@@ -5,7 +5,7 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "caniuse-lite": "*",
+    "browserslist": "*",
     "electron-to-chromium": "*"
   }
 }
