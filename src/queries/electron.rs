@@ -2,19 +2,13 @@ use super::Selector;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
-pub(super) struct ElectronVersions(pub(super) Vec<(f32, String)>);
-
-impl ElectronVersions {
-    pub(super) fn new() -> Self {
-        let versions = serde_json::from_str(include_str!(concat!(
-            env!("OUT_DIR"),
-            "/electron-to-chromium.json"
-        )))
-        .unwrap();
-
-        Self(versions)
-    }
-}
+pub(super) static ELECTRON_VERSIONS: Lazy<Vec<(f32, String)>> = Lazy::new(|| {
+    serde_json::from_str(include_str!(concat!(
+        env!("OUT_DIR"),
+        "/electron-to-chromium.json"
+    )))
+    .unwrap()
+});
 
 static REGEX: Lazy<Regex> = Lazy::new(|| {
     RegexBuilder::new(r"^electron\s+(\d+\.\d+)(?:\.\d+)?\s*-\s*(\d+\.\d+)(?:\.\d+)?$")
@@ -23,17 +17,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
-pub(super) struct ElectronSelector {
-    versions: ElectronVersions,
-}
-
-impl ElectronSelector {
-    pub(super) fn new() -> Self {
-        Self {
-            versions: ElectronVersions::new(),
-        }
-    }
-}
+pub(super) struct ElectronSelector;
 
 impl Selector for ElectronSelector {
     fn select(&self, text: &str) -> Option<Vec<String>> {
@@ -46,8 +30,7 @@ impl Selector for ElectronSelector {
                 ))
             })
             .map(|(from, to)| {
-                self.versions
-                    .0
+                ELECTRON_VERSIONS
                     .iter()
                     .filter(|(version, _)| from <= *version && *version <= to)
                     .map(|(_, version)| format!("chrome {}", version))

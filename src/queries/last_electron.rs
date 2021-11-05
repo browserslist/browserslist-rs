@@ -1,4 +1,4 @@
-use super::{electron::ElectronVersions, Selector};
+use super::{electron::ELECTRON_VERSIONS, Selector};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
@@ -9,17 +9,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
-pub(super) struct LastElectronSelector {
-    versions: ElectronVersions,
-}
-
-impl LastElectronSelector {
-    pub(super) fn new() -> Self {
-        Self {
-            versions: ElectronVersions::new(),
-        }
-    }
-}
+pub(super) struct LastElectronSelector;
 
 impl Selector for LastElectronSelector {
     fn select(&self, text: &str) -> Option<Vec<String>> {
@@ -28,8 +18,7 @@ impl Selector for LastElectronSelector {
             .and_then(|cap| cap.get(1))
             .and_then(|ver| ver.as_str().parse::<usize>().ok())
             .map(|count| {
-                self.versions
-                    .0
+                ELECTRON_VERSIONS
                     .iter()
                     .rev()
                     .take(count)

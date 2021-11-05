@@ -9,8 +9,8 @@ trait Selector {
 
 pub fn query(query_string: &str) -> Option<Vec<String>> {
     let queries: Vec<Box<dyn Selector>> = vec![
-        Box::new(last_electron::LastElectronSelector::new()),
-        Box::new(electron::ElectronSelector::new()),
+        Box::new(last_electron::LastElectronSelector),
+        Box::new(electron::ElectronSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
         Box::new(dead::DeadSelector),
     ];
