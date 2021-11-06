@@ -1,4 +1,5 @@
 use super::Selector;
+use crate::opts::Opts;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
@@ -20,7 +21,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct ElectronSelector;
 
 impl Selector for ElectronSelector {
-    fn select(&self, text: &str) -> Option<Vec<String>> {
+    fn select(&self, text: &str, _: &Opts) -> Option<Vec<String>> {
         REGEX
             .captures(text)
             .and_then(|cap| {

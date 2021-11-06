@@ -1,4 +1,5 @@
 use super::{caniuse::CANIUSE_LITE_USAGE, Selector};
+use crate::opts::Opts;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
@@ -7,7 +8,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(>=?|<=?)\s*(\d+|\d+\.\d+|
 pub(super) struct PercentageSelector;
 
 impl Selector for PercentageSelector {
-    fn select(&self, text: &str) -> Option<Vec<String>> {
+    fn select(&self, text: &str, _: &Opts) -> Option<Vec<String>> {
         let matches = REGEX.captures(text)?;
         let sign = matches.get(1)?.as_str();
         let popularity: f32 = matches.get(2)?.as_str().parse().ok()?;

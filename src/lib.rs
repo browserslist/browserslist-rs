@@ -2,6 +2,7 @@ use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use std::cmp::Ordering;
 
+pub mod opts;
 mod queries;
 
 static REGEX_OR: Lazy<Regex> = Lazy::new(|| {
@@ -53,7 +54,7 @@ fn semver_compare(a: &str, b: &str) -> Ordering {
         })
 }
 
-pub fn resolve(queries: &[impl AsRef<str>]) -> Vec<String> {
+pub fn resolve(queries: &[impl AsRef<str>], opts: &opts::Opts) -> Vec<String> {
     let mut result = queries
         .iter()
         .map(|query| parse(query.as_ref()))
@@ -71,7 +72,7 @@ pub fn resolve(queries: &[impl AsRef<str>]) -> Vec<String> {
                 query_string
             };
 
-            if let Some(mut queries) = queries::query(query_string) {
+            if let Some(mut queries) = queries::query(query_string, opts) {
                 if is_exclude {
                     result.retain(|q| !queries.contains(q));
                 } else {

@@ -1,4 +1,5 @@
 use super::{electron::ELECTRON_VERSIONS, Selector};
+use crate::opts::Opts;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
@@ -12,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct LastElectronSelector;
 
 impl Selector for LastElectronSelector {
-    fn select(&self, text: &str) -> Option<Vec<String>> {
+    fn select(&self, text: &str, _: &Opts) -> Option<Vec<String>> {
         REGEX
             .captures(text)
             .and_then(|cap| cap.get(1))

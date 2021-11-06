@@ -1,7 +1,8 @@
 use super::{
-    caniuse::{CANIUSE_LITE_BROWSERS, CANIUSE_LITE_VERSION_ALIASES},
+    caniuse::{get_browser_stat, CANIUSE_LITE_VERSION_ALIASES},
     Selector,
 };
+use crate::opts::Opts;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
@@ -10,13 +11,13 @@ static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+)\s*(>=?|<=?)\s*([\d.
 pub(super) struct BrowserVersionRangeSelector;
 
 impl Selector for BrowserVersionRangeSelector {
-    fn select(&self, text: &str) -> Option<Vec<String>> {
+    fn select(&self, text: &str, opts: &Opts) -> Option<Vec<String>> {
         let matches = REGEX.captures(text)?;
         let name = matches.get(1)?.as_str();
         let sign = matches.get(2)?.as_str();
         let version = matches.get(3)?.as_str();
 
-        let stat = CANIUSE_LITE_BROWSERS.get(name)?;
+        let stat = get_browser_stat(name, opts.mobile_to_desktop)?;
         let version: f32 = match CANIUSE_LITE_VERSION_ALIASES.get(&stat.name)?.get(version) {
             Some(version) => version.parse().unwrap_or(0.0),
             None => version.parse().unwrap_or(0.0),
