@@ -18,7 +18,6 @@ static REGEX_AND: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
-#[derive(Debug)]
 enum Query<'a> {
     And(&'a str),
     Or(&'a str),
@@ -60,42 +59,36 @@ pub fn resolve(queries: &[impl AsRef<str>]) -> Vec<String> {
         .map(|query| parse(query.as_ref()))
         .flatten()
         .fold(vec![], |mut result, current| {
-            match current {
-                Query::And(query_string) => {
-                    let is_exclude = query_string.starts_with("not");
-                    let query_string = if is_exclude {
-                        &query_string[4..]
-                    } else {
-                        query_string
-                    };
-                    if let Some(queries) = queries::query(query_string) {
-                        if is_exclude {
-                            result.retain(|q| !queries.contains(q));
-                        } else {
+            let query_string = match current {
+                Query::And(s) => s,
+                Query::Or(s) => s,
+            };
+
+            let is_exclude = query_string.starts_with("not");
+            let query_string = if is_exclude {
+                &query_string[4..]
+            } else {
+                query_string
+            };
+
+            if let Some(mut queries) = queries::query(query_string) {
+                if is_exclude {
+                    result.retain(|q| !queries.contains(q));
+                } else {
+                    match current {
+                        Query::And(_) => {
                             result.retain(|q| queries.contains(q));
-                        }
-                    }
-                }
-                Query::Or(query_string) => {
-                    let is_exclude = query_string.starts_with("not");
-                    let query_string = if is_exclude {
-                        &query_string[4..]
-                    } else {
-                        query_string
-                    };
-                    if let Some(mut queries) = queries::query(query_string) {
-                        if is_exclude {
-                            result.retain(|q| !queries.contains(q));
-                        } else {
+                        },
+                        Query::Or(_) => {
                             result.append(&mut queries);
                         }
                     }
                 }
             }
+
             result
         });
 
-    result.dedup();
     result.sort_by(|a, b| {
         let mut a = a.split(' ');
         let mut b = b.split(' ');
@@ -110,6 +103,7 @@ pub fn resolve(queries: &[impl AsRef<str>]) -> Vec<String> {
             browser_a.cmp(browser_b)
         }
     });
+    result.dedup();
 
     result
 }
