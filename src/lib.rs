@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
+use std::cmp::Ordering;
 
 mod queries;
 
@@ -38,8 +39,23 @@ fn parse(query: &str) -> impl Iterator<Item = Query<'_>> {
         .flatten()
 }
 
+fn semver_compare(a: &str, b: &str) -> Ordering {
+    a.split('.')
+        .zip(b.split('.'))
+        .fold(Ordering::Equal, |ord, (a, b)| {
+            if ord == Ordering::Equal {
+                // this is intentional: version comes from high to low
+                b.parse::<i32>()
+                    .unwrap_or(0)
+                    .cmp(&a.parse::<i32>().unwrap_or(0))
+            } else {
+                ord
+            }
+        })
+}
+
 pub fn resolve(queries: &[impl AsRef<str>]) -> Vec<String> {
-    queries
+    let mut result = queries
         .iter()
         .map(|query| parse(query.as_ref()))
         .flatten()
@@ -77,5 +93,23 @@ pub fn resolve(queries: &[impl AsRef<str>]) -> Vec<String> {
                 }
             }
             result
-        })
+        });
+
+    result.dedup();
+    result.sort_by(|a, b| {
+        let mut a = a.split(' ');
+        let mut b = b.split(' ');
+        let browser_a = a.next().unwrap();
+        let browser_b = b.next().unwrap();
+
+        if browser_a == browser_b {
+            let version_a = a.next().unwrap().split('-').next().unwrap();
+            let version_b = b.next().unwrap().split('-').next().unwrap();
+            semver_compare(version_a, version_b)
+        } else {
+            browser_a.cmp(browser_b)
+        }
+    });
+
+    result
 }
