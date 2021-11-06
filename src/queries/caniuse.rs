@@ -28,3 +28,12 @@ pub(super) static CANIUSE_LITE_USAGE: Lazy<HashMap<String, f32>> = Lazy::new(|| 
     )))
     .unwrap()
 });
+
+pub(super) static CANIUSE_LITE_VERSION_ALIASES: Lazy<HashMap<String, HashMap<String, String>>> =
+    Lazy::new(|| {
+        serde_json::from_str(include_str!(concat!(
+            env!("OUT_DIR"),
+            "/caniuse-lite-version-aliases.json"
+        )))
+        .unwrap()
+    });

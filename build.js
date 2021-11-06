@@ -15,6 +15,11 @@ async function main() {
   )
 
   await fs.writeFile(
+    path.join(process.env.OUT_DIR, 'caniuse-lite-version-aliases.json'),
+    JSON.stringify(browserslist.versionAliases)
+  )
+
+  await fs.writeFile(
     path.join(process.env.OUT_DIR, 'electron-to-chromium.json'),
     JSON.stringify(
       Object.entries(e2c).map(([k, v]) => [Number.parseFloat(k), v])
