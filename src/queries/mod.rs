@@ -1,5 +1,6 @@
 mod caniuse;
 mod dead;
+mod defaults;
 mod electron;
 mod firefox_esr;
 mod last_electron;
@@ -17,6 +18,7 @@ pub fn query(query_string: &str) -> Option<Vec<String>> {
         Box::new(last_electron::LastElectronSelector),
         Box::new(electron::ElectronSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
+        Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),
     ];
 
