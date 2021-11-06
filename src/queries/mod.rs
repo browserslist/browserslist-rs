@@ -1,3 +1,4 @@
+mod browser_version_range;
 mod caniuse;
 mod dead;
 mod defaults;
@@ -17,6 +18,7 @@ pub fn query(query_string: &str) -> Option<Vec<String>> {
         Box::new(percentage::PercentageSelector),
         Box::new(last_electron::LastElectronSelector),
         Box::new(electron::ElectronSelector),
+        Box::new(browser_version_range::BrowserVersionRangeSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
         Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),
