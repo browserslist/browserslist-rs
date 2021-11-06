@@ -70,6 +70,39 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     android
 });
 
+static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
+    let mut op_mob = CANIUSE_LITE_BROWSERS.get("opera").unwrap().clone();
+
+    op_mob.versions = op_mob
+        .versions
+        .into_iter()
+        .map(|version| {
+            if &version == "10.0-10.1" {
+                "10".to_string()
+            } else {
+                version
+            }
+        })
+        .collect();
+    op_mob.released = op_mob
+        .released
+        .into_iter()
+        .map(|version| {
+            if &version == "10.0-10.1" {
+                "10".to_string()
+            } else {
+                version
+            }
+        })
+        .collect();
+
+    if let Some(value) = op_mob.release_date.remove("10.0-10.1") {
+        op_mob.release_date.insert("10".to_string(), value);
+    }
+
+    op_mob
+});
+
 pub(super) fn get_browser_stat(name: &str, mobile_to_desktop: bool) -> Option<&BrowserStat> {
     let name = if name.bytes().all(|b| b.is_ascii_lowercase()) {
         Cow::from(name)
@@ -80,10 +113,10 @@ pub(super) fn get_browser_stat(name: &str, mobile_to_desktop: bool) -> Option<&B
 
     if mobile_to_desktop {
         if let Some(desktop_name) = to_desktop_name(name) {
-            if name == "android" {
-                Some(&ANDROID_TO_DESKTOP)
-            } else {
-                CANIUSE_LITE_BROWSERS.get(desktop_name)
+            match name {
+                "android" => Some(&ANDROID_TO_DESKTOP),
+                "op_mob" => Some(&OPERA_MOBILE_TO_DESKTOP),
+                _ => CANIUSE_LITE_BROWSERS.get(desktop_name),
             }
         } else {
             CANIUSE_LITE_BROWSERS.get(name)
