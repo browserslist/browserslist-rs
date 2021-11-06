@@ -4,9 +4,9 @@ use regex::Regex;
 
 static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(>=?|<=?)\s*(\d+|\d+\.\d+|\.\d+)%").unwrap());
 
-pub(super) struct Percentage;
+pub(super) struct PercentageSelector;
 
-impl Selector for Percentage {
+impl Selector for PercentageSelector {
     fn select(&self, text: &str) -> Option<Vec<String>> {
         let matches = REGEX.captures(text)?;
         let sign = matches.get(1)?.as_str();
