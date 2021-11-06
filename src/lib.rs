@@ -38,40 +38,44 @@ fn parse(query: &str) -> impl Iterator<Item = Query<'_>> {
         .flatten()
 }
 
-pub fn resolve(query: &str) -> Vec<String> {
-    parse(query).fold(vec![], |mut result, current| {
-        match current {
-            Query::And(query_string) => {
-                let is_exclude = query_string.starts_with("not");
-                let query_string = if is_exclude {
-                    &query_string[4..]
-                } else {
-                    query_string
-                };
-                if let Some(queries) = queries::query(query_string) {
-                    if is_exclude {
-                        result.retain(|q| !queries.contains(q));
+pub fn resolve(queries: &[impl AsRef<str>]) -> Vec<String> {
+    queries
+        .iter()
+        .map(|query| parse(query.as_ref()))
+        .flatten()
+        .fold(vec![], |mut result, current| {
+            match current {
+                Query::And(query_string) => {
+                    let is_exclude = query_string.starts_with("not");
+                    let query_string = if is_exclude {
+                        &query_string[4..]
                     } else {
-                        result.retain(|q| queries.contains(q));
+                        query_string
+                    };
+                    if let Some(queries) = queries::query(query_string) {
+                        if is_exclude {
+                            result.retain(|q| !queries.contains(q));
+                        } else {
+                            result.retain(|q| queries.contains(q));
+                        }
+                    }
+                }
+                Query::Or(query_string) => {
+                    let is_exclude = query_string.starts_with("not");
+                    let query_string = if is_exclude {
+                        &query_string[4..]
+                    } else {
+                        query_string
+                    };
+                    if let Some(mut queries) = queries::query(query_string) {
+                        if is_exclude {
+                            result.retain(|q| !queries.contains(q));
+                        } else {
+                            result.append(&mut queries);
+                        }
                     }
                 }
             }
-            Query::Or(query_string) => {
-                let is_exclude = query_string.starts_with("not");
-                let query_string = if is_exclude {
-                    &query_string[4..]
-                } else {
-                    query_string
-                };
-                if let Some(mut queries) = queries::query(query_string) {
-                    if is_exclude {
-                        result.retain(|q| !queries.contains(q));
-                    } else {
-                        result.append(&mut queries);
-                    }
-                }
-            }
-        }
-        result
-    })
+            result
+        })
 }
