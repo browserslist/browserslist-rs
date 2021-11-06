@@ -1,4 +1,6 @@
-use super::{caniuse::CANIUSE_LITE_BROWSERS, Selector};
+use super::{
+    caniuse::CANIUSE_LITE_BROWSERS, count_android_filter, should_filter_android, Selector,
+};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
@@ -13,24 +15,33 @@ pub(super) struct LastNVersionsSelector;
 
 impl Selector for LastNVersionsSelector {
     fn select(&self, text: &str) -> Option<Vec<String>> {
-        REGEX
-            .captures(text)
-            .and_then(|cap| cap.get(1))
-            .and_then(|ver| ver.as_str().parse::<usize>().ok())
-            .map(|count| {
-                CANIUSE_LITE_BROWSERS
-                    .iter()
-                    .map(|(name, stat)| {
-                        // TODO: handle for Android
-                        stat.released.iter().rev().take(count).map(|version| {
-                            let mut r = name.clone();
-                            r.push(' ');
-                            r.push_str(&version);
-                            r
-                        })
-                    })
-                    .flatten()
-                    .collect()
+        let count = REGEX
+            .captures(text)?
+            .get(1)?
+            .as_str()
+            .parse::<usize>()
+            .ok()?;
+
+        let versions = CANIUSE_LITE_BROWSERS
+            .iter()
+            .map(|(name, stat)| {
+                // TODO: handle for Android if `mobile_to_desktop` enabled
+                let count = if should_filter_android(name, false) {
+                    count_android_filter(count)
+                } else {
+                    count
+                };
+
+                stat.released.iter().rev().take(count).map(|version| {
+                    let mut r = name.clone();
+                    r.push(' ');
+                    r.push_str(&version);
+                    r
+                })
             })
+            .flatten()
+            .collect();
+
+        Some(versions)
     }
 }

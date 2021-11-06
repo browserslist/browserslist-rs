@@ -45,3 +45,25 @@ pub fn get_browser_alias(name: &str) -> &str {
         _ => name,
     }
 }
+
+#[inline]
+pub fn should_filter_android(name: &str, mobile_to_desktop: bool) -> bool {
+    name == "android" && !mobile_to_desktop
+}
+
+const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
+
+pub fn count_android_filter(count: usize) -> usize {
+    let released = &caniuse::CANIUSE_LITE_BROWSERS
+        .get("android")
+        .unwrap()
+        .released;
+    let diff = (released.last().unwrap().parse::<f32>().unwrap()
+        - ANDROID_EVERGREEN_FIRST
+        - (count as f32)) as usize;
+    if diff > 0 {
+        1
+    } else {
+        1 - diff
+    }
+}

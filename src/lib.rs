@@ -78,7 +78,7 @@ pub fn resolve(queries: &[impl AsRef<str>]) -> Vec<String> {
                     match current {
                         Query::And(_) => {
                             result.retain(|q| queries.contains(q));
-                        },
+                        }
                         Query::Or(_) => {
                             result.append(&mut queries);
                         }
