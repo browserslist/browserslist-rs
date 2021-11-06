@@ -3,20 +3,20 @@ use regex::Regex;
 use serde::Deserialize;
 use std::{borrow::Cow, collections::HashMap};
 
-pub(super) const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
+pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 
 #[derive(Clone, Deserialize)]
-pub(super) struct BrowserStat {
-    pub(super) name: String,
-    pub(super) versions: Vec<String>,
-    pub(super) released: Vec<String>,
+pub struct BrowserStat {
+    pub name: String,
+    pub versions: Vec<String>,
+    pub released: Vec<String>,
     #[serde(rename = "releaseDate")]
-    pub(super) release_date: HashMap<String, Option<u32>>,
+    pub release_date: HashMap<String, Option<u32>>,
 }
 
-pub(super) type CaniuseData = HashMap<String, BrowserStat>;
+pub type CaniuseData = HashMap<String, BrowserStat>;
 
-pub(super) static CANIUSE_LITE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
+pub static CANIUSE_LITE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
     serde_json::from_str(include_str!(concat!(
         env!("OUT_DIR"),
         "/caniuse-lite-browsers.json"
@@ -24,7 +24,7 @@ pub(super) static CANIUSE_LITE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
     .unwrap()
 });
 
-pub(super) static CANIUSE_LITE_USAGE: Lazy<HashMap<String, f32>> = Lazy::new(|| {
+pub static CANIUSE_LITE_USAGE: Lazy<HashMap<String, f32>> = Lazy::new(|| {
     serde_json::from_str(include_str!(concat!(
         env!("OUT_DIR"),
         "/caniuse-lite-usage.json"
@@ -32,7 +32,7 @@ pub(super) static CANIUSE_LITE_USAGE: Lazy<HashMap<String, f32>> = Lazy::new(|| 
     .unwrap()
 });
 
-pub(super) static CANIUSE_LITE_VERSION_ALIASES: Lazy<HashMap<String, HashMap<String, String>>> =
+pub static CANIUSE_LITE_VERSION_ALIASES: Lazy<HashMap<String, HashMap<String, String>>> =
     Lazy::new(|| {
         serde_json::from_str(include_str!(concat!(
             env!("OUT_DIR"),
@@ -96,7 +96,7 @@ static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     op_mob
 });
 
-pub(super) fn get_browser_stat(name: &str, mobile_to_desktop: bool) -> Option<&BrowserStat> {
+pub fn get_browser_stat(name: &str, mobile_to_desktop: bool) -> Option<&BrowserStat> {
     let name = if name.bytes().all(|b| b.is_ascii_lowercase()) {
         Cow::from(name)
     } else {
@@ -119,7 +119,7 @@ pub(super) fn get_browser_stat(name: &str, mobile_to_desktop: bool) -> Option<&B
     }
 }
 
-pub fn get_browser_alias(name: &str) -> &str {
+fn get_browser_alias(name: &str) -> &str {
     match name {
         "fx" | "ff" => "firefox",
         "ios" => "ios_saf",
@@ -136,7 +136,7 @@ pub fn get_browser_alias(name: &str) -> &str {
     }
 }
 
-pub fn to_desktop_name(name: &str) -> Option<&'static str> {
+fn to_desktop_name(name: &str) -> Option<&'static str> {
     match name {
         "and_chr" => Some("chrome"),
         "and_ff" => Some("firefox"),

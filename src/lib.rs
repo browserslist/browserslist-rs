@@ -2,6 +2,7 @@ use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use std::cmp::Ordering;
 
+mod data;
 pub mod opts;
 mod queries;
 

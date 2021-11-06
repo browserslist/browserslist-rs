@@ -1,5 +1,5 @@
-use super::{caniuse::CANIUSE_LITE_USAGE, Selector};
-use crate::opts::Opts;
+use super::Selector;
+use crate::{data::caniuse::CANIUSE_LITE_USAGE, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::Regex;
 

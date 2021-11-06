@@ -1,7 +1,6 @@
-use crate::opts::Opts;
+use crate::{data::caniuse, opts::Opts};
 
 mod browser_version_range;
-mod caniuse;
 mod dead;
 mod defaults;
 mod electron;

@@ -1,8 +1,8 @@
-use super::{
-    caniuse::{get_browser_stat, CANIUSE_LITE_VERSION_ALIASES},
-    Selector,
+use super::Selector;
+use crate::{
+    data::caniuse::{get_browser_stat, CANIUSE_LITE_VERSION_ALIASES},
+    opts::Opts,
 };
-use crate::opts::Opts;
 use once_cell::sync::Lazy;
 use regex::Regex;
 

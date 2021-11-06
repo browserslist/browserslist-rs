@@ -1,15 +1,7 @@
 use super::Selector;
-use crate::opts::Opts;
+use crate::{data::electron::ELECTRON_VERSIONS, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
-
-pub(super) static ELECTRON_VERSIONS: Lazy<Vec<(f32, String)>> = Lazy::new(|| {
-    serde_json::from_str(include_str!(concat!(
-        env!("OUT_DIR"),
-        "/electron-to-chromium.json"
-    )))
-    .unwrap()
-});
 
 static REGEX: Lazy<Regex> = Lazy::new(|| {
     RegexBuilder::new(r"^electron\s+(\d+\.\d+)(?:\.\d+)?\s*-\s*(\d+\.\d+)(?:\.\d+)?$")

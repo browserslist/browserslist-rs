@@ -1,5 +1,5 @@
-use super::{electron::ELECTRON_VERSIONS, Selector};
-use crate::opts::Opts;
+use super::Selector;
+use crate::{data::electron::ELECTRON_VERSIONS, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
