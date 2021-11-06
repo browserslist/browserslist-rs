@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
 static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^(firefox|ff|fx)\s+esr$")
+    RegexBuilder::new(r"^(?:firefox|ff|fx)\s+esr$")
         .case_insensitive(true)
         .build()
         .unwrap()

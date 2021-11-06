@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
-use std::{borrow::Cow, collections::HashMap, mem};
+use std::{borrow::Cow, collections::HashMap};
 
 pub(super) const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 

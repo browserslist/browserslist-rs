@@ -9,6 +9,7 @@ mod firefox_esr;
 mod last_electron;
 mod last_n_versions;
 mod percentage;
+mod phantom;
 
 trait Selector {
     fn select(&self, text: &str, opts: &Opts) -> Option<Vec<String>>;
@@ -22,6 +23,7 @@ pub fn query(query_string: &str, opts: &Opts) -> Option<Vec<String>> {
         Box::new(electron::ElectronSelector),
         Box::new(browser_version_range::BrowserVersionRangeSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
+        Box::new(phantom::PhantomSelector),
         Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),
     ];
