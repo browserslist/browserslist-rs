@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
-use std::{borrow::Cow, collections::HashMap};
+use std::{borrow::Cow, collections::HashMap, mem};
 
 pub(super) const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 
@@ -73,28 +73,21 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
 static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     let mut op_mob = CANIUSE_LITE_BROWSERS.get("opera").unwrap().clone();
 
-    op_mob.versions = op_mob
+    if let Some(v) = op_mob
         .versions
-        .into_iter()
-        .map(|version| {
-            if &version == "10.0-10.1" {
-                "10".to_string()
-            } else {
-                version
-            }
-        })
-        .collect();
-    op_mob.released = op_mob
+        .iter_mut()
+        .find(|version| version.as_str() == "10.0-10.1")
+    {
+        *v = "10".to_string();
+    }
+
+    if let Some(v) = op_mob
         .released
-        .into_iter()
-        .map(|version| {
-            if &version == "10.0-10.1" {
-                "10".to_string()
-            } else {
-                version
-            }
-        })
-        .collect();
+        .iter_mut()
+        .find(|version| version.as_str() == "10.0-10.1")
+    {
+        *v = "10".to_string();
+    }
 
     if let Some(value) = op_mob.release_date.remove("10.0-10.1") {
         op_mob.release_date.insert("10".to_string(), value);
