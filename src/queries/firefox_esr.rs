@@ -1,4 +1,4 @@
-use super::{Selector, SelectorResult, Version};
+use super::{Selector, SelectorResult, Distrib};
 use crate::opts::Opts;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
@@ -16,8 +16,8 @@ impl Selector for FirefoxESRSelector {
     fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
         if REGEX.is_match(text) {
             Ok(Some(vec![
-                Version::new("firefox", "78"),
-                Version::new("firefox", "91"),
+                Distrib::new("firefox", "78"),
+                Distrib::new("firefox", "91"),
             ]))
         } else {
             Ok(None)

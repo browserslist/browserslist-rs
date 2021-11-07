@@ -1,6 +1,6 @@
 use super::{
     caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
-    count_android_filter, should_filter_android, Selector, SelectorResult, Version,
+    count_android_filter, should_filter_android, Selector, SelectorResult, Distrib,
 };
 use crate::{error::Error, opts::Opts};
 use itertools::Itertools;
@@ -51,7 +51,7 @@ impl Selector for LastNMajorBrowsersSelector {
                         version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
                     })
                     .rev()
-                    .map(move |version| Version::new(&name, &version))
+                    .map(move |version| Distrib::new(&name, &version))
             })
             .flatten()
             .collect();

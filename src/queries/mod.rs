@@ -18,16 +18,16 @@ mod phantom;
 /// [browserslist](https://github.com/browserslist/browserslist). For example:
 ///
 /// ```
-/// use browserslist::Version;
+/// use browserslist::Distrib;
 ///
-/// assert_eq!(Version::new("firefox", "93").to_string(), "firefox 93".to_string());
-/// assert_eq!(Version::new("op_mini", "all").to_string(), "op_mini all".to_string());
-/// assert_eq!(Version::new("node", "16.0.0").to_string(), "node 16.0.0".to_string());
+/// assert_eq!(Distrib::new("firefox", "93").to_string(), "firefox 93".to_string());
+/// assert_eq!(Distrib::new("op_mini", "all").to_string(), "op_mini all".to_string());
+/// assert_eq!(Distrib::new("node", "16.0.0").to_string(), "node 16.0.0".to_string());
 /// ```
 #[derive(Debug, PartialEq, Eq)]
-pub struct Version<'a>(&'a str, &'a str);
+pub struct Distrib<'a>(&'a str, &'a str);
 
-impl<'a> Version<'a> {
+impl<'a> Distrib<'a> {
     #[inline]
     pub fn new(name: &'a str, version: &'a str) -> Self {
         Self(name, version)
@@ -36,11 +36,11 @@ impl<'a> Version<'a> {
     /// Return browser name, or `node`.
     ///
     /// ```
-    /// use browserslist::Version;
+    /// use browserslist::Distrib;
     ///
-    /// assert_eq!(Version::new("firefox", "93").name(), "firefox");
-    /// assert_eq!(Version::new("op_mini", "all").name(), "op_mini");
-    /// assert_eq!(Version::new("node", "16.0.0").name(), "node");
+    /// assert_eq!(Distrib::new("firefox", "93").name(), "firefox");
+    /// assert_eq!(Distrib::new("op_mini", "all").name(), "op_mini");
+    /// assert_eq!(Distrib::new("node", "16.0.0").name(), "node");
     /// ```
     #[inline]
     pub fn name(&self) -> &str {
@@ -50,11 +50,11 @@ impl<'a> Version<'a> {
     /// Return version string.
     ///
     /// ```
-    /// use browserslist::Version;
+    /// use browserslist::Distrib;
     ///
-    /// assert_eq!(Version::new("firefox", "93").version(), "93");
-    /// assert_eq!(Version::new("op_mini", "all").version(), "all");
-    /// assert_eq!(Version::new("node", "16.0.0").version(), "16.0.0");
+    /// assert_eq!(Distrib::new("firefox", "93").version(), "93");
+    /// assert_eq!(Distrib::new("op_mini", "all").version(), "all");
+    /// assert_eq!(Distrib::new("node", "16.0.0").version(), "16.0.0");
     /// ```
     #[inline]
     pub fn version(&self) -> &str {
@@ -62,19 +62,19 @@ impl<'a> Version<'a> {
     }
 }
 
-impl<'a> Display for Version<'a> {
+impl<'a> Display for Distrib<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}", self.0, self.1)
     }
 }
 
-pub type SelectorResult<'a> = Result<Option<Vec<Version<'a>>>, Error>;
+pub type SelectorResult<'a> = Result<Option<Vec<Distrib<'a>>>, Error>;
 
 trait Selector {
     fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a>;
 }
 
-pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Version<'a>>, Error> {
+pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>, Error> {
     let selectors: Vec<Box<dyn Selector>> = vec![
         Box::new(last_n_major_browsers::LastNMajorBrowsersSelector),
         Box::new(last_n_browsers::LastNBrowsersSelector),

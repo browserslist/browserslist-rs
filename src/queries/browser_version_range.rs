@@ -1,4 +1,4 @@
-use super::{Selector, SelectorResult, Version};
+use super::{Selector, SelectorResult, Distrib};
 use crate::{
     data::caniuse::{get_browser_stat, CANIUSE_LITE_VERSION_ALIASES},
     error::Error,
@@ -42,7 +42,7 @@ impl Selector for BrowserVersionRangeSelector {
                     _ => v >= version,
                 }
             })
-            .map(|version| Version::new(&stat.name, &version))
+            .map(|version| Distrib::new(&stat.name, &version))
             .collect();
         Ok(Some(versions))
     }

@@ -1,5 +1,5 @@
 use parser::{parse, Query};
-pub use queries::Version;
+pub use queries::Distrib;
 use std::cmp::Ordering;
 
 mod data;
@@ -28,7 +28,7 @@ fn semver_compare(a: &str, b: &str) -> Ordering {
 pub fn resolve<'a>(
     queries: &'a [impl AsRef<str>],
     opts: &opts::Opts,
-) -> Result<Vec<Version<'a>>, error::Error> {
+) -> Result<Vec<Distrib<'a>>, error::Error> {
     let result = queries
         .iter()
         .map(|query| parse(query.as_ref()))

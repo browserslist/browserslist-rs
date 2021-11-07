@@ -1,6 +1,6 @@
 use super::{
     caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
-    count_android_filter, should_filter_android, Selector, SelectorResult, Version,
+    count_android_filter, should_filter_android, Selector, SelectorResult, Distrib,
 };
 use crate::{error::Error, opts::Opts};
 use once_cell::sync::Lazy;
@@ -38,7 +38,7 @@ impl Selector for LastNBrowsersSelector {
                     .iter()
                     .rev()
                     .take(count)
-                    .map(move |version| Version::new(&name, &version))
+                    .map(move |version| Distrib::new(&name, &version))
             })
             .flatten()
             .collect();

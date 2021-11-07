@@ -1,4 +1,4 @@
-use super::{Selector, SelectorResult, Version};
+use super::{Selector, SelectorResult, Distrib};
 use crate::{data::caniuse::CANIUSE_LITE_USAGE, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -25,7 +25,7 @@ impl Selector for PercentageSelector {
                 "<=" => *usage <= popularity,
                 _ => *usage >= popularity,
             })
-            .map(|(name, version, _)| Version::new(name, version))
+            .map(|(name, version, _)| Distrib::new(name, version))
             .collect();
         Ok(Some(versions))
     }
