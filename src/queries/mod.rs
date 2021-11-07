@@ -10,6 +10,7 @@ mod last_n_browsers;
 mod last_n_electron;
 mod last_n_electron_major;
 mod last_n_major_browsers;
+mod last_n_x_browsers;
 mod last_n_x_major_browsers;
 mod percentage;
 mod phantom;
@@ -83,6 +84,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(last_n_electron_major::LastNElectronMajorSelector),
         Box::new(last_n_x_major_browsers::LastNXMajorBrowsersSelector),
         Box::new(last_n_electron::LastNElectronSelector),
+        Box::new(last_n_x_browsers::LastNXBrowsersSelector),
         Box::new(percentage::PercentageSelector),
         Box::new(electron::ElectronSelector),
         Box::new(browser_version_range::BrowserVersionRangeSelector),
