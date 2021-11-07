@@ -1,4 +1,4 @@
-use crate::{data::caniuse, opts::Opts};
+use crate::{data::caniuse, error::Error, opts::Opts};
 
 mod browser_version_range;
 mod dead;
@@ -11,10 +11,10 @@ mod percentage;
 mod phantom;
 
 trait Selector {
-    fn select(&self, text: &str, opts: &Opts) -> Option<Vec<String>>;
+    fn select(&self, text: &str, opts: &Opts) -> Result<Option<Vec<String>>, Error>;
 }
 
-pub fn query(query_string: &str, opts: &Opts) -> Option<Vec<String>> {
+pub fn query(query_string: &str, opts: &Opts) -> Result<Vec<String>, Error> {
     let selectors: Vec<Box<dyn Selector>> = vec![
         Box::new(last_n_versions::LastNVersionsSelector),
         Box::new(percentage::PercentageSelector),
@@ -29,7 +29,12 @@ pub fn query(query_string: &str, opts: &Opts) -> Option<Vec<String>> {
 
     selectors
         .into_iter()
-        .find_map(|selector| selector.select(query_string, opts))
+        .try_fold(vec![], |mut result, selector| {
+            if let Some(mut r) = selector.select(query_string, opts)? {
+                result.append(&mut r);
+            };
+            Ok(result)
+        })
 }
 
 #[inline]

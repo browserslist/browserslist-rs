@@ -3,6 +3,7 @@ use regex::{Regex, RegexBuilder};
 use std::cmp::Ordering;
 
 mod data;
+pub mod error;
 pub mod opts;
 mod queries;
 
@@ -55,12 +56,15 @@ fn semver_compare(a: &str, b: &str) -> Ordering {
         })
 }
 
-pub fn resolve(queries: &[impl AsRef<str>], opts: &opts::Opts) -> Vec<String> {
-    let mut result = queries
+pub fn resolve(
+    queries: &[impl AsRef<str>],
+    opts: &opts::Opts,
+) -> Result<Vec<String>, error::Error> {
+    let result = queries
         .iter()
         .map(|query| parse(query.as_ref()))
         .flatten()
-        .fold(vec![], |mut result, current| {
+        .try_fold(vec![], |mut result, current| {
             let query_string = match current {
                 Query::And(s) => s,
                 Query::Or(s) => s,
@@ -73,24 +77,24 @@ pub fn resolve(queries: &[impl AsRef<str>], opts: &opts::Opts) -> Vec<String> {
                 query_string
             };
 
-            if let Some(mut queries) = queries::query(query_string, opts) {
-                if is_exclude {
-                    result.retain(|q| !queries.contains(q));
-                } else {
-                    match current {
-                        Query::And(_) => {
-                            result.retain(|q| queries.contains(q));
-                        }
-                        Query::Or(_) => {
-                            result.append(&mut queries);
-                        }
+            let mut queries = queries::query(query_string, opts)?;
+            if is_exclude {
+                result.retain(|q| !queries.contains(q));
+            } else {
+                match current {
+                    Query::And(_) => {
+                        result.retain(|q| queries.contains(q));
+                    }
+                    Query::Or(_) => {
+                        result.append(&mut queries);
                     }
                 }
             }
 
-            result
+            Ok::<_, error::Error>(result)
         });
 
+    let mut result = result?;
     result.sort_by(|a, b| {
         let mut a = a.split(' ');
         let mut b = b.split(' ');
@@ -107,5 +111,5 @@ pub fn resolve(queries: &[impl AsRef<str>], opts: &opts::Opts) -> Vec<String> {
     });
     result.dedup();
 
-    result
+    Ok(result)
 }

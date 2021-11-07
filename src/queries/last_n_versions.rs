@@ -2,7 +2,7 @@ use super::{
     caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
     count_android_filter, should_filter_android, Selector,
 };
-use crate::opts::Opts;
+use crate::{error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
@@ -16,13 +16,11 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct LastNVersionsSelector;
 
 impl Selector for LastNVersionsSelector {
-    fn select(&self, text: &str, opts: &Opts) -> Option<Vec<String>> {
-        let count = REGEX
-            .captures(text)?
-            .get(1)?
-            .as_str()
-            .parse::<usize>()
-            .ok()?;
+    fn select(&self, text: &str, opts: &Opts) -> Result<Option<Vec<String>>, Error> {
+        let count: usize = match REGEX.captures(text) {
+            Some(cap) => cap[1].parse().map_err(Error::ParseVersionsCount)?,
+            None => return Ok(None),
+        };
 
         let versions = CANIUSE_LITE_BROWSERS
             .keys()
@@ -46,6 +44,6 @@ impl Selector for LastNVersionsSelector {
             .flatten()
             .collect();
 
-        Some(versions)
+        Ok(Some(versions))
     }
 }
