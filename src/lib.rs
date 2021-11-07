@@ -3,7 +3,9 @@ use regex::{Regex, RegexBuilder};
 use std::cmp::Ordering;
 
 mod data;
+/// error handling
 pub mod error;
+/// browserslist options
 pub mod opts;
 mod queries;
 
