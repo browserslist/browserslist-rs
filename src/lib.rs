@@ -1,6 +1,5 @@
-use once_cell::sync::Lazy;
+use parser::{parse, Query};
 pub use queries::Version;
-use regex::{Regex, RegexBuilder};
 use std::cmp::Ordering;
 
 mod data;
@@ -8,41 +7,8 @@ mod data;
 pub mod error;
 /// browserslist options
 pub mod opts;
+mod parser;
 mod queries;
-
-static REGEX_OR: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"\s+or\s+|\s*,\s*")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
-
-static REGEX_AND: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"\s+and\s+")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
-
-enum Query<'a> {
-    And(&'a str),
-    Or(&'a str),
-}
-
-fn parse(query: &str) -> impl Iterator<Item = Query<'_>> {
-    REGEX_OR
-        .split(query)
-        .map(|s| {
-            REGEX_AND.split(s).enumerate().map(|(i, text)| {
-                if i == 0 {
-                    Query::Or(text)
-                } else {
-                    Query::And(text)
-                }
-            })
-        })
-        .flatten()
-}
 
 fn semver_compare(a: &str, b: &str) -> Ordering {
     a.split('.')
