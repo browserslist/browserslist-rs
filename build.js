@@ -10,7 +10,12 @@ Promise.all([
   ),
   fs.writeFile(
     path.join(process.env.OUT_DIR, 'caniuse-lite-usage.json'),
-    JSON.stringify(browserslist.usage.global)
+    JSON.stringify(
+      Object.entries(browserslist.usage.global).map(([v, usage]) => {
+        const [name, version] = v.split(' ')
+        return [name, version, usage]
+      })
+    )
   ),
   fs.writeFile(
     path.join(process.env.OUT_DIR, 'caniuse-lite-version-aliases.json'),

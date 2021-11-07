@@ -24,7 +24,7 @@ pub static CANIUSE_LITE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static CANIUSE_LITE_USAGE: Lazy<HashMap<String, f32>> = Lazy::new(|| {
+pub static CANIUSE_LITE_USAGE: Lazy<Vec<(String, String, f32)>> = Lazy::new(|| {
     serde_json::from_str(include_str!(concat!(
         env!("OUT_DIR"),
         "/caniuse-lite-usage.json"
@@ -96,7 +96,7 @@ static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     op_mob
 });
 
-pub fn get_browser_stat(name: &str, mobile_to_desktop: bool) -> Option<&BrowserStat> {
+pub fn get_browser_stat(name: &str, mobile_to_desktop: bool) -> Option<&'static BrowserStat> {
     let name = if name.bytes().all(|b| b.is_ascii_lowercase()) {
         Cow::from(name)
     } else {

@@ -1,4 +1,5 @@
 use once_cell::sync::Lazy;
+pub use queries::Version;
 use regex::{Regex, RegexBuilder};
 use std::cmp::Ordering;
 
@@ -58,10 +59,10 @@ fn semver_compare(a: &str, b: &str) -> Ordering {
         })
 }
 
-pub fn resolve(
-    queries: &[impl AsRef<str>],
+pub fn resolve<'a>(
+    queries: &'a [impl AsRef<str>],
     opts: &opts::Opts,
-) -> Result<Vec<String>, error::Error> {
+) -> Result<Vec<Version<'a>>, error::Error> {
     let result = queries
         .iter()
         .map(|query| parse(query.as_ref()))
@@ -97,20 +98,17 @@ pub fn resolve(
         });
 
     let mut result = result?;
-    result.sort_by(|a, b| {
-        let mut a = a.split(' ');
-        let mut b = b.split(' ');
-        let browser_a = a.next().unwrap();
-        let browser_b = b.next().unwrap();
-
-        if browser_a == browser_b {
-            let version_a = a.next().unwrap().split('-').next().unwrap();
-            let version_b = b.next().unwrap().split('-').next().unwrap();
-            semver_compare(version_a, version_b)
-        } else {
-            browser_a.cmp(browser_b)
-        }
-    });
+    result.sort_by(
+        |Version(browser_a, version_a), Version(browser_b, version_b)| {
+            if browser_a == browser_b {
+                let version_a = version_a.split('-').next().unwrap();
+                let version_b = version_b.split('-').next().unwrap();
+                semver_compare(version_a, version_b)
+            } else {
+                browser_a.cmp(browser_b)
+            }
+        },
+    );
     result.dedup();
 
     Ok(result)

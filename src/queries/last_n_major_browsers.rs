@@ -1,6 +1,6 @@
 use super::{
     caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
-    count_android_filter, should_filter_android, Selector,
+    count_android_filter, should_filter_android, Selector, SelectorResult, Version,
 };
 use crate::{error::Error, opts::Opts};
 use itertools::Itertools;
@@ -17,7 +17,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct LastNMajorBrowsersSelector;
 
 impl Selector for LastNMajorBrowsersSelector {
-    fn select(&self, text: &str, opts: &Opts) -> Result<Option<Vec<String>>, Error> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
         let count: usize = match REGEX.captures(text) {
             Some(cap) => cap[1].parse().map_err(Error::ParseVersionsCount)?,
             None => return Ok(None),
@@ -51,12 +51,7 @@ impl Selector for LastNMajorBrowsersSelector {
                         version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
                     })
                     .rev()
-                    .map(|version| {
-                        let mut r = name.clone();
-                        r.push(' ');
-                        r.push_str(&version);
-                        r
-                    })
+                    .map(move |version| Version(&name, &version))
             })
             .flatten()
             .collect();

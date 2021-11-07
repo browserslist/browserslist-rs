@@ -1,5 +1,5 @@
-use super::Selector;
-use crate::{error::Error, opts::Opts};
+use super::{Selector, SelectorResult, Version};
+use crate::opts::Opts;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
@@ -13,9 +13,12 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct FirefoxESRSelector;
 
 impl Selector for FirefoxESRSelector {
-    fn select(&self, text: &str, _: &Opts) -> Result<Option<Vec<String>>, Error> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
         if REGEX.is_match(text) {
-            Ok(Some(vec!["firefox 78".into(), "firefox 91".into()]))
+            Ok(Some(vec![
+                Version("firefox", "78"),
+                Version("firefox", "91"),
+            ]))
         } else {
             Ok(None)
         }

@@ -1,4 +1,5 @@
 use crate::{data::caniuse, error::Error, opts::Opts};
+use std::fmt::Display;
 
 mod browser_version_range;
 mod dead;
@@ -11,11 +12,39 @@ mod last_n_major_browsers;
 mod percentage;
 mod phantom;
 
-trait Selector {
-    fn select(&self, text: &str, opts: &Opts) -> Result<Option<Vec<String>>, Error>;
+/// Representation of browser name (or `node`) and its version.
+///
+/// When converting it to string, it will be formatted as the output of
+/// [browserslist](https://github.com/browserslist/browserslist). For example:
+///
+/// ```
+/// use browserslist::Version;
+///
+/// assert_eq!(Version("chrome", "95").to_string(), "chrome 95".to_string());
+/// assert_eq!(Version("op_mini", "all").to_string(), "op_mini all".to_string());
+/// assert_eq!(Version("node", "16.0.0").to_string(), "node 16.0.0".to_string());
+/// ```
+#[derive(Debug, PartialEq, Eq)]
+pub struct Version<'a>(
+    /// browser name, or `node`
+    pub &'a str,
+    /// version string
+    pub &'a str,
+);
+
+impl<'a> Display for Version<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.0, self.1)
+    }
 }
 
-pub fn query(query_string: &str, opts: &Opts) -> Result<Vec<String>, Error> {
+pub type SelectorResult<'a> = Result<Option<Vec<Version<'a>>>, Error>;
+
+trait Selector {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a>;
+}
+
+pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Version<'a>>, Error> {
     let selectors: Vec<Box<dyn Selector>> = vec![
         Box::new(last_n_major_browsers::LastNMajorBrowsersSelector),
         Box::new(last_n_browsers::LastNBrowsersSelector),
