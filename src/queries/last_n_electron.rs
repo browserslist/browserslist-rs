@@ -10,9 +10,9 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
-pub(super) struct LastElectronSelector;
+pub(super) struct LastNElectronSelector;
 
-impl Selector for LastElectronSelector {
+impl Selector for LastNElectronSelector {
     fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
         if let Some(cap) = REGEX.captures(text) {
             let count: usize = cap[1].parse().map_err(Error::ParseVersionsCount)?;
