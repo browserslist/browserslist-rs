@@ -1,4 +1,4 @@
-use super::{Selector, SelectorResult, Distrib};
+use super::{Distrib, Selector, SelectorResult};
 use crate::{data::electron::ELECTRON_VERSIONS, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};

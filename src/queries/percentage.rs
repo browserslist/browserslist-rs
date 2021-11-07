@@ -1,4 +1,4 @@
-use super::{Selector, SelectorResult, Distrib};
+use super::{Distrib, Selector, SelectorResult};
 use crate::{data::caniuse::CANIUSE_LITE_USAGE, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::Regex;

@@ -1,6 +1,6 @@
 use super::{
     caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
-    count_android_filter, should_filter_android, Selector, SelectorResult, Distrib,
+    count_android_filter, should_filter_android, Distrib, Selector, SelectorResult,
 };
 use crate::{error::Error, opts::Opts};
 use itertools::Itertools;

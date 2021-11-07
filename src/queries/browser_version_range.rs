@@ -1,4 +1,4 @@
-use super::{Selector, SelectorResult, Distrib};
+use super::{Distrib, Selector, SelectorResult};
 use crate::{
     data::caniuse::{get_browser_stat, CANIUSE_LITE_VERSION_ALIASES},
     error::Error,
