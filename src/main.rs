@@ -1,4 +1,4 @@
-use browserslist::{opts::Opts, resolve};
+use browserslist::{resolve, Opts};
 use std::env;
 
 fn main() {

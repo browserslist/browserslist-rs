@@ -1,12 +1,10 @@
 use parser::{parse, Query};
-pub use queries::Distrib;
 use std::cmp::Ordering;
+pub use {error::Error, opts::Opts, queries::Distrib};
 
 mod data;
-/// error handling
-pub mod error;
-/// browserslist options
-pub mod opts;
+mod error;
+mod opts;
 mod parser;
 mod queries;
 
