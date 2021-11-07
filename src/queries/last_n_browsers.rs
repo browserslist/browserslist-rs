@@ -13,9 +13,9 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
-pub(super) struct LastNVersionsSelector;
+pub(super) struct LastNBrowsersSelector;
 
-impl Selector for LastNVersionsSelector {
+impl Selector for LastNBrowsersSelector {
     fn select(&self, text: &str, opts: &Opts) -> Result<Option<Vec<String>>, Error> {
         let count: usize = match REGEX.captures(text) {
             Some(cap) => cap[1].parse().map_err(Error::ParseVersionsCount)?,
