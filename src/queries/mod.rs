@@ -7,6 +7,7 @@ mod electron;
 mod firefox_esr;
 mod last_electron;
 mod last_n_browsers;
+mod last_n_major_browsers;
 mod percentage;
 mod phantom;
 
@@ -16,6 +17,7 @@ trait Selector {
 
 pub fn query(query_string: &str, opts: &Opts) -> Result<Vec<String>, Error> {
     let selectors: Vec<Box<dyn Selector>> = vec![
+        Box::new(last_n_major_browsers::LastNMajorBrowsersSelector),
         Box::new(last_n_browsers::LastNBrowsersSelector),
         Box::new(percentage::PercentageSelector),
         Box::new(last_electron::LastElectronSelector),
