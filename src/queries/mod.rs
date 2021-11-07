@@ -20,17 +20,47 @@ mod phantom;
 /// ```
 /// use browserslist::Version;
 ///
-/// assert_eq!(Version("chrome", "95").to_string(), "chrome 95".to_string());
-/// assert_eq!(Version("op_mini", "all").to_string(), "op_mini all".to_string());
-/// assert_eq!(Version("node", "16.0.0").to_string(), "node 16.0.0".to_string());
+/// assert_eq!(Version::new("firefox", "93").to_string(), "firefox 93".to_string());
+/// assert_eq!(Version::new("op_mini", "all").to_string(), "op_mini all".to_string());
+/// assert_eq!(Version::new("node", "16.0.0").to_string(), "node 16.0.0".to_string());
 /// ```
 #[derive(Debug, PartialEq, Eq)]
-pub struct Version<'a>(
-    /// browser name, or `node`
-    pub &'a str,
-    /// version string
-    pub &'a str,
-);
+pub struct Version<'a>(&'a str, &'a str);
+
+impl<'a> Version<'a> {
+    #[inline]
+    pub fn new(name: &'a str, version: &'a str) -> Self {
+        Self(name, version)
+    }
+
+    /// Return browser name, or `node`.
+    ///
+    /// ```
+    /// use browserslist::Version;
+    ///
+    /// assert_eq!(Version::new("firefox", "93").name(), "firefox");
+    /// assert_eq!(Version::new("op_mini", "all").name(), "op_mini");
+    /// assert_eq!(Version::new("node", "16.0.0").name(), "node");
+    /// ```
+    #[inline]
+    pub fn name(&self) -> &str {
+        self.0
+    }
+
+    /// Return version string.
+    ///
+    /// ```
+    /// use browserslist::Version;
+    ///
+    /// assert_eq!(Version::new("firefox", "93").version(), "93");
+    /// assert_eq!(Version::new("op_mini", "all").version(), "all");
+    /// assert_eq!(Version::new("node", "16.0.0").version(), "16.0.0");
+    /// ```
+    #[inline]
+    pub fn version(&self) -> &str {
+        self.1
+    }
+}
 
 impl<'a> Display for Version<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -42,7 +42,7 @@ impl Selector for BrowserVersionRangeSelector {
                     _ => v >= version,
                 }
             })
-            .map(|version| Version(&stat.name, &version))
+            .map(|version| Version::new(&stat.name, &version))
             .collect();
         Ok(Some(versions))
     }

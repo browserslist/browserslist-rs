@@ -64,17 +64,14 @@ pub fn resolve<'a>(
         });
 
     let mut result = result?;
-    result.sort_by(
-        |Version(browser_a, version_a), Version(browser_b, version_b)| {
-            if browser_a == browser_b {
-                let version_a = version_a.split('-').next().unwrap();
-                let version_b = version_b.split('-').next().unwrap();
-                semver_compare(version_a, version_b)
-            } else {
-                browser_a.cmp(browser_b)
-            }
-        },
-    );
+    result.sort_by(|a, b| match a.name().cmp(b.name()) {
+        Ordering::Equal => {
+            let version_a = a.version().split('-').next().unwrap();
+            let version_b = b.version().split('-').next().unwrap();
+            semver_compare(version_a, version_b)
+        }
+        ord => ord,
+    });
     result.dedup();
 
     Ok(result)

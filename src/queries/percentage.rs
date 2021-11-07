@@ -25,7 +25,7 @@ impl Selector for PercentageSelector {
                 "<=" => *usage <= popularity,
                 _ => *usage >= popularity,
             })
-            .map(|(name, version, _)| Version(name, version))
+            .map(|(name, version, _)| Version::new(name, version))
             .collect();
         Ok(Some(versions))
     }

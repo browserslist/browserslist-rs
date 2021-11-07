@@ -20,7 +20,7 @@ impl Selector for LastElectronSelector {
                 .iter()
                 .rev()
                 .take(count)
-                .map(|(_, version)| Version("chrome", &version))
+                .map(|(_, version)| Version::new("chrome", &version))
                 .collect();
             Ok(Some(versions))
         } else {

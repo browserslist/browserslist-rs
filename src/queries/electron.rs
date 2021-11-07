@@ -21,7 +21,7 @@ impl Selector for ElectronSelector {
             let versions = ELECTRON_VERSIONS
                 .iter()
                 .filter(|(version, _)| from <= *version && *version <= to)
-                .map(|(_, version)| Version("chrome", &version))
+                .map(|(_, version)| Version::new("chrome", &version))
                 .collect();
             Ok(Some(versions))
         } else {

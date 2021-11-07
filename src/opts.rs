@@ -2,7 +2,7 @@
 #[derive(Clone, Debug, Default)]
 pub struct Opts {
     /// Use desktop browsers if Can I Use doesn’t have data about this mobile version.
-    pub mobile_to_desktop: bool,
+    pub(crate) mobile_to_desktop: bool,
 }
 
 impl Opts {

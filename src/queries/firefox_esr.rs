@@ -16,8 +16,8 @@ impl Selector for FirefoxESRSelector {
     fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
         if REGEX.is_match(text) {
             Ok(Some(vec![
-                Version("firefox", "78"),
-                Version("firefox", "91"),
+                Version::new("firefox", "78"),
+                Version::new("firefox", "91"),
             ]))
         } else {
             Ok(None)
