@@ -14,6 +14,7 @@ mod last_n_x_browsers;
 mod last_n_x_major_browsers;
 mod percentage;
 mod phantom;
+mod unreleased_browsers;
 
 /// Representation of browser name (or `node`) and its version.
 ///
@@ -85,6 +86,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(last_n_x_major_browsers::LastNXMajorBrowsersSelector),
         Box::new(last_n_electron::LastNElectronSelector),
         Box::new(last_n_x_browsers::LastNXBrowsersSelector),
+        Box::new(unreleased_browsers::UnreleasedBrowsersSelector),
         Box::new(percentage::PercentageSelector),
         Box::new(electron::ElectronSelector),
         Box::new(browser_version_range::BrowserVersionRangeSelector),
