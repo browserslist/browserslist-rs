@@ -1,8 +1,9 @@
-use super::{
-    caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
-    count_android_filter, should_filter_android, Distrib, Selector, SelectorResult,
+use super::{count_android_filter, should_filter_android, Distrib, Selector, SelectorResult};
+use crate::{
+    data::caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
+    error::Error,
+    opts::Opts,
 };
-use crate::{error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
