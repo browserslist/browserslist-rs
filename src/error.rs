@@ -11,6 +11,8 @@ pub enum Error {
     ParseVersionsCount(num::ParseIntError),
     #[error("invalid years count: {0:?}")]
     ParseYearsCount(num::ParseFloatError),
+    #[error("invalid date: {0}")]
+    InvalidDate(String),
     #[error("unknown browser: '{0}'")]
     BrowserNotFound(String),
 }

@@ -15,6 +15,7 @@ mod last_n_x_major_browsers;
 mod op_mini;
 mod percentage;
 mod phantom;
+mod since;
 mod unreleased_browsers;
 mod unreleased_electron;
 mod unreleased_x_browsers;
@@ -94,6 +95,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(unreleased_electron::UnreleasedElectronSelector),
         Box::new(unreleased_x_browsers::UnreleasedXBrowsersSelector),
         Box::new(years::YearsSelector),
+        Box::new(since::SinceSelector),
         Box::new(percentage::PercentageSelector),
         Box::new(electron::ElectronSelector),
         Box::new(browser_version_range::BrowserVersionRangeSelector),
