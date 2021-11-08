@@ -100,14 +100,12 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(dead::DeadSelector),
     ];
 
-    selectors
-        .into_iter()
-        .try_fold(vec![], |mut result, selector| {
-            if let Some(mut r) = selector.select(query_string, opts)? {
-                result.append(&mut r);
-            };
-            Ok(result)
-        })
+    for selector in selectors {
+        if let Some(distribs) = selector.select(query_string, opts)? {
+            return Ok(distribs);
+        }
+    }
+    Ok(vec![])
 }
 
 #[inline]
