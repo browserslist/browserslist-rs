@@ -11,7 +11,7 @@ pub struct BrowserStat {
     pub versions: Vec<String>,
     pub released: Vec<String>,
     #[serde(rename = "releaseDate")]
-    pub release_date: HashMap<String, Option<u32>>,
+    pub release_date: HashMap<String, Option<i64>>,
 }
 
 pub type CaniuseData = HashMap<String, BrowserStat>;

@@ -9,6 +9,8 @@ pub enum Error {
     ParsePercentage(num::ParseFloatError),
     #[error("invalid versions count: {0:?}")]
     ParseVersionsCount(num::ParseIntError),
+    #[error("invalid years count: {0:?}")]
+    ParseYearsCount(num::ParseFloatError),
     #[error("unknown browser: '{0}'")]
     BrowserNotFound(String),
 }
