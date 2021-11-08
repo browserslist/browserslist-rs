@@ -12,6 +12,7 @@ mod last_n_electron_major;
 mod last_n_major_browsers;
 mod last_n_x_browsers;
 mod last_n_x_major_browsers;
+mod op_mini;
 mod percentage;
 mod phantom;
 mod unreleased_browsers;
@@ -97,6 +98,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(electron::ElectronSelector),
         Box::new(browser_version_range::BrowserVersionRangeSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
+        Box::new(op_mini::OperaMiniSelector),
         Box::new(phantom::PhantomSelector),
         Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),
