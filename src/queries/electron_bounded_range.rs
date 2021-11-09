@@ -10,9 +10,9 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
-pub(super) struct ElectronSelector;
+pub(super) struct ElectronBoundedRangeSelector;
 
-impl Selector for ElectronSelector {
+impl Selector for ElectronBoundedRangeSelector {
     fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
         if let Some(cap) = REGEX.captures(text) {
             let from: f32 = cap[1].parse().map_err(Error::ParseVersion)?;

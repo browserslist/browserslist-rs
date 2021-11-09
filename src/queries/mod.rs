@@ -5,7 +5,7 @@ mod browser_unbounded_range;
 mod cover;
 mod dead;
 mod defaults;
-mod electron;
+mod electron_bounded_range;
 mod firefox_esr;
 mod last_n_browsers;
 mod last_n_electron;
@@ -99,7 +99,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(since::SinceSelector),
         Box::new(percentage::PercentageSelector),
         Box::new(cover::CoverSelector),
-        Box::new(electron::ElectronSelector),
+        Box::new(electron_bounded_range::ElectronBoundedRangeSelector),
         Box::new(browser_unbounded_range::BrowserUnboundedRangeSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
         Box::new(op_mini::OperaMiniSelector),
