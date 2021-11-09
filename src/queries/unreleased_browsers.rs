@@ -25,7 +25,7 @@ impl Selector for UnreleasedBrowsersSelector {
                     stat.versions
                         .iter()
                         .filter(|version| !stat.released.contains(version))
-                        .map(|version| Distrib(&stat.name, version))
+                        .map(|version| Distrib::new(&stat.name, version))
                 })
                 .flatten()
                 .collect();

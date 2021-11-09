@@ -33,7 +33,7 @@ impl Selector for YearsSelector {
                     stat.released
                         .iter()
                         .filter(|version| matches!(stat.release_date.get(*version), Some(Some(date)) if *date >= time))
-                        .map(|version| Distrib(&stat.name, &version))
+                        .map(|version| Distrib::new(&stat.name, &version))
                 })
                 .flatten()
                 .collect();

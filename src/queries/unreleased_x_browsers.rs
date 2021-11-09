@@ -22,7 +22,7 @@ impl Selector for UnreleasedXBrowsersSelector {
                 .versions
                 .iter()
                 .filter(|version| !stat.released.contains(version))
-                .map(|version| Distrib(&stat.name, version))
+                .map(|version| Distrib::new(&stat.name, version))
                 .collect();
             Ok(Some(versions))
         } else {
