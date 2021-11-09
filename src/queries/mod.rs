@@ -13,6 +13,7 @@ mod last_n_electron_major;
 mod last_n_major_browsers;
 mod last_n_x_browsers;
 mod last_n_x_major_browsers;
+mod node_bounded_range;
 mod op_mini;
 mod percentage;
 mod phantom;
@@ -100,6 +101,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(percentage::PercentageSelector),
         Box::new(cover::CoverSelector),
         Box::new(electron_bounded_range::ElectronBoundedRangeSelector),
+        Box::new(node_bounded_range::NodeBoundedRangeSelector),
         Box::new(browser_unbounded_range::BrowserUnboundedRangeSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
         Box::new(op_mini::OperaMiniSelector),

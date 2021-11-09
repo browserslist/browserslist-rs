@@ -7,21 +7,7 @@ mod error;
 mod opts;
 mod parser;
 mod queries;
-
-fn semver_compare(a: &str, b: &str) -> Ordering {
-    a.split('.')
-        .zip(b.split('.'))
-        .fold(Ordering::Equal, |ord, (a, b)| {
-            if ord == Ordering::Equal {
-                // this is intentional: version comes from high to low
-                b.parse::<i32>()
-                    .unwrap_or(0)
-                    .cmp(&a.parse::<i32>().unwrap_or(0))
-            } else {
-                ord
-            }
-        })
-}
+mod util;
 
 pub fn resolve<'a>(
     queries: &'a [impl AsRef<str>],
@@ -66,7 +52,7 @@ pub fn resolve<'a>(
         Ordering::Equal => {
             let version_a = a.version().split('-').next().unwrap();
             let version_b = b.version().split('-').next().unwrap();
-            semver_compare(version_a, version_b)
+            util::semver_compare(version_a, version_b)
         }
         ord => ord,
     });

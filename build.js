@@ -2,6 +2,7 @@ const fs = require('fs/promises')
 const path = require('path')
 const browserslist = require('browserslist')
 const e2c = require('electron-to-chromium/versions')
+const nodeVersions = require('node-releases/data/processed/envs.json')
 
 Promise.all([
   fs.writeFile(
@@ -28,5 +29,9 @@ Promise.all([
     JSON.stringify(
       Object.entries(e2c).map(([k, v]) => [Number.parseFloat(k), v])
     )
+  ),
+  fs.writeFile(
+    path.join(process.env.OUT_DIR, 'node-versions.json'),
+    JSON.stringify(nodeVersions.map(({ version }) => version))
   ),
 ])

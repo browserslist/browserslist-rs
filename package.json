@@ -6,6 +6,7 @@
   "private": true,
   "dependencies": {
     "browserslist": "*",
-    "electron-to-chromium": "*"
+    "electron-to-chromium": "*",
+    "node-releases": "^2.0.1"
   }
 }
