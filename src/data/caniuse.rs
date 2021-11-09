@@ -146,3 +146,21 @@ fn to_desktop_name(name: &str) -> Option<&'static str> {
         _ => None,
     }
 }
+
+pub(crate) fn normalize_version<'a>(
+    stat: &'static BrowserStat,
+    version: &'a str,
+) -> Option<&'a str> {
+    if stat.versions.iter().any(|v| v == version) {
+        Some(version)
+    } else if let Some(version) = CANIUSE_LITE_VERSION_ALIASES
+        .get(&stat.name)
+        .and_then(|aliases| aliases.get(version).map(|s| s.as_str()))
+    {
+        Some(version)
+    } else if stat.versions.len() == 1 {
+        stat.versions.first().map(|s| s.as_str())
+    } else {
+        None
+    }
+}

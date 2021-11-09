@@ -7,8 +7,8 @@ pub(crate) fn semver_compare(a: &str, b: &str) -> Ordering {
             if ord == Ordering::Equal {
                 // this is intentional: version comes from high to low
                 b.parse::<i32>()
-                    .unwrap_or(0)
-                    .cmp(&a.parse::<i32>().unwrap_or(0))
+                    .unwrap_or_default()
+                    .cmp(&a.parse::<i32>().unwrap_or_default())
             } else {
                 ord
             }
@@ -23,8 +23,8 @@ pub(crate) fn semver_loose_compare(a: &str, b: &str) -> Ordering {
             if ord == Ordering::Equal {
                 // this is intentional: version comes from high to low
                 b.parse::<i32>()
-                    .unwrap_or(0)
-                    .cmp(&a.parse::<i32>().unwrap_or(0))
+                    .unwrap_or_default()
+                    .cmp(&a.parse::<i32>().unwrap_or_default())
             } else {
                 ord
             }
