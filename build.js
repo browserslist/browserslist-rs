@@ -11,10 +11,12 @@ Promise.all([
   fs.writeFile(
     path.join(process.env.OUT_DIR, 'caniuse-lite-usage.json'),
     JSON.stringify(
-      Object.entries(browserslist.usage.global).map(([v, usage]) => {
-        const [name, version] = v.split(' ')
-        return [name, version, usage]
-      })
+      Object.entries(browserslist.usage.global)
+        .map(([v, usage]) => {
+          const [name, version] = v.split(' ')
+          return [name, version, usage]
+        })
+        .sort(([, , a], [, , b]) => b - a)
     )
   ),
   fs.writeFile(

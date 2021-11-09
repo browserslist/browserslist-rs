@@ -2,6 +2,7 @@ use crate::{data::caniuse, error::Error, opts::Opts};
 use std::fmt::Display;
 
 mod browser_version_range;
+mod cover;
 mod dead;
 mod defaults;
 mod electron;
@@ -97,6 +98,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(years::YearsSelector),
         Box::new(since::SinceSelector),
         Box::new(percentage::PercentageSelector),
+        Box::new(cover::CoverSelector),
         Box::new(electron::ElectronSelector),
         Box::new(browser_version_range::BrowserVersionRangeSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
