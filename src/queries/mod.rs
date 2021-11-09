@@ -1,7 +1,7 @@
 use crate::{data::caniuse, error::Error, opts::Opts};
 use std::fmt::Display;
 
-mod browser_version_range;
+mod browser_unbounded_range;
 mod cover;
 mod dead;
 mod defaults;
@@ -100,7 +100,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(percentage::PercentageSelector),
         Box::new(cover::CoverSelector),
         Box::new(electron::ElectronSelector),
-        Box::new(browser_version_range::BrowserVersionRangeSelector),
+        Box::new(browser_unbounded_range::BrowserUnboundedRangeSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
         Box::new(op_mini::OperaMiniSelector),
         Box::new(phantom::PhantomSelector),

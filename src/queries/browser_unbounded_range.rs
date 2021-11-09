@@ -7,11 +7,11 @@ use crate::{
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+)\s*(>=?|<=?)\s*([\d.]+)$").unwrap());
+static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+)\s*([<>]=?)\s*([\d.]+)$").unwrap());
 
-pub(super) struct BrowserVersionRangeSelector;
+pub(super) struct BrowserUnboundedRangeSelector;
 
-impl Selector for BrowserVersionRangeSelector {
+impl Selector for BrowserUnboundedRangeSelector {
     fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
         let cap = match REGEX.captures(text) {
             Some(cap) => cap,
