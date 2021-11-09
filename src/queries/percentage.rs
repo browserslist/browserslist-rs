@@ -3,7 +3,7 @@ use crate::{data::caniuse::CANIUSE_LITE_USAGE, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(>=?|<=?)\s*(\d+|\d+\.\d+|\.\d+)%").unwrap());
+static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([<>]=?)\s*(\d*\.?\d+)%$").unwrap());
 
 pub(super) struct PercentageSelector;
 
