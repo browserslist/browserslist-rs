@@ -36,7 +36,7 @@ impl Selector for BrowserBoundedRangeSelector {
                     let version: f32 = version.parse().unwrap_or_default();
                     from <= version && version <= to
                 })
-                .map(|version| Distrib::new(&stat.name, &version))
+                .map(|version| Distrib::new(&stat.name, version))
                 .collect();
             Ok(Some(versions))
         } else {

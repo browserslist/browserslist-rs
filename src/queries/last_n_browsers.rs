@@ -39,7 +39,7 @@ impl Selector for LastNBrowsersSelector {
                     .iter()
                     .rev()
                     .take(count)
-                    .map(move |version| Distrib::new(&name, &version))
+                    .map(move |version| Distrib::new(&name, version))
             })
             .flatten()
             .collect();

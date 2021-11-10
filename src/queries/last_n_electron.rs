@@ -20,7 +20,7 @@ impl Selector for LastNElectronSelector {
                 .iter()
                 .rev()
                 .take(count)
-                .map(|(_, version)| Distrib::new("chrome", &version))
+                .map(|(_, version)| Distrib::new("chrome", version))
                 .collect();
             Ok(Some(versions))
         } else {

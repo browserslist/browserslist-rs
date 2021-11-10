@@ -30,7 +30,7 @@ impl Selector for NodeUnboundedRangeSelector {
                         _ => matches!(ord, Ordering::Greater | Ordering::Equal),
                     }
                 })
-                .map(|version| Distrib::new("node", &version))
+                .map(|version| Distrib::new("node", version))
                 .collect();
             Ok(Some(versions))
         } else {

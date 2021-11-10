@@ -30,7 +30,7 @@ impl Selector for NodeBoundedRangeSelector {
                         Ordering::Less | Ordering::Equal
                     )
                 })
-                .map(|version| Distrib::new("node", &version))
+                .map(|version| Distrib::new("node", version))
                 .collect();
             Ok(Some(versions))
         } else {

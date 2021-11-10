@@ -42,7 +42,7 @@ impl Selector for BrowserUnboundedRangeSelector {
                     _ => v >= version,
                 }
             })
-            .map(|version| Distrib::new(&stat.name, &version))
+            .map(|version| Distrib::new(&stat.name, version))
             .collect();
         Ok(Some(versions))
     }

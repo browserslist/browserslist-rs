@@ -1,9 +1,10 @@
 use crate::{data::caniuse, error::Error, opts::Opts};
-use std::fmt::Display;
+use std::{borrow::Cow, fmt::Display};
 
 mod browser_bounded_range;
 mod browser_unbounded_range;
 mod cover;
+mod current_node;
 mod dead;
 mod defaults;
 mod electron_accurate;
@@ -41,12 +42,12 @@ mod years;
 /// assert_eq!(Distrib::new("node", "16.0.0").to_string(), "node 16.0.0".to_string());
 /// ```
 #[derive(Debug, PartialEq, Eq)]
-pub struct Distrib<'a>(&'a str, &'a str);
+pub struct Distrib<'a>(&'a str, Cow<'a, str>);
 
 impl<'a> Distrib<'a> {
     #[inline]
-    pub fn new(name: &'a str, version: &'a str) -> Self {
-        Self(name, version)
+    pub fn new<S: Into<Cow<'a, str>>>(name: &'a str, version: S) -> Self {
+        Self(name, version.into())
     }
 
     /// Return browser name, or `node`.
@@ -74,7 +75,7 @@ impl<'a> Distrib<'a> {
     /// ```
     #[inline]
     pub fn version(&self) -> &str {
-        self.1
+        &self.1
     }
 }
 
@@ -115,6 +116,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(op_mini::OperaMiniSelector),
         Box::new(electron_accurate::ElectronAccurateSelector),
         Box::new(node_accurate::NodeAccurateSelector),
+        Box::new(current_node::CurrentNodeSelector),
         Box::new(phantom::PhantomSelector),
         Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),

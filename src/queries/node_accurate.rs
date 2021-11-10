@@ -22,7 +22,7 @@ impl Selector for NodeAccurateSelector {
                 .filter(|v| v.split('.').zip(version.split('.')).all(|(a, b)| a == b))
                 .rev()
                 .next()
-                .map(|version| vec![Distrib::new("node", &version)]);
+                .map(|version| vec![Distrib::new("node", version)]);
             if opts.ignore_unknown_versions {
                 Ok(Some(versions.unwrap_or_default()))
             } else {

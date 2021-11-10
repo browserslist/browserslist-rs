@@ -52,7 +52,7 @@ impl Selector for LastNMajorBrowsersSelector {
                         version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
                     })
                     .rev()
-                    .map(move |version| Distrib::new(&name, &version))
+                    .map(move |version| Distrib::new(&name, version))
             })
             .flatten()
             .collect();

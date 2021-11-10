@@ -35,7 +35,7 @@ impl Selector for LastNXBrowsersSelector {
             .iter()
             .rev()
             .take(count)
-            .map(|version| Distrib::new(name, &version))
+            .map(|version| Distrib::new(name, version))
             .collect();
         Ok(Some(versions))
     }

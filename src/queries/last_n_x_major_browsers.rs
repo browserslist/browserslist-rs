@@ -47,7 +47,7 @@ impl Selector for LastNXMajorBrowsersSelector {
                 version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
             })
             .rev()
-            .map(move |version| Distrib::new(&name, &version))
+            .map(move |version| Distrib::new(&name, version))
             .collect();
 
         Ok(Some(versions))
