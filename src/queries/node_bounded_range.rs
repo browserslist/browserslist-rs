@@ -1,5 +1,5 @@
 use super::{Distrib, Selector, SelectorResult};
-use crate::{data::node::NODE_VERSIONS, opts::Opts, util::semver_loose_compare};
+use crate::{data::node::NODE_VERSIONS, opts::Opts, semver::loose_compare};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use std::cmp::Ordering;
@@ -23,10 +23,10 @@ impl Selector for NodeBoundedRangeSelector {
                 .iter()
                 .filter(|version| {
                     matches!(
-                        semver_loose_compare(from, &version),
+                        loose_compare(&version, from),
                         Ordering::Greater | Ordering::Equal
                     ) && matches!(
-                        semver_loose_compare(to, &version),
+                        loose_compare(&version, to),
                         Ordering::Less | Ordering::Equal
                     )
                 })

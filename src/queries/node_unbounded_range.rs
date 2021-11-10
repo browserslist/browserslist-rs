@@ -1,5 +1,5 @@
 use super::{Distrib, Selector, SelectorResult};
-use crate::{data::node::NODE_VERSIONS, opts::Opts, util::semver_compare};
+use crate::{data::node::NODE_VERSIONS, opts::Opts, semver::compare};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use std::cmp::Ordering;
@@ -22,7 +22,7 @@ impl Selector for NodeUnboundedRangeSelector {
             let versions = NODE_VERSIONS
                 .iter()
                 .filter(|v| {
-                    let ord = semver_compare(version, &v);
+                    let ord = compare(&v, version);
                     match sign {
                         ">" => matches!(ord, Ordering::Greater),
                         "<" => matches!(ord, Ordering::Less),

@@ -7,7 +7,7 @@ mod error;
 mod opts;
 mod parser;
 mod queries;
-mod util;
+mod semver;
 
 pub fn resolve<'a>(
     queries: &'a [impl AsRef<str>],
@@ -52,7 +52,7 @@ pub fn resolve<'a>(
         Ordering::Equal => {
             let version_a = a.version().split('-').next().unwrap();
             let version_b = b.version().split('-').next().unwrap();
-            util::semver_compare(version_a, version_b)
+            semver::reverse_compare(version_a, version_b)
         }
         ord => ord,
     });
