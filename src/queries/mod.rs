@@ -17,6 +17,7 @@ mod last_n_electron_major;
 mod last_n_major_browsers;
 mod last_n_x_browsers;
 mod last_n_x_major_browsers;
+mod maintained_node;
 mod node_accurate;
 mod node_bounded_range;
 mod node_unbounded_range;
@@ -117,6 +118,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(electron_accurate::ElectronAccurateSelector),
         Box::new(node_accurate::NodeAccurateSelector),
         Box::new(current_node::CurrentNodeSelector),
+        Box::new(maintained_node::MaintainedNodeSelector),
         Box::new(phantom::PhantomSelector),
         Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),

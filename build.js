@@ -3,6 +3,7 @@ const path = require('path')
 const browserslist = require('browserslist')
 const e2c = require('electron-to-chromium/versions')
 const nodeVersions = require('node-releases/data/processed/envs.json')
+const nodeReleaseSchedule = require('node-releases/data/release-schedule/release-schedule.json')
 
 Promise.all([
   fs.writeFile(
@@ -33,5 +34,16 @@ Promise.all([
   fs.writeFile(
     path.join(process.env.OUT_DIR, 'node-versions.json'),
     JSON.stringify(nodeVersions.map(({ version }) => version))
+  ),
+  fs.writeFile(
+    path.join(process.env.OUT_DIR, 'node-release-schedule.json'),
+    JSON.stringify(
+      Object.fromEntries(
+        Object.entries(nodeReleaseSchedule).map(([version, { start, end }]) => [
+          version.slice(1),
+          [start, end],
+        ])
+      )
+    )
   ),
 ])
