@@ -15,4 +15,6 @@ pub enum Error {
     InvalidDate(String),
     #[error("unknown browser: '{0}'")]
     BrowserNotFound(String),
+    #[error("unknown Electron version: {0}")]
+    UnknownElectronVersion(String),
 }

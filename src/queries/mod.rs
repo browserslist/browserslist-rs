@@ -6,6 +6,7 @@ mod browser_unbounded_range;
 mod cover;
 mod dead;
 mod defaults;
+mod electron_accurate;
 mod electron_bounded_range;
 mod electron_unbounded_range;
 mod firefox_esr;
@@ -111,6 +112,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(browser_unbounded_range::BrowserUnboundedRangeSelector),
         Box::new(firefox_esr::FirefoxESRSelector),
         Box::new(op_mini::OperaMiniSelector),
+        Box::new(electron_accurate::ElectronAccurateSelector),
         Box::new(phantom::PhantomSelector),
         Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),
