@@ -5,14 +5,9 @@ use crate::{
     opts::Opts,
 };
 use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
+use regex::Regex;
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^(\w+)\s+([\d.]+)\s*-\s*([\d.]+)$")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
+static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+)\s+([\d.]+)\s*-\s*([\d.]+)$").unwrap());
 
 pub(super) struct BrowserBoundedRangeSelector;
 

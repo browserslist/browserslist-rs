@@ -1,10 +1,14 @@
 use super::{Distrib, Selector, SelectorResult};
 use crate::{data::electron::ELECTRON_VERSIONS, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 
-static REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^electron\s*([<>]=?)\s*(\d+\.\d+)(?:\.\d+)?$").unwrap());
+static REGEX: Lazy<Regex> = Lazy::new(|| {
+    RegexBuilder::new(r"^electron\s*([<>]=?)\s*(\d+\.\d+)(?:\.\d+)?$")
+        .case_insensitive(true)
+        .build()
+        .unwrap()
+});
 
 pub(super) struct ElectronUnboundedRangeSelector;
 
