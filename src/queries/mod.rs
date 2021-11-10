@@ -16,6 +16,7 @@ mod last_n_electron_major;
 mod last_n_major_browsers;
 mod last_n_x_browsers;
 mod last_n_x_major_browsers;
+mod node_accurate;
 mod node_bounded_range;
 mod node_unbounded_range;
 mod op_mini;
@@ -113,6 +114,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(firefox_esr::FirefoxESRSelector),
         Box::new(op_mini::OperaMiniSelector),
         Box::new(electron_accurate::ElectronAccurateSelector),
+        Box::new(node_accurate::NodeAccurateSelector),
         Box::new(phantom::PhantomSelector),
         Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),

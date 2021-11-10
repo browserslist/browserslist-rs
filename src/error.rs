@@ -17,4 +17,6 @@ pub enum Error {
     BrowserNotFound(String),
     #[error("unknown Electron version: {0}")]
     UnknownElectronVersion(String),
+    #[error("unknown Node.js version: {0}")]
+    UnknownNodejsVersion(String),
 }
