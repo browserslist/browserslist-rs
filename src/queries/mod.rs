@@ -1,4 +1,4 @@
-use crate::{data::caniuse, error::Error, opts::Opts};
+use crate::{data::caniuse, data::caniuse::get_browser_stat, error::Error, opts::Opts};
 use std::{borrow::Cow, fmt::Display};
 
 mod browser_bounded_range;
@@ -129,7 +129,11 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
             return Ok(distribs);
         }
     }
-    Ok(vec![])
+    if get_browser_stat(query_string, opts.mobile_to_desktop).is_some() {
+        Err(Error::VersionRequired(query_string.to_string()))
+    } else {
+        Err(Error::UnknownQuery(query_string.to_string()))
+    }
 }
 
 #[inline]

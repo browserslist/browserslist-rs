@@ -21,4 +21,8 @@ pub enum Error {
     UnknownNodejsVersion(String),
     #[error("current environment for querying `current node` is not supported")]
     UnsupportedCurrentNode,
+    #[error("specify versions in Browserslist query for browser '{0}'")]
+    VersionRequired(String),
+    #[error("unknown browser query: '{0}'")]
+    UnknownQuery(String),
 }
