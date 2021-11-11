@@ -1,6 +1,7 @@
 use crate::{data::caniuse, data::caniuse::get_browser_stat, error::Error, opts::Opts};
 use std::{borrow::Cow, fmt::Display};
 
+mod browser_accurate;
 mod browser_bounded_range;
 mod browser_unbounded_range;
 mod cover;
@@ -120,6 +121,7 @@ pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>,
         Box::new(current_node::CurrentNodeSelector),
         Box::new(maintained_node::MaintainedNodeSelector),
         Box::new(phantom::PhantomSelector),
+        Box::new(browser_accurate::BrowserAccurateSelector),
         Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),
     ];

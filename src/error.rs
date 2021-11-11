@@ -19,6 +19,8 @@ pub enum Error {
     UnknownElectronVersion(String),
     #[error("unknown Node.js version: {0}")]
     UnknownNodejsVersion(String),
+    #[error("unknown version '{1}' of browser '{0}'")]
+    UnknownBrowserVersion(String, String),
     #[error("current environment for querying `current node` is not supported")]
     UnsupportedCurrentNode,
     #[error("specify versions in Browserslist query for browser '{0}'")]
