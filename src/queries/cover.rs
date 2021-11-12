@@ -14,7 +14,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct CoverSelector;
 
 impl Selector for CoverSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let coverage = cap[1].parse().map_err(Error::ParsePercentage)?;
             let result = CANIUSE_LITE_USAGE.iter().try_fold(

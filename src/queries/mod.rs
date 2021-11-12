@@ -45,11 +45,11 @@ mod years;
 /// assert_eq!(Distrib::new("node", "16.0.0").to_string(), "node 16.0.0".to_string());
 /// ```
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Distrib<'a>(&'a str, Cow<'a, str>);
+pub struct Distrib(&'static str, Cow<'static, str>);
 
-impl<'a> Distrib<'a> {
+impl Distrib {
     #[inline]
-    pub fn new<S: Into<Cow<'a, str>>>(name: &'a str, version: S) -> Self {
+    pub fn new<S: Into<Cow<'static, str>>>(name: &'static str, version: S) -> Self {
         Self(name, version.into())
     }
 
@@ -82,19 +82,19 @@ impl<'a> Distrib<'a> {
     }
 }
 
-impl<'a> Display for Distrib<'a> {
+impl Display for Distrib {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}", self.0, self.1)
     }
 }
 
-pub type SelectorResult<'a> = Result<Option<Vec<Distrib<'a>>>, Error>;
+pub type SelectorResult = Result<Option<Vec<Distrib>>, Error>;
 
 trait Selector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a>;
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult;
 }
 
-pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib<'a>>, Error> {
+pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib>, Error> {
     let selectors: Vec<Box<dyn Selector>> = vec![
         Box::new(last_n_major_browsers::LastNMajorBrowsersSelector),
         Box::new(last_n_browsers::LastNBrowsersSelector),

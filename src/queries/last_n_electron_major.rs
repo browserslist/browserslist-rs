@@ -14,7 +14,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct LastNElectronMajorSelector;
 
 impl Selector for LastNElectronMajorSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         let count: usize = match REGEX.captures(text) {
             Some(cap) => cap[1].parse().map_err(Error::ParseVersionsCount)?,
             None => return Ok(None),

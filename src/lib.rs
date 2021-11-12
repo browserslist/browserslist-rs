@@ -9,15 +9,16 @@ mod parser;
 mod queries;
 mod semver;
 
-pub fn resolve<'a>(
-    queries: &'a [impl AsRef<str>],
-    opts: &opts::Opts,
-) -> Result<Vec<Distrib<'a>>, error::Error> {
-    let result = queries
-        .iter()
-        .map(|query| parse(query.as_ref()))
-        .flatten()
-        .try_fold(vec![], |mut result, current| {
+pub fn resolve<I, S>(queries: I, opts: &Opts) -> Result<Vec<Distrib>, Error>
+where
+    S: AsRef<str>,
+    I: IntoIterator<Item = S>,
+{
+    let mut distribs = vec![];
+
+    for query in queries {
+        let query = query.as_ref();
+        parse(&query).try_fold(&mut distribs, |distribs, current| {
             let query_string = match current {
                 Query::And(s) => s,
                 Query::Or(s) => s,
@@ -32,23 +33,23 @@ pub fn resolve<'a>(
 
             let mut queries = queries::query(query_string, opts)?;
             if is_exclude {
-                result.retain(|q| !queries.contains(q));
+                distribs.retain(|q| !queries.contains(q));
             } else {
                 match current {
                     Query::And(_) => {
-                        result.retain(|q| queries.contains(q));
+                        distribs.retain(|q| queries.contains(q));
                     }
                     Query::Or(_) => {
-                        result.append(&mut queries);
+                        distribs.append(&mut queries);
                     }
                 }
             }
 
-            Ok::<_, error::Error>(result)
-        });
+            Ok::<_, Error>(distribs)
+        })?;
+    }
 
-    let mut result = result?;
-    result.sort_by(|a, b| match a.name().cmp(b.name()) {
+    distribs.sort_by(|a, b| match a.name().cmp(b.name()) {
         Ordering::Equal => {
             let version_a = a.version().split('-').next().unwrap();
             let version_b = b.version().split('-').next().unwrap();
@@ -56,7 +57,7 @@ pub fn resolve<'a>(
         }
         ord => ord,
     });
-    result.dedup();
+    distribs.dedup();
 
-    Ok(result)
+    Ok(distribs)
 }

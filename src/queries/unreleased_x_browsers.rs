@@ -13,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct UnreleasedXBrowsersSelector;
 
 impl Selector for UnreleasedXBrowsersSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let name = &cap[1];
             let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)

@@ -18,7 +18,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct SinceSelector;
 
 impl Selector for SinceSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let year = cap[2]
                 .parse()

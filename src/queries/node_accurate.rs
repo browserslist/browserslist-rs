@@ -13,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct NodeAccurateSelector;
 
 impl Selector for NodeAccurateSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let version = &cap[1];
 

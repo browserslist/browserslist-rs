@@ -13,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct CurrentNodeSelector;
 
 impl Selector for CurrentNodeSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if REGEX.is_match(text) {
             #[cfg(target_arch = "wasm32")]
             {

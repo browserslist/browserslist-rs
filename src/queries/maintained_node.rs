@@ -17,7 +17,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct MaintainedNodeSelector;
 
 impl Selector for MaintainedNodeSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if REGEX.is_match(text) {
             let now = Local::now().naive_local();
 

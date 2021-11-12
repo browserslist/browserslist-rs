@@ -13,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct PhantomSelector;
 
 impl Selector for PhantomSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             match &cap[1] {
                 "1.9" => Ok(Some(vec![Distrib::new("safari", "5")])),

@@ -12,7 +12,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+)\s*([<>]=?)\s*([\d.]
 pub(super) struct BrowserUnboundedRangeSelector;
 
 impl Selector for BrowserUnboundedRangeSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         let cap = match REGEX.captures(text) {
             Some(cap) => cap,
             None => return Ok(None),

@@ -13,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct ElectronAccurateSelector;
 
 impl Selector for ElectronAccurateSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let version: f32 = cap[1].parse().map_err(Error::ParseVersion)?;
 

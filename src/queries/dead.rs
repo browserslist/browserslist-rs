@@ -4,7 +4,7 @@ use crate::{error::Error, opts::Opts};
 pub(super) struct DeadSelector;
 
 impl Selector for DeadSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         if text.eq_ignore_ascii_case("dead") {
             [
                 "ie <= 10",

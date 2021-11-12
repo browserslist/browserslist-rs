@@ -4,7 +4,7 @@ use crate::{error::Error, opts::Opts};
 pub(super) struct DefaultsSelector;
 
 impl Selector for DefaultsSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         if text.eq_ignore_ascii_case("defaults") {
             ["> 0.5%", "last 2 versions", "Firefox ESR", "not dead"]
                 .into_iter()

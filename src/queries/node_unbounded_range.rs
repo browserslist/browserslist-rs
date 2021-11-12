@@ -14,7 +14,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct NodeUnboundedRangeSelector;
 
 impl Selector for NodeUnboundedRangeSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let sign = &cap[1];
             let version = &cap[2];

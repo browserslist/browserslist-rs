@@ -17,7 +17,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct LastNBrowsersSelector;
 
 impl Selector for LastNBrowsersSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         let count: usize = match REGEX.captures(text) {
             Some(cap) => cap[1].parse().map_err(Error::ParseVersionsCount)?,
             None => return Ok(None),

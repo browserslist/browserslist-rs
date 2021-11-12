@@ -14,7 +14,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct LastNXMajorBrowsersSelector;
 
 impl Selector for LastNXMajorBrowsersSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         let cap = match REGEX.captures(text) {
             Some(cap) => cap,
             None => return Ok(None),

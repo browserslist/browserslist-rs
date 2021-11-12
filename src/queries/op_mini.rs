@@ -13,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct OperaMiniSelector;
 
 impl Selector for OperaMiniSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if REGEX.is_match(text) {
             Ok(Some(vec![Distrib::new("op_mini", "all")]))
         } else {

@@ -16,7 +16,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct UnreleasedBrowsersSelector;
 
 impl Selector for UnreleasedBrowsersSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         if REGEX.is_match(text) {
             let versions = CANIUSE_LITE_BROWSERS
                 .keys()

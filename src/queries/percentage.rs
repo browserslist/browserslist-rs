@@ -8,7 +8,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([<>]=?)\s*(\d*\.?\d+)%$"
 pub(super) struct PercentageSelector;
 
 impl Selector for PercentageSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         let cap = match REGEX.captures(text) {
             Some(cap) => cap,
             None => return Ok(None),

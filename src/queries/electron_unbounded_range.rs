@@ -13,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct ElectronUnboundedRangeSelector;
 
 impl Selector for ElectronUnboundedRangeSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let sign = &cap[1];
             let version: f32 = cap[2].parse().map_err(Error::ParseVersion)?;

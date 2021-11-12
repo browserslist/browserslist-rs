@@ -13,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct UnreleasedElectronSelector;
 
 impl Selector for UnreleasedElectronSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if REGEX.is_match(text) {
             Ok(Some(vec![]))
         } else {

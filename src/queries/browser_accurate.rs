@@ -18,7 +18,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct BrowserAccurateSelector;
 
 impl Selector for BrowserAccurateSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let name = &cap[1];
             let version = match &cap[2] {

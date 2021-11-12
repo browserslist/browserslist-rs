@@ -13,7 +13,7 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
 pub(super) struct LastNElectronSelector;
 
 impl Selector for LastNElectronSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult<'a> {
+    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let count: usize = cap[1].parse().map_err(Error::ParseVersionsCount)?;
             let versions = ELECTRON_VERSIONS
