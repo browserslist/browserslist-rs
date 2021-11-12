@@ -18,8 +18,7 @@ where
     let mut distribs = vec![];
 
     for query in queries {
-        let query = query.as_ref();
-        parse(&query).try_fold(&mut distribs, |distribs, current| {
+        parse(query.as_ref()).try_fold(&mut distribs, |distribs, current| {
             let query_string = match current {
                 Query::And(s) => s,
                 Query::Or(s) => s,

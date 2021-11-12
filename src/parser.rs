@@ -20,7 +20,7 @@ pub enum Query<'a> {
     Or(&'a str),
 }
 
-pub fn parse<'a>(query: &'a str) -> impl Iterator<Item = Query<'a>> {
+pub fn parse(query: &str) -> impl Iterator<Item = Query> {
     REGEX_OR.split(query).into_iter().flat_map(|s| {
         REGEX_AND.split(s).enumerate().map(|(i, text)| {
             if i == 0 {

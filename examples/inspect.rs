@@ -18,7 +18,7 @@ fn main() {
 
     match resolve(
         &vec![matches.value_of("queries").unwrap_or_default()],
-        &Opts::new()
+        Opts::new()
             .mobile_to_desktop(matches.is_present("mobile_to_desktop"))
             .ignore_unknown_versions(matches.is_present("ignore_unknown_versions")),
     ) {

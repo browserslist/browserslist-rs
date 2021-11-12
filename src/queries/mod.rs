@@ -91,10 +91,10 @@ impl Display for Distrib {
 pub type SelectorResult = Result<Option<Vec<Distrib>>, Error>;
 
 trait Selector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult;
+    fn select(&self, text: &str, opts: &Opts) -> SelectorResult;
 }
 
-pub fn query<'a>(query_string: &'a str, opts: &Opts) -> Result<Vec<Distrib>, Error> {
+pub fn query(query_string: &str, opts: &Opts) -> Result<Vec<Distrib>, Error> {
     let selectors: Vec<Box<dyn Selector>> = vec![
         Box::new(last_n_major_browsers::LastNMajorBrowsersSelector),
         Box::new(last_n_browsers::LastNBrowsersSelector),
