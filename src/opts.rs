@@ -18,18 +18,14 @@ impl Opts {
     }
 
     /// Set `mobile_to_desktop` option.
-    pub fn mobile_to_desktop(self, flag: bool) -> Self {
-        Self {
-            mobile_to_desktop: flag,
-            ..self
-        }
+    pub fn mobile_to_desktop(&mut self, flag: bool) -> &mut Self {
+        self.mobile_to_desktop = flag;
+        self
     }
 
     /// Set `ignore_unknown_versions` option.
-    pub fn ignore_unknown_versions(self, flag: bool) -> Self {
-        Self {
-            ignore_unknown_versions: flag,
-            ..self
-        }
+    pub fn ignore_unknown_versions(&mut self, flag: bool) -> &mut Self {
+        self.ignore_unknown_versions = flag;
+        self
     }
 }

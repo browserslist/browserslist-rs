@@ -16,13 +16,11 @@ fn main() {
         .arg(Arg::with_name("queries"))
         .get_matches();
 
-    let opts = Opts::new()
-        .mobile_to_desktop(matches.is_present("mobile_to_desktop"))
-        .ignore_unknown_versions(matches.is_present("ignore_unknown_versions"));
-
     match resolve(
         &vec![matches.value_of("queries").unwrap_or_default()],
-        &opts,
+        &Opts::new()
+            .mobile_to_desktop(matches.is_present("mobile_to_desktop"))
+            .ignore_unknown_versions(matches.is_present("ignore_unknown_versions")),
     ) {
         Ok(versions) => {
             for version in versions {
