@@ -1,4 +1,5 @@
 use crate::{data::caniuse, data::caniuse::get_browser_stat, error::Error, opts::Opts};
+use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, fmt::Display};
 
 mod browser_accurate;
@@ -43,7 +44,7 @@ mod years;
 /// assert_eq!(Distrib::new("op_mini", "all").to_string(), "op_mini all".to_string());
 /// assert_eq!(Distrib::new("node", "16.0.0").to_string(), "node 16.0.0".to_string());
 /// ```
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Distrib<'a>(&'a str, Cow<'a, str>);
 
 impl<'a> Distrib<'a> {

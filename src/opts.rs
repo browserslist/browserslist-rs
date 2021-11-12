@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 /// Options for controlling the behavior of browserslist.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Opts {
     /// Use desktop browsers if Can I Use doesn’t have data about this mobile version.
     pub(crate) mobile_to_desktop: bool,
