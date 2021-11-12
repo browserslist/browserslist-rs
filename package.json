@@ -4,9 +4,12 @@
   "author": "Pig Fang <g-plane@hotmail.com>",
   "license": "MIT",
   "private": true,
-  "dependencies": {
-    "browserslist": "*",
-    "electron-to-chromium": "*",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "browserslist": "^4.17.6",
+    "electron-to-chromium": "^1.3.895",
     "node-releases": "^2.0.1"
   }
 }
