@@ -22,9 +22,8 @@ impl Selector for LastNXMajorBrowsersSelector {
         let count = cap[1].parse().map_err(Error::ParseVersionsCount)?;
         let name = &cap[2];
 
-        let stat = get_browser_stat(name, opts.mobile_to_desktop)
+        let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
             .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
-        let name = stat.name.as_str();
         let count = if should_filter_android(name, opts.mobile_to_desktop) {
             count_android_filter(count, opts.mobile_to_desktop)
         } else {
@@ -47,7 +46,7 @@ impl Selector for LastNXMajorBrowsersSelector {
                 version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
             })
             .rev()
-            .map(move |version| Distrib::new(&name, version))
+            .map(move |version| Distrib::new(name, version))
             .collect();
 
         Ok(Some(versions))

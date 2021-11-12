@@ -26,9 +26,7 @@ impl Selector for LastNMajorBrowsersSelector {
 
         let versions = CANIUSE_LITE_BROWSERS
             .keys()
-            .filter_map(|name| {
-                get_browser_stat(name, opts.mobile_to_desktop).map(|stat| (name, stat))
-            })
+            .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
             .map(|(name, stat)| {
                 let count = if should_filter_android(name, opts.mobile_to_desktop) {
                     count_android_filter(count, opts.mobile_to_desktop)
@@ -52,7 +50,7 @@ impl Selector for LastNMajorBrowsersSelector {
                         version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
                     })
                     .rev()
-                    .map(move |version| Distrib::new(&name, version))
+                    .map(move |version| Distrib::new(name, version))
             })
             .flatten()
             .collect();

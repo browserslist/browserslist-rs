@@ -7,7 +7,7 @@ pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 
 #[derive(Clone, Deserialize)]
 pub struct BrowserStat {
-    pub name: String,
+    name: String,
     pub versions: Vec<String>,
     pub released: Vec<String>,
     #[serde(rename = "releaseDate")]
@@ -96,7 +96,10 @@ static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     op_mob
 });
 
-pub fn get_browser_stat(name: &str, mobile_to_desktop: bool) -> Option<&'static BrowserStat> {
+pub fn get_browser_stat(
+    name: &str,
+    mobile_to_desktop: bool,
+) -> Option<(&'static str, &'static BrowserStat)> {
     let name = if name.bytes().all(|b| b.is_ascii_lowercase()) {
         Cow::from(name)
     } else {
@@ -107,15 +110,21 @@ pub fn get_browser_stat(name: &str, mobile_to_desktop: bool) -> Option<&'static 
     if mobile_to_desktop {
         if let Some(desktop_name) = to_desktop_name(name) {
             match name {
-                "android" => Some(&ANDROID_TO_DESKTOP),
-                "op_mob" => Some(&OPERA_MOBILE_TO_DESKTOP),
-                _ => CANIUSE_LITE_BROWSERS.get(desktop_name),
+                "android" => Some(("android", &ANDROID_TO_DESKTOP)),
+                "op_mob" => Some(("op_mob", &OPERA_MOBILE_TO_DESKTOP)),
+                _ => CANIUSE_LITE_BROWSERS
+                    .get(desktop_name)
+                    .map(|stat| (get_mobile_by_desktop_name(desktop_name), stat)),
             }
         } else {
-            CANIUSE_LITE_BROWSERS.get(name)
+            CANIUSE_LITE_BROWSERS
+                .get(name)
+                .map(|stat| (&*stat.name, stat))
         }
     } else {
-        CANIUSE_LITE_BROWSERS.get(name)
+        CANIUSE_LITE_BROWSERS
+            .get(name)
+            .map(|stat| (&*stat.name, stat))
     }
 }
 
@@ -138,12 +147,21 @@ fn get_browser_alias(name: &str) -> &str {
 
 fn to_desktop_name(name: &str) -> Option<&'static str> {
     match name {
-        "and_chr" => Some("chrome"),
+        "and_chr" | "android" => Some("chrome"),
         "and_ff" => Some("firefox"),
         "ie_mob" => Some("ie"),
         "op_mob" => Some("opera"),
-        "android" => Some("chrome"),
         _ => None,
+    }
+}
+
+fn get_mobile_by_desktop_name(name: &str) -> &'static str {
+    match name {
+        "chrome" => "and_chr", // "android" has been handled as a special case
+        "firefox" => "and_ff",
+        "ie" => "ie_mob",
+        "opera" => "op_mob",
+        _ => unreachable!(),
     }
 }
 

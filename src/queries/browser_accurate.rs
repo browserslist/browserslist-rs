@@ -26,11 +26,11 @@ impl Selector for BrowserAccurateSelector {
                 version => version,
             };
 
-            let stat = get_browser_stat(name, opts.mobile_to_desktop)
+            let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
                 .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
 
             if let Some(version) = normalize_version(stat, version) {
-                Ok(Some(vec![Distrib::new(&stat.name, version.to_owned())]))
+                Ok(Some(vec![Distrib::new(name, version.to_owned())]))
             } else {
                 let version = if version.contains('.') {
                     Cow::Borrowed(version.trim_end_matches(".0"))
@@ -40,12 +40,12 @@ impl Selector for BrowserAccurateSelector {
                     Cow::Owned(v)
                 };
                 if let Some(version) = normalize_version(stat, &version) {
-                    Ok(Some(vec![Distrib::new(&stat.name, version.to_owned())]))
+                    Ok(Some(vec![Distrib::new(name, version.to_owned())]))
                 } else if opts.ignore_unknown_versions {
                     Ok(Some(vec![]))
                 } else {
                     Err(Error::UnknownBrowserVersion(
-                        name.to_string(),
+                        cap[1].to_string(),
                         version.to_string(),
                     ))
                 }

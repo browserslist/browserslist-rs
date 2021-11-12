@@ -21,11 +21,11 @@ impl Selector for UnreleasedBrowsersSelector {
             let versions = CANIUSE_LITE_BROWSERS
                 .keys()
                 .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-                .map(|stat| {
+                .map(|(name, stat)| {
                     stat.versions
                         .iter()
                         .filter(|version| !stat.released.contains(version))
-                        .map(|version| Distrib::new(&stat.name, version))
+                        .map(|version| Distrib::new(name, version))
                 })
                 .flatten()
                 .collect();

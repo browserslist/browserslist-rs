@@ -16,13 +16,13 @@ impl Selector for UnreleasedXBrowsersSelector {
     fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
         if let Some(cap) = REGEX.captures(text) {
             let name = &cap[1];
-            let stat = get_browser_stat(name, opts.mobile_to_desktop)
+            let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
                 .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
             let versions = stat
                 .versions
                 .iter()
                 .filter(|version| !stat.released.contains(version))
-                .map(|version| Distrib::new(&stat.name, version))
+                .map(|version| Distrib::new(name, version))
                 .collect();
             Ok(Some(versions))
         } else {

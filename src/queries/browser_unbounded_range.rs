@@ -21,10 +21,10 @@ impl Selector for BrowserUnboundedRangeSelector {
         let sign = &cap[2];
         let version = &cap[3];
 
-        let stat = get_browser_stat(&cap[1], opts.mobile_to_desktop)
+        let (name, stat) = get_browser_stat(&cap[1], opts.mobile_to_desktop)
             .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
         let version = CANIUSE_LITE_VERSION_ALIASES
-            .get(&stat.name)
+            .get(name)
             .and_then(|alias| alias.get(version).map(|s| s.as_str()))
             .unwrap_or(version)
             .parse()
@@ -42,7 +42,7 @@ impl Selector for BrowserUnboundedRangeSelector {
                     _ => v >= version,
                 }
             })
-            .map(|version| Distrib::new(&stat.name, version))
+            .map(|version| Distrib::new(name, version))
             .collect();
         Ok(Some(versions))
     }

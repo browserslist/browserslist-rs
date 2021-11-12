@@ -18,7 +18,7 @@ impl Selector for BrowserBoundedRangeSelector {
             let from = &cap[2];
             let to = &cap[3];
 
-            let stat = get_browser_stat(name, opts.mobile_to_desktop)
+            let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
                 .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
             let from: f32 = normalize_version(stat, from)
                 .unwrap_or(from)
@@ -36,7 +36,7 @@ impl Selector for BrowserBoundedRangeSelector {
                     let version: f32 = version.parse().unwrap_or_default();
                     from <= version && version <= to
                 })
-                .map(|version| Distrib::new(&stat.name, version))
+                .map(|version| Distrib::new(name, version))
                 .collect();
             Ok(Some(versions))
         } else {
