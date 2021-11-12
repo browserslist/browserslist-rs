@@ -8,8 +8,7 @@ repository = "https://github.com/g-plane/browserslist-rs"
 license = "MIT"
 keywords = ["web", "javascript"]
 categories = ["web-programming", "config"]
-include = ["/data"]
-exclude = ["/.vscode", "/node_modules", ".*", "build.mjs"]
+include = ["/data", "**/*.rs", "Cargo.toml"]
 
 [dependencies]
 chrono = { version = "0.4", features = ["wasmbind"] }
