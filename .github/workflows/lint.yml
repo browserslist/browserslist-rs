@@ -1,4 +1,4 @@
-name: CI
+name: lint
 
 on: [push, pull_request]
 
@@ -11,4 +11,3 @@ jobs:
       - run: cargo clippy
       - run: cargo clippy --example inspect
       - run: cargo clippy --tests
-      - run: cargo test
