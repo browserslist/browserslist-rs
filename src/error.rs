@@ -1,6 +1,7 @@
 use std::num;
 use thiserror::Error;
 
+/// The errors may occur when querying with browserslist.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("invalid version string: {0:?}")]

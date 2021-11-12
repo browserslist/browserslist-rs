@@ -9,6 +9,7 @@ mod parser;
 mod queries;
 mod semver;
 
+/// Execute browserslist querying.
 pub fn resolve<I, S>(queries: I, opts: &Opts) -> Result<Vec<Distrib>, Error>
 where
     S: AsRef<str>,
