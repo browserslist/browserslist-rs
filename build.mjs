@@ -12,46 +12,44 @@ const nodeReleaseSchedule = require('node-releases/data/release-schedule/release
 const dest = path.join(process.cwd(), 'data')
 
 Promise.all([
-    fs.writeFile(
-        path.join(dest, 'caniuse-lite-browsers.json'),
-        JSON.stringify(browserslist.data)
-    ),
-    fs.writeFile(
-        path.join(dest, 'caniuse-lite-usage.json'),
-        JSON.stringify(
-            Object.entries(browserslist.usage.global)
-                .map(([v, usage]) => {
-                    const [name, version] = v.split(' ')
-                    return [name, version, usage]
-                })
-                .sort(([, , a], [, , b]) => b - a)
-        )
-    ),
-    fs.writeFile(
-        path.join(dest, 'caniuse-lite-version-aliases.json'),
-        JSON.stringify(browserslist.versionAliases)
-    ),
-    fs.writeFile(
-        path.join(dest, 'electron-to-chromium.json'),
-        JSON.stringify(
-            Object.entries(e2c).map(([k, v]) => [Number.parseFloat(k), v])
-        )
-    ),
-    fs.writeFile(
-        path.join(dest, 'node-versions.json'),
-        JSON.stringify(nodeVersions.map(({ version }) => version))
-    ),
-    fs.writeFile(
-        path.join(dest, 'node-release-schedule.json'),
-        JSON.stringify(
-            Object.fromEntries(
-                Object.entries(nodeReleaseSchedule).map(
-                    ([version, { start, end }]) => [
-                        version.slice(1),
-                        [start, end],
-                    ]
-                )
-            )
-        )
-    ),
+  fs.writeFile(
+    path.join(dest, 'caniuse-lite-browsers.json'),
+    JSON.stringify(browserslist.data)
+  ),
+  fs.writeFile(
+    path.join(dest, 'caniuse-lite-usage.json'),
+    JSON.stringify(
+      Object.entries(browserslist.usage.global)
+        .map(([v, usage]) => {
+          const [name, version] = v.split(' ')
+          return [name, version, usage]
+        })
+        .sort(([, , a], [, , b]) => b - a)
+    )
+  ),
+  fs.writeFile(
+    path.join(dest, 'caniuse-lite-version-aliases.json'),
+    JSON.stringify(browserslist.versionAliases)
+  ),
+  fs.writeFile(
+    path.join(dest, 'electron-to-chromium.json'),
+    JSON.stringify(
+      Object.entries(e2c).map(([k, v]) => [Number.parseFloat(k), v])
+    )
+  ),
+  fs.writeFile(
+    path.join(dest, 'node-versions.json'),
+    JSON.stringify(nodeVersions.map(({ version }) => version))
+  ),
+  fs.writeFile(
+    path.join(dest, 'node-release-schedule.json'),
+    JSON.stringify(
+      Object.fromEntries(
+        Object.entries(nodeReleaseSchedule).map(([version, { start, end }]) => [
+          version.slice(1),
+          [start, end],
+        ])
+      )
+    )
+  ),
 ])
