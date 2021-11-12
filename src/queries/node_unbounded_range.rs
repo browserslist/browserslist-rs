@@ -22,7 +22,7 @@ impl Selector for NodeUnboundedRangeSelector {
             let versions = NODE_VERSIONS
                 .iter()
                 .filter(|v| {
-                    let ord = compare(&v, version);
+                    let ord = compare(v, version);
                     match sign {
                         ">" => matches!(ord, Ordering::Greater),
                         "<" => matches!(ord, Ordering::Less),

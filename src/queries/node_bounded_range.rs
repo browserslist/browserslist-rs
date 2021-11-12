@@ -23,12 +23,9 @@ impl Selector for NodeBoundedRangeSelector {
                 .iter()
                 .filter(|version| {
                     matches!(
-                        loose_compare(&version, from),
+                        loose_compare(version, from),
                         Ordering::Greater | Ordering::Equal
-                    ) && matches!(
-                        loose_compare(&version, to),
-                        Ordering::Less | Ordering::Equal
-                    )
+                    ) && matches!(loose_compare(version, to), Ordering::Less | Ordering::Equal)
                 })
                 .map(|version| Distrib::new("node", version))
                 .collect();

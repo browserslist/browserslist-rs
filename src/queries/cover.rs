@@ -23,7 +23,7 @@ impl Selector for CoverSelector {
                     if total >= coverage || *usage == 0.0 {
                         ControlFlow::Break((versions, total))
                     } else {
-                        versions.push(Distrib::new(&name, version));
+                        versions.push(Distrib::new(name, version));
                         ControlFlow::Continue((versions, total + usage))
                     }
                 },

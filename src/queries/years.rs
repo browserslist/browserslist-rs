@@ -15,14 +15,14 @@ static REGEX: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
-const ONE_YEAR_IN_SECONDS: f32 = 365.259641 * 24.0 * 60.0 * 60.0;
+const ONE_YEAR_IN_SECONDS: f64 = 365.259641 * 24.0 * 60.0 * 60.0;
 
 pub(super) struct YearsSelector;
 
 impl Selector for YearsSelector {
     fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult<'a> {
         if let Some(cap) = REGEX.captures(text) {
-            let count: f32 = cap[1].parse().map_err(Error::ParseYearsCount)?;
+            let count: f64 = cap[1].parse().map_err(Error::ParseYearsCount)?;
             let duration = Duration::seconds((count * ONE_YEAR_IN_SECONDS) as i64);
             let time = (Utc::now() - duration).timestamp();
 
