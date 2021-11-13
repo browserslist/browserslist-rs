@@ -1,4 +1,4 @@
-use browserslist::{resolve, Error, Opts};
+use crate::{resolve, Error, Opts};
 use std::process::Command;
 
 pub fn run_compare(query: &str, opts: &Opts) {

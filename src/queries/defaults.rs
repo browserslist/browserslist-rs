@@ -16,3 +16,17 @@ impl Selector for DefaultsSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("defaults", &Opts::new(); "no options")]
+    #[test_case("Defaults", &Opts::new(); "case insensitive")]
+    #[test_case("defaults", &Opts::new().mobile_to_desktop(true); "respect options")]
+    fn valid(query: &str, opts: &Opts) {
+        run_compare(query, &opts);
+    }
+}
