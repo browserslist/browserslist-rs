@@ -17,10 +17,22 @@ impl Opts {
         Self::default()
     }
 
+    /// Get `mobile_to_desktop` option.
+    #[inline]
+    pub fn is_mobile_to_desktop(&self) -> bool {
+        self.mobile_to_desktop
+    }
+
     /// Set `mobile_to_desktop` option.
     pub fn mobile_to_desktop(&mut self, flag: bool) -> &mut Self {
         self.mobile_to_desktop = flag;
         self
+    }
+
+    /// Get `ignore_unknown_versions` options.
+    #[inline]
+    pub fn is_ignore_unknown_versions(&self) -> bool {
+        self.ignore_unknown_versions
     }
 
     /// Set `ignore_unknown_versions` option.
