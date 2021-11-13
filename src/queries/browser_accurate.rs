@@ -46,7 +46,7 @@ impl Selector for BrowserAccurateSelector {
                 } else {
                     Err(Error::UnknownBrowserVersion(
                         cap[1].to_string(),
-                        version.to_string(),
+                        cap[2].to_string(),
                     ))
                 }
             }

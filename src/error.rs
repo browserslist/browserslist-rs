@@ -2,7 +2,7 @@ use std::num;
 use thiserror::Error;
 
 /// The errors may occur when querying with browserslist.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq, Clone)]
 pub enum Error {
     #[error("invalid version string: {0:?}")]
     ParseVersion(num::ParseFloatError),

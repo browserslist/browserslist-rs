@@ -1,4 +1,4 @@
-use browserslist::{resolve, Opts};
+use browserslist::{resolve, Error, Opts};
 use std::process::Command;
 
 pub fn run_compare(query: &str, opts: &Opts) {
@@ -20,4 +20,8 @@ pub fn run_compare(query: &str, opts: &Opts) {
         .collect::<Vec<_>>();
 
     assert_eq!(expected, actual);
+}
+
+pub fn should_failed(query: &str, opts: &Opts) -> Error {
+    resolve([query], opts).unwrap_err()
 }
