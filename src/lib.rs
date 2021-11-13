@@ -55,7 +55,10 @@ where
         Ordering::Equal => {
             let version_a = a.version().split('-').next().unwrap();
             let version_b = b.version().split('-').next().unwrap();
-            semver::reverse_compare(version_a, version_b)
+            version_b
+                .parse::<semver::Version>()
+                .unwrap_or_default()
+                .cmp(&version_a.parse().unwrap_or_default())
         }
         ord => ord,
     });

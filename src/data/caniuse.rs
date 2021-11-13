@@ -5,7 +5,7 @@ use std::{borrow::Cow, collections::HashMap};
 
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct BrowserStat {
     name: String,
     pub versions: Vec<String>,
@@ -35,27 +35,27 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     let chrome = CANIUSE_LITE_BROWSERS.get("chrome").unwrap();
     let mut android = CANIUSE_LITE_BROWSERS.get("android").unwrap().clone();
 
-    android.released = android
-        .released
-        .into_iter()
-        .filter(|version| REGEX_NON_DESKTOP_ANDROID.is_match(version))
-        .chain(chrome.released.iter().cloned().skip(
-            chrome.released.last().unwrap().parse::<usize>().unwrap()
-                - (ANDROID_EVERGREEN_FIRST as usize),
-        ))
-        .collect();
-    android.versions = android
-        .versions
-        .into_iter()
-        .filter(|version| REGEX_NON_DESKTOP_ANDROID.is_match(version))
-        .chain(chrome.versions.iter().cloned().skip(
-            chrome.versions.last().unwrap().parse::<usize>().unwrap()
-                - (ANDROID_EVERGREEN_FIRST as usize),
-        ))
-        .collect();
+    android.released = normalize_android_versions(android.released, &chrome.released);
+    android.versions = normalize_android_versions(android.versions, &chrome.versions);
 
     android
 });
+
+fn normalize_android_versions(
+    android_versions: Vec<String>,
+    chrome_versions: &[String],
+) -> Vec<String> {
+    android_versions
+        .into_iter()
+        .filter(|version| REGEX_NON_DESKTOP_ANDROID.is_match(version))
+        .chain(chrome_versions.iter().cloned().skip(
+            chrome_versions.len()
+                - (chrome_versions.last().unwrap().parse::<usize>().unwrap()
+                    - (ANDROID_EVERGREEN_FIRST as usize)
+                    + 1),
+        ))
+        .collect()
+}
 
 static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     let mut op_mob = CANIUSE_LITE_BROWSERS.get("opera").unwrap().clone();

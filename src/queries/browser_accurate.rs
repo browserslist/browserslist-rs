@@ -9,7 +9,7 @@ use regex::{Regex, RegexBuilder};
 use std::borrow::Cow;
 
 static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^(\w+)\s+(tp|[\d.]+)$")
+    RegexBuilder::new(r"^(\w+)\s+(tp|[\d\.]+)$")
         .case_insensitive(true)
         .build()
         .unwrap()
@@ -65,18 +65,40 @@ mod tests {
     };
     use test_case::test_case;
 
-    #[test_case("ie 10", &Opts::new(); "by name")]
-    #[test_case("IE 10", &Opts::new(); "case insensitive")]
-    #[test_case("Explorer 10", &Opts::new(); "alias")]
-    #[test_case("ios 7.0", &Opts::new(); "work with joined versions 1")]
-    #[test_case("ios 7.1", &Opts::new(); "work with joined versions 2")]
-    #[test_case("ios 7", &Opts::new(); "allow missing zero 1")]
-    #[test_case("ios 8.0", &Opts::new(); "allow missing zero 2")]
-    #[test_case("safari tp", &Opts::new(); "safari tp")]
-    #[test_case("Safari TP", &Opts::new(); "safari tp case insensitive")]
-    #[test_case("and_uc 10", &Opts::new(); "cutted version")]
-    fn valid(query: &str, opts: &Opts) {
-        run_compare(query, &opts);
+    #[test_case("ie 10"; "by name")]
+    #[test_case("IE 10"; "case insensitive")]
+    #[test_case("Explorer 10"; "alias")]
+    #[test_case("ios 7.0"; "work with joined versions 1")]
+    #[test_case("ios 7.1"; "work with joined versions 2")]
+    #[test_case("ios 7"; "allow missing zero 1")]
+    #[test_case("ios 8.0"; "allow missing zero 2")]
+    #[test_case("safari tp"; "safari tp")]
+    #[test_case("Safari TP"; "safari tp case insensitive")]
+    #[test_case("and_uc 10"; "cutted version")]
+    #[test_case("chromeandroid 53"; "missing mobile versions 1")]
+    #[test_case("and_ff 60"; "missing mobile versions 2")]
+    fn default_options(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+
+    #[test_case("chromeandroid 53"; "chrome 1")]
+    #[test_case("and_ff 60"; "firefox")]
+    #[test_case("ie_mob 9"; "ie mobile")]
+    #[test_case("op_mob 30"; "opera mobile")]
+    #[test_case("chromeandroid >= 52 and chromeandroid < 54"; "chrome 2")]
+    #[test_case("and_chr 52-53"; "chrome 3")]
+    #[test_case("android 4.4-38"; "android")]
+    #[test_case("> 0%, dead"; "all browsers")]
+    fn mobile_to_desktop(query: &str) {
+        run_compare(query, &Opts::new().mobile_to_desktop(true));
+    }
+
+    #[test]
+    fn ignore_unknown_versions() {
+        assert_eq!(
+            resolve(["IE 1, IE 9"], &Opts::new().ignore_unknown_versions(true)).unwrap()[0],
+            Distrib::new("ie", "9")
+        );
     }
 
     #[test_case(
@@ -92,15 +114,15 @@ mod tests {
         Error::UnknownBrowserVersion(String::from("safari"), String::from("12.2"));
         "use correct browser name in error"
     )]
+    #[test_case(
+        "ie_mob 9", Error::UnknownBrowserVersion(String::from("ie_mob"), String::from("9"));
+        "missing mobile versions 1"
+    )]
+    #[test_case(
+        "op_mob 30", Error::UnknownBrowserVersion(String::from("op_mob"), String::from("30"));
+        "missing mobile versions 2"
+    )]
     fn invalid(query: &str, error: Error) {
         assert_eq!(should_failed(query, &Opts::new()), error);
-    }
-
-    #[test]
-    fn ignore_unknown_versions() {
-        assert_eq!(
-            resolve(["IE 1, IE 9"], &Opts::new().ignore_unknown_versions(true)).unwrap()[0],
-            Distrib::new("ie", "9")
-        );
     }
 }
