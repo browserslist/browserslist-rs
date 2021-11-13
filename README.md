@@ -27,7 +27,7 @@ cargo run --example inspect -- -h
 
 ## Limitations
 
-The features below aren't supported:
+The features below aren't supported currently:
 
 - Custom usage like `> 0.5% in my stats` or `> 0.5% in XX`.
 - Custom usage like `cover 99.5% in my stats` or `cover 99.5% in XX`.
