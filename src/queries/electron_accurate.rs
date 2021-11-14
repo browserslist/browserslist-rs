@@ -29,3 +29,25 @@ impl Selector for ElectronAccurateSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::{run_compare, should_failed};
+    use test_case::test_case;
+
+    #[test_case("electron 1.1"; "basic")]
+    #[test_case("electron 4.0.4"; "with semver patch version")]
+    #[test_case("Electron 1.1"; "case insensitive")]
+    fn valid(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+
+    #[test_case(
+        "electron 0.19", Error::UnknownElectronVersion(String::from("0.19"));
+        "unknown version"
+    )]
+    fn invalid(query: &str, error: Error) {
+        assert_eq!(should_failed(query, &Opts::new()), error);
+    }
+}
