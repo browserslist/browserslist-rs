@@ -6,8 +6,8 @@
   "private": true,
   "scripts": {
     "build": "node build.mjs",
-    "build:wasm": "wasm-pack build --target nodejs && node post-build-wasm.mjs",
-    "build:wasm:dev": "wasm-pack build --target nodejs --dev && node post-build-wasm.mjs"
+    "build:wasm": "wasm-pack build --target=nodejs --out-dir=pkg/cjs && node post-build-wasm.mjs",
+    "build:wasm:dev": "wasm-pack build --target=nodejs --out-dir=pkg/cjs --dev && node post-build-wasm.mjs"
   },
   "devDependencies": {
     "browserslist": "^4.18.0",

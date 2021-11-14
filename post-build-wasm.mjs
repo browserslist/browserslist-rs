@@ -2,11 +2,11 @@ import * as fs from 'node:fs/promises'
 
 Promise.all([
   fs.writeFile(
-    './pkg/index.js',
+    './pkg/cjs/index.js',
     `module.exports = require('./browserslist').resolveToStrings`
   ),
   (async () => {
-    const manifestPath = './pkg/package.json'
+    const manifestPath = './pkg/cjs/package.json'
     const pkg = JSON.parse(await fs.readFile(manifestPath, 'utf8'))
 
     pkg.author = pkg.collaborators[0]
