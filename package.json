@@ -6,10 +6,10 @@
   "private": true,
   "scripts": {
     "sync": "node ./scripts/sync.mjs",
-    "build:wasm:cjs": "wasm-pack build --target=nodejs --out-dir=pkg/cjs && node ./scripts/post-cjs-build-wasm.mjs",
-    "build:wasm:cjs:dev": "wasm-pack build --target=nodejs --out-dir=pkg/cjs --dev && node ./scripts/post-cjs-build-wasm.mjs",
-    "build:wasm:esm": "wasm-pack build --target=web --out-dir=pkg/esm && node ./scripts/post-esm-build-wasm.mjs",
-    "build:wasm:esm:dev": "wasm-pack build --target=web --out-dir=pkg/esm --dev && node ./scripts/post-esm-build-wasm.mjs"
+    "build:wasm:cjs": "wasm-pack build --target=nodejs --out-dir=pkg/node && node ./scripts/post-node-build-wasm.mjs",
+    "build:wasm:cjs:dev": "wasm-pack build --target=nodejs --out-dir=pkg/node --dev && node ./scripts/post-node-build-wasm.mjs",
+    "build:wasm:esm": "wasm-pack build --target=web --out-dir=pkg/web && node ./scripts/post-web-build-wasm.mjs",
+    "build:wasm:esm:dev": "wasm-pack build --target=web --out-dir=pkg/web --dev && node ./scripts/post-web-build-wasm.mjs"
   },
   "devDependencies": {
     "browserslist": "^4.18.0",
