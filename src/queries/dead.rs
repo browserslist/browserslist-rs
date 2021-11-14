@@ -25,3 +25,21 @@ impl Selector for DeadSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("dead"; "basic")]
+    #[test_case("Dead"; "case insensitive")]
+    fn default_options(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+
+    #[test_case("> 0%, dead"; "all browsers")]
+    fn mobile_to_desktop(query: &str) {
+        run_compare(query, &Opts::new().mobile_to_desktop(true));
+    }
+}
