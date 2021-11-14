@@ -1,7 +1,7 @@
 use parser::{parse, Query};
 use std::cmp::Ordering;
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+pub use wasm::resolve_to_strings;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
 mod data;
@@ -12,6 +12,8 @@ mod queries;
 mod semver;
 #[cfg(test)]
 mod test;
+#[cfg(target_arch = "wasm32")]
+mod wasm;
 
 /// Execute browserslist querying.
 pub fn resolve<I, S>(queries: I, opts: &Opts) -> Result<Vec<Distrib>, Error>
@@ -67,19 +69,4 @@ where
     distribs.dedup();
 
     Ok(distribs)
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(js_name = "resolveToStrings")]
-pub fn resolve_to_strings(query: String, opts: JsValue) -> Result<JsValue, JsValue> {
-    let opts: Option<Opts> = opts.into_serde().unwrap_or_default();
-
-    serde_wasm_bindgen::to_value(
-        &resolve([query], &opts.unwrap_or_default())
-            .map_err(|e| format!("{}", e))?
-            .into_iter()
-            .map(|d| d.to_string())
-            .collect::<Vec<_>>(),
-    )
-    .map_err(JsValue::from)
 }
