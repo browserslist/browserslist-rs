@@ -5,7 +5,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "node build.mjs",
+    "sync": "node ./scripts/sync.mjs",
     "build:wasm:cjs": "wasm-pack build --target=nodejs --out-dir=pkg/cjs && node ./scripts/post-cjs-build-wasm.mjs",
     "build:wasm:cjs:dev": "wasm-pack build --target=nodejs --out-dir=pkg/cjs --dev && node ./scripts/post-cjs-build-wasm.mjs",
     "build:wasm:esm": "wasm-pack build --target=web --out-dir=pkg/esm && node ./scripts/post-esm-build-wasm.mjs",
