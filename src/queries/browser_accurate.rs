@@ -59,10 +59,7 @@ impl Selector for BrowserAccurateSelector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        resolve,
-        test::{run_compare, should_failed},
-    };
+    use crate::test::{run_compare, should_failed};
     use test_case::test_case;
 
     #[test_case("ie 10"; "by name")]
@@ -95,10 +92,7 @@ mod tests {
 
     #[test]
     fn ignore_unknown_versions() {
-        assert_eq!(
-            resolve(["IE 1, IE 9"], &Opts::new().ignore_unknown_versions(true)).unwrap()[0],
-            Distrib::new("ie", "9")
-        );
+        run_compare("IE 1, IE 9", &Opts::new().ignore_unknown_versions(true));
     }
 
     #[test_case(
