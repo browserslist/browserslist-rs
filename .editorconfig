@@ -8,5 +8,5 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[*.{mjs,js,json,yml}]
+[*.{mjs,js,ts,json,yml}]
 indent_size = 2

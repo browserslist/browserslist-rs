@@ -1,13 +1,10 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
-import { createRequire } from 'node:module'
 import browserslist from 'browserslist'
 import { versions as e2c } from 'electron-to-chromium'
-
-const require = createRequire(import.meta.url)
-const nodeVersions = require('node-releases/data/processed/envs.json')
-const nodeReleaseSchedule = require('node-releases/data/release-schedule/release-schedule.json')
+import nodeVersions from 'node-releases/data/processed/envs.json'
+import nodeReleaseSchedule from 'node-releases/data/release-schedule/release-schedule.json'
 
 const dest = path.join(process.cwd(), 'data')
 
@@ -19,10 +16,10 @@ Promise.all([
   fs.writeFile(
     path.join(dest, 'caniuse-lite-usage.json'),
     JSON.stringify(
-      Object.entries(browserslist.usage.global)
+      Object.entries(browserslist.usage.global!)
         .map(([v, usage]) => {
           const [name, version] = v.split(' ')
-          return [name, version, usage]
+          return [name, version, usage] as const
         })
         .sort(([, , a], [, , b]) => b - a)
     )
