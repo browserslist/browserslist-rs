@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// Options for controlling the behavior of browserslist.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(default, rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct Opts {
     /// Use desktop browsers if Can I Use doesn’t have data about this mobile version.
     #[serde(default)]
