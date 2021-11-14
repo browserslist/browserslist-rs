@@ -82,9 +82,6 @@ mod tests {
     #[test_case("and_ff 60"; "firefox")]
     #[test_case("ie_mob 9"; "ie mobile")]
     #[test_case("op_mob 30"; "opera mobile")]
-    #[test_case("chromeandroid >= 52 and chromeandroid < 54"; "chrome 2")]
-    #[test_case("and_chr 52-53"; "chrome 3")]
-    #[test_case("android 4.4-38"; "android")]
     #[test_case("> 0%, dead"; "all browsers")]
     fn mobile_to_desktop(query: &str) {
         run_compare(query, &Opts::new().mobile_to_desktop(true));

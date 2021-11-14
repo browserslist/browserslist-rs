@@ -45,3 +45,16 @@ impl Selector for BrowserBoundedRangeSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("and_chr 52-53"; "chrome 3")]
+    #[test_case("android 4.4-38"; "android")]
+    fn mobile_to_desktop(query: &str) {
+        run_compare(query, &Opts::new().mobile_to_desktop(true));
+    }
+}

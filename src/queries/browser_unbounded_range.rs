@@ -47,3 +47,15 @@ impl Selector for BrowserUnboundedRangeSelector {
         Ok(Some(versions))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("chromeandroid >= 52 and chromeandroid < 54"; "chrome 2")]
+    fn mobile_to_desktop(query: &str) {
+        run_compare(query, &Opts::new().mobile_to_desktop(true));
+    }
+}
