@@ -2,13 +2,16 @@ use serde::{Deserialize, Serialize};
 
 /// Options for controlling the behavior of browserslist.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(default, rename_all = "camelCase")]
 pub struct Opts {
     /// Use desktop browsers if Can I Use doesn’t have data about this mobile version.
-    pub(crate) mobile_to_desktop: bool,
+    #[serde(default)]
+    pub mobile_to_desktop: bool,
 
     /// If `true`, ignore unknown versions then return empty result;
     /// otherwise, throw an error.
-    pub(crate) ignore_unknown_versions: bool,
+    #[serde(default)]
+    pub ignore_unknown_versions: bool,
 }
 
 impl Opts {

@@ -1,4 +1,4 @@
-use super::{Distrib, Selector, SelectorResult};
+use super::{Selector, SelectorResult};
 use crate::opts::Opts;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
@@ -22,6 +22,7 @@ impl Selector for CurrentNodeSelector {
 
             #[cfg(not(target_arch = "wasm32"))]
             {
+                use super::Distrib;
                 use std::process::Command;
 
                 let output = Command::new("node").arg("-v").output().unwrap();
