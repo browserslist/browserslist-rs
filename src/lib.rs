@@ -1,7 +1,7 @@
 use parser::{parse, Query};
 use std::cmp::Ordering;
 #[cfg(target_arch = "wasm32")]
-pub use wasm::resolve_to_strings;
+pub use wasm::execute;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
 mod data;

@@ -1,8 +1,8 @@
 use crate::{opts::Opts, resolve};
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen(js_name = "resolveToStrings")]
-pub fn resolve_to_strings(query: String, opts: JsValue) -> Result<JsValue, JsValue> {
+#[wasm_bindgen]
+pub fn execute(query: String, opts: JsValue) -> Result<JsValue, JsValue> {
     let opts: Option<Opts> = opts.into_serde().unwrap_or_default();
 
     serde_wasm_bindgen::to_value(
