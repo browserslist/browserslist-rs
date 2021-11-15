@@ -38,3 +38,21 @@ impl Selector for NodeUnboundedRangeSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("node <= 5"; "less or equal")]
+    #[test_case("node < 5"; "less")]
+    #[test_case("node >= 9"; "greater or equal")]
+    #[test_case("node > 9"; "greater")]
+    #[test_case("Node <= 5"; "case insensitive")]
+    #[test_case("node > 10.12"; "with semver minor")]
+    #[test_case("node > 10.12.1"; "with semver patch")]
+    fn valid(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+}

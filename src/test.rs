@@ -11,7 +11,11 @@ pub fn run_compare(query: &str, opts: &Opts) {
     }
     command.arg(query);
     let output = String::from_utf8(command.output().unwrap().stdout).unwrap();
-    let expected = output.trim().split('\n').collect::<Vec<_>>();
+    let expected = output
+        .trim()
+        .split('\n')
+        .filter(|line| *line != "")
+        .collect::<Vec<_>>();
 
     let actual = resolve([query], opts)
         .unwrap()

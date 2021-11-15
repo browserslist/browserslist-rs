@@ -48,3 +48,17 @@ impl Selector for CurrentNodeSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("current node"; "basic")]
+    #[test_case("Current Node"; "case insensitive")]
+    #[test_case("current      node"; "more spaces")]
+    fn valid(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+}

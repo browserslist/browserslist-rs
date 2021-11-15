@@ -35,3 +35,21 @@ impl Selector for NodeBoundedRangeSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("node 4-6"; "semver major only")]
+    #[test_case("node 4-6.0.0"; "different semver formats")]
+    #[test_case("node 6.5-7.5"; "with semver minor")]
+    #[test_case("node 6.6.4-7.7.5"; "with semver patch")]
+    #[test_case("Node 4   -    6"; "more spaces 1")]
+    #[test_case("node 6.5    -  7.5"; "more spaces 2")]
+    #[test_case("node 6.6.4    -    7.7.5"; "more spaces 3")]
+    fn valid(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+}
