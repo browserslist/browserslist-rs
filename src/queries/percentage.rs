@@ -30,3 +30,21 @@ impl Selector for PercentageSelector {
         Ok(Some(versions))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("> 10%"; "greater")]
+    #[test_case(">= 5%"; "greater or equal")]
+    #[test_case("< 5%"; "less")]
+    #[test_case("<= 5%"; "less or equal")]
+    #[test_case(">10%"; "no space")]
+    #[test_case("> 10.2%"; "with float")]
+    #[test_case("> .2%"; "with float that has a leading dot")]
+    fn default_options(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+}
