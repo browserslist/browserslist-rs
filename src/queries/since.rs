@@ -45,11 +45,23 @@ impl Selector for SinceSelector {
             let versions = CANIUSE_LITE_BROWSERS
                 .keys()
                 .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-                .map(|(name,stat)| {
-                    stat.released
+                .map(|(name, stat)| {
+                    stat.release_date
                         .iter()
-                        .filter(|version| matches!(stat.release_date.get(*version), Some(Some(date)) if *date >= time))
-                        .map(|version| Distrib::new(name, version))
+                        .filter(|(_, date)| match date {
+                            Some(date) => *date >= time,
+                            // This is for matching original "browserslist":
+                            // For unreleased browsers like `safari TP`,
+                            // its released date value is `null`.
+                            // When querying `since 1970`,
+                            // its corresponding UNIX timestamp is `0`.
+                            // In JavaScript, `null >= 0` will be evaluate to `true`.
+                            // Thus, for the query `since 1970`,
+                            // unreleased browsers versions will be included,
+                            // and here we're behaving as same as "browserslist" in JavaScript.
+                            None => time == 0,
+                        })
+                        .map(|(version, _)| Distrib::new(name, version))
                 })
                 .flatten()
                 .collect();
@@ -57,5 +69,21 @@ impl Selector for SinceSelector {
         } else {
             Ok(None)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("since 2017"; "year only")]
+    #[test_case("Since 2017"; "case insensitive")]
+    #[test_case("since 2017-02"; "with month")]
+    #[test_case("since 2017-02-15"; "with day")]
+    #[test_case("since 1970"; "unix timestamp zero")]
+    fn valid(query: &str) {
+        run_compare(query, &Opts::new());
     }
 }
