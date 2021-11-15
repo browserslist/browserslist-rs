@@ -3,6 +3,7 @@ use crate::{
     data::caniuse::{get_browser_stat, CANIUSE_LITE_VERSION_ALIASES},
     error::Error,
     opts::Opts,
+    semver::Version,
 };
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -23,18 +24,18 @@ impl Selector for BrowserUnboundedRangeSelector {
 
         let (name, stat) = get_browser_stat(&cap[1], opts.mobile_to_desktop)
             .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
-        let version = CANIUSE_LITE_VERSION_ALIASES
+        let version: Version = CANIUSE_LITE_VERSION_ALIASES
             .get(name)
             .and_then(|alias| alias.get(version).map(|s| s.as_str()))
             .unwrap_or(version)
             .parse()
-            .unwrap_or(0.0);
+            .unwrap_or_default();
 
         let versions = stat
             .released
             .iter()
             .filter(|v| {
-                let v = v.parse().unwrap_or(0.0);
+                let v: Version = v.parse().unwrap_or_default();
                 match sign {
                     ">" => v > version,
                     "<" => v < version,
@@ -51,11 +52,32 @@ impl Selector for BrowserUnboundedRangeSelector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::run_compare;
+    use crate::test::{run_compare, should_failed};
     use test_case::test_case;
 
-    #[test_case("chromeandroid >= 52 and chromeandroid < 54"; "chrome 2")]
+    #[test_case("ie > 9"; "greater")]
+    #[test_case("ie >= 10"; "greater or equal")]
+    #[test_case("ie < 10"; "less")]
+    #[test_case("ie <= 9"; "less or equal")]
+    #[test_case("Explorer > 10"; "case insensitive")]
+    #[test_case("android >= 4.2"; "android 1")]
+    #[test_case("android >= 4.3"; "android 2")]
+    #[test_case("ie<=9"; "no spaces")]
+    #[test_case("and_qq > 0"; "browser with one version")]
+    fn default_options(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+
+    #[test_case("chromeandroid >= 52 and chromeandroid < 54"; "chrome")]
     fn mobile_to_desktop(query: &str) {
         run_compare(query, Opts::new().mobile_to_desktop(true));
+    }
+
+    #[test_case(
+        "unknow > 10", Error::BrowserNotFound(String::from("unknow"));
+        "unknown browser"
+    )]
+    fn invalid(query: &str, error: Error) {
+        assert_eq!(should_failed(query, &Opts::new()), error);
     }
 }

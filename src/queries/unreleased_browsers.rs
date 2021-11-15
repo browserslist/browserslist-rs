@@ -35,3 +35,17 @@ impl Selector for UnreleasedBrowsersSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("unreleased versions"; "basic")]
+    #[test_case("Unreleased Versions"; "case insensitive")]
+    #[test_case("unreleased        versions"; "more spaces")]
+    fn valid(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+}
