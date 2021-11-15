@@ -55,6 +55,6 @@ mod tests {
     #[test_case("and_chr 52-53"; "chrome 3")]
     #[test_case("android 4.4-38"; "android")]
     fn mobile_to_desktop(query: &str) {
-        run_compare(query, &Opts::new().mobile_to_desktop(true));
+        run_compare(query, Opts::new().mobile_to_desktop(true));
     }
 }

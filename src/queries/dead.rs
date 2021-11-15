@@ -40,6 +40,6 @@ mod tests {
 
     #[test_case("> 0%, dead"; "all browsers")]
     fn mobile_to_desktop(query: &str) {
-        run_compare(query, &Opts::new().mobile_to_desktop(true));
+        run_compare(query, Opts::new().mobile_to_desktop(true));
     }
 }

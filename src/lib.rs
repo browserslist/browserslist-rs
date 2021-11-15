@@ -1,3 +1,6 @@
+#![allow(clippy::float_cmp)]
+#![deny(clippy::needless_borrow)]
+
 use parser::{parse, Query};
 use std::cmp::Ordering;
 #[cfg(target_arch = "wasm32")]
@@ -8,7 +11,6 @@ mod data;
 mod error;
 mod opts;
 mod parser;
-#[allow(clippy::float_cmp)]
 mod queries;
 mod semver;
 #[cfg(test)]
