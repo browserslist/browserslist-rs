@@ -8,6 +8,7 @@ mod data;
 mod error;
 mod opts;
 mod parser;
+#[allow(clippy::float_cmp)]
 mod queries;
 mod semver;
 #[cfg(test)]

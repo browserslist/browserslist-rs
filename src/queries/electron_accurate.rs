@@ -17,7 +17,6 @@ impl Selector for ElectronAccurateSelector {
         if let Some(cap) = REGEX.captures(text) {
             let version: f32 = cap[1].parse().map_err(Error::ParseVersion)?;
 
-            #[allow(clippy::float_cmp)]
             let versions = ELECTRON_VERSIONS
                 .iter()
                 .find(|(electron_version, _)| *electron_version == version)
