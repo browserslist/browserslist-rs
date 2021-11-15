@@ -56,7 +56,7 @@ mod tests {
     #[test_case("last 31 versions"; "android")]
     #[test_case("last 1 version"; "support pluralization")]
     #[test_case("Last 02 Versions"; "case insensitive")]
-    fn valid(query: &str) {
+    fn default_options(query: &str) {
         run_compare(query, &Opts::new());
     }
 }

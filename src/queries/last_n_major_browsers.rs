@@ -65,10 +65,10 @@ mod tests {
     use crate::test::run_compare;
     use test_case::test_case;
 
-    #[test_case("last 2 electron major versions"; "basic")]
-    #[test_case("last 2 Electron major versions"; "case insensitive")]
-    #[test_case("last 2 electron major version"; "support pluralization")]
-    fn valid(query: &str) {
+    #[test_case("last 2 major versions"; "basic")]
+    #[test_case("last 1 major version"; "support pluralization")]
+    #[test_case("Last 01 MaJoR Version"; "case insensitive")]
+    fn default_options(query: &str) {
         run_compare(query, &Opts::new());
     }
 }

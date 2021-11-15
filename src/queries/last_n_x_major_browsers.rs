@@ -52,3 +52,28 @@ impl Selector for LastNXMajorBrowsersSelector {
         Ok(Some(versions))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("last 2 edge major versions"; "basic")]
+    #[test_case("last 1 bb major version"; "support pluralization")]
+    #[test_case("last 3 Chrome major versions"; "case insensitive")]
+    #[test_case("last 2 android major versions"; "android")]
+    #[test_case("last 2 bb major versions"; "non-sequential version numbers")]
+    #[test_case("last 3 bb major versions"; "more versions than have been released")]
+    fn default_options(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+
+    #[test]
+    fn mobile_to_desktop() {
+        run_compare(
+            "last 2 android major versions",
+            Opts::new().mobile_to_desktop(true),
+        );
+    }
+}

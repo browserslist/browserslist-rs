@@ -41,7 +41,7 @@ mod tests {
     use test_case::test_case;
 
     #[test_case("cover 0.1%"; "global")]
-    fn default_options(query: &str) {
+    fn valid(query: &str) {
         run_compare(query, &Opts::new());
     }
 }
