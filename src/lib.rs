@@ -1,5 +1,8 @@
 #![allow(clippy::float_cmp)]
+#![deny(clippy::if_not_else)]
 #![deny(clippy::needless_borrow)]
+#![deny(clippy::trivial_regex)]
+#![deny(clippy::unimplemented)]
 
 use parser::{parse, Query};
 use std::cmp::Ordering;
