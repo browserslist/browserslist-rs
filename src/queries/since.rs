@@ -52,7 +52,7 @@ impl Selector for SinceSelector {
                             Some(date) => *date >= time,
                             // This is for matching original "browserslist":
                             // For unreleased browsers like `safari TP`,
-                            // its released date value is `null`.
+                            // their released date value are `null`.
                             // When querying `since 1970`,
                             // its corresponding UNIX timestamp is `0`.
                             // In JavaScript, `null >= 0` will be evaluate to `true`.
