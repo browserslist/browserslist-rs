@@ -34,3 +34,17 @@ impl Selector for ElectronUnboundedRangeSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("electron <= 0.21"; "basic")]
+    #[test_case("Electron < 0.21"; "case insensitive")]
+    #[test_case("Electron < 0.21.5"; "with semver patch version")]
+    fn valid(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+}

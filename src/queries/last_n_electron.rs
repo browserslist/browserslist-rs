@@ -28,3 +28,17 @@ impl Selector for LastNElectronSelector {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::run_compare;
+    use test_case::test_case;
+
+    #[test_case("last 2 electron versions"; "basic")]
+    #[test_case("last 2 Electron versions"; "case insensitive")]
+    #[test_case("last 2 electron version"; "support pluralization")]
+    fn valid(query: &str) {
+        run_compare(query, &Opts::new());
+    }
+}
