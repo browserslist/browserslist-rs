@@ -22,6 +22,17 @@ mod test;
 mod wasm;
 
 /// Execute browserslist querying.
+///
+/// Example:
+///
+/// ```
+/// use browserslist::{Distrib, Opts, resolve};
+///
+/// assert_eq!(
+///     resolve(["ie <= 6"], &Opts::new()).unwrap(),
+///     vec![Distrib::new("ie", "6"), Distrib::new("ie", "5.5")]
+/// );
+/// ```
 pub fn resolve<I, S>(queries: I, opts: &Opts) -> Result<Vec<Distrib>, Error>
 where
     S: AsRef<str>,
