@@ -42,7 +42,10 @@ impl Selector for NodeUnboundedRangeSelector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::run_compare;
+    use crate::{
+        error::Error,
+        test::{run_compare, should_failed},
+    };
     use test_case::test_case;
 
     #[test_case("node <= 5"; "less or equal")]
@@ -54,5 +57,17 @@ mod tests {
     #[test_case("node > 10.12.1"; "with semver patch")]
     fn valid(query: &str) {
         run_compare(query, &Opts::new());
+    }
+
+    #[test_case(
+        "node < 8.a", Error::UnknownQuery(String::from("node < 8.a"));
+        "malformed version 1"
+    )]
+    #[test_case(
+        "node >= 8.8.8.8", Error::UnknownNodejsVersion(String::from("8.8.8.8"));
+        "malformed version 2"
+    )]
+    fn invalid(query: &str, error: Error) {
+        assert_eq!(should_failed(query, &Opts::new()), error);
     }
 }

@@ -19,8 +19,15 @@ impl Selector for BrowserBoundedRangeSelector {
             let from = &cap[2];
             let to = &cap[3];
 
-            let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
-                .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
+            let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop).ok_or_else(|| {
+                if name.eq_ignore_ascii_case("node") {
+                    Error::UnknownNodejsVersion(format!("{} - {}", from, to))
+                } else if name.eq_ignore_ascii_case("electron") {
+                    Error::UnknownElectronVersion(format!("{} - {}", from, to))
+                } else {
+                    Error::BrowserNotFound(name.to_string())
+                }
+            })?;
             let from: Version = normalize_version(stat, from)
                 .unwrap_or(from)
                 .parse()

@@ -58,7 +58,7 @@ mod tests {
         "malformed version 1"
     )]
     #[test_case(
-        "node 8.8.8.8", Error::BrowserNotFound(String::from("node"));
+        "node 8.8.8.8", Error::UnknownNodejsVersion(String::from("8.8.8.8"));
         "malformed version 2"
     )]
     #[test_case(

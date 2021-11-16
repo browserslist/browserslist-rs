@@ -38,7 +38,7 @@ impl Selector for ElectronUnboundedRangeSelector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::run_compare;
+    use crate::test::{run_compare, should_failed};
     use test_case::test_case;
 
     #[test_case("electron <= 0.21"; "basic")]
@@ -46,5 +46,17 @@ mod tests {
     #[test_case("Electron < 0.21.5"; "with semver patch version")]
     fn valid(query: &str) {
         run_compare(query, &Opts::new());
+    }
+
+    #[test_case(
+        "electron < 8.a", Error::UnknownQuery(String::from("electron < 8.a"));
+        "malformed version 1"
+    )]
+    #[test_case(
+        "electron >= 1.1.1.1", Error::UnknownElectronVersion(String::from("1.1.1.1"));
+        "malformed version 2"
+    )]
+    fn invalid(query: &str, error: Error) {
+        assert_eq!(should_failed(query, &Opts::new()), error);
     }
 }

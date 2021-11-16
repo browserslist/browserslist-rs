@@ -26,8 +26,15 @@ impl Selector for BrowserAccurateSelector {
                 version => version,
             };
 
-            let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
-                .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
+            let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop).ok_or_else(|| {
+                if name.eq_ignore_ascii_case("node") {
+                    Error::UnknownNodejsVersion(version.to_string())
+                } else if name.eq_ignore_ascii_case("electron") {
+                    Error::UnknownElectronVersion(version.to_string())
+                } else {
+                    Error::BrowserNotFound(name.to_string())
+                }
+            })?;
 
             if let Some(version) = normalize_version(stat, version) {
                 Ok(Some(vec![Distrib::new(name, version.to_owned())]))

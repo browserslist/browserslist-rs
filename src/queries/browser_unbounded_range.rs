@@ -22,8 +22,15 @@ impl Selector for BrowserUnboundedRangeSelector {
         let sign = &cap[2];
         let version = &cap[3];
 
-        let (name, stat) = get_browser_stat(&cap[1], opts.mobile_to_desktop)
-            .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
+        let (name, stat) = get_browser_stat(&cap[1], opts.mobile_to_desktop).ok_or_else(|| {
+            if name.eq_ignore_ascii_case("node") {
+                Error::UnknownNodejsVersion(version.to_string())
+            } else if name.eq_ignore_ascii_case("electron") {
+                Error::UnknownElectronVersion(version.to_string())
+            } else {
+                Error::BrowserNotFound(name.to_string())
+            }
+        })?;
         let version: Version = CANIUSE_LITE_VERSION_ALIASES
             .get(name)
             .and_then(|alias| alias.get(version).map(|s| s.as_str()))

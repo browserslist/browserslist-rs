@@ -46,6 +46,18 @@ mod tests {
         "electron 0.19", Error::UnknownElectronVersion(String::from("0.19"));
         "unknown version"
     )]
+    #[test_case(
+        "electron 8.a", Error::UnknownQuery(String::from("electron 8.a"));
+        "malformed version 1"
+    )]
+    #[test_case(
+        "electron 1.1.1.1", Error::UnknownElectronVersion(String::from("1.1.1.1"));
+        "malformed version 2"
+    )]
+    #[test_case(
+        "electron 7.01", Error::UnknownElectronVersion(String::from("7.01"));
+        "malformed version 3"
+    )]
     fn invalid(query: &str, error: Error) {
         assert_eq!(should_failed(query, &Opts::new()), error);
     }
