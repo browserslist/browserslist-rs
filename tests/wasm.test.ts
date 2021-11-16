@@ -1,6 +1,6 @@
 import * as assert from 'node:assert'
 import browserslist from 'browserslist'
-import execute from './pkg/node'
+import execute from '../pkg/node'
 
 describe('should match `browserslist` library', () => {
   it('current node', () => {

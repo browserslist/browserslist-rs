@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "sync": "ts-node ./scripts/sync.ts",
-    "test": "mocha -r=ts-node/register test.ts",
+    "test:napi": "mocha -r=ts-node/register tests/napi.test.ts",
+    "test:wasm": "mocha -r=ts-node/register tests/wasm.test.ts",
     "build:napi": "napi build --features=node --cargo-name=browserslist --platform --release",
     "build:napi:dev": "napi build --features=node --cargo-name=browserslist",
     "build:wasm:node": "wasm-pack build --target=nodejs --out-dir=pkg/node && ts-node ./scripts/post-node-build-wasm.ts",

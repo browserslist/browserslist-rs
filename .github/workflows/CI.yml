@@ -34,4 +34,16 @@ jobs:
           run_install: true
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: pnpm build:wasm:node:dev
-      - run: pnpm test
+      - run: pnpm test:wasm
+
+  napi:
+    name: napi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 6.21.1
+          run_install: true
+      - run: pnpm build:napi:dev
+      - run: pnpm test:napi
