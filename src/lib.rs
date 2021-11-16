@@ -3,11 +3,20 @@
 #![deny(clippy::needless_borrow)]
 #![deny(clippy::trivial_regex)]
 #![deny(clippy::unimplemented)]
+#![warn(missing_docs)]
 
 //! **browserslist-rs** is a Rust-based implementation of [Browserslist](https://github.com/browserslist/browserslist).
 //!
+//! ## Introduction
+//!
 //! This library bundles Can I Use data, Electron versions list and Node.js releases list,
 //! so it won't and doesn't need to access any data files.
+//!
+//! Except several non-widely/non-frequently used features,
+//! this library works as same as the JavaScript-based
+//! implementation [Browserslist](https://github.com/browserslist/browserslist).
+//!
+//! ## Usage
 //!
 //! It provides a simple API for querying which accepts a sequence of strings and options [`Opts`],
 //! then returns the result.
@@ -40,6 +49,14 @@
 //!     vec![String::from("ie 6"), String::from("ie 5.5")]
 //! );
 //! ```
+//!
+//! ## WebAssembly
+//!
+//! This crate can be compiled as WebAssembly, without configuring any features manually.
+//!
+//! Please note that browser and Deno can run WebAssembly,
+//! but those environments aren't Node.js,
+//! so you will receive an error when querying `current node` in those environments.
 
 use parser::{parse, Query};
 use std::cmp::Ordering;

@@ -48,6 +48,7 @@ mod years;
 pub struct Distrib(&'static str, Cow<'static, str>);
 
 impl Distrib {
+    /// Create a new distribution with browser name (or `node`) and version.
     #[inline]
     pub fn new<S: Into<Cow<'static, str>>>(name: &'static str, version: S) -> Self {
         Self(name, version.into())
