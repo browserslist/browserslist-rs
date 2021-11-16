@@ -2,6 +2,8 @@
 
 The tool like [Browserslist](https://github.com/browserslist/browserslist), but written in Rust.
 
+For the project status, please see [Project #1](https://github.com/g-plane/browserslist-rs/projects/1).
+
 ## Try it out
 
 Before trying this crate, you're required to get [Rust](https://www.rust-lang.org/) installed.
@@ -16,7 +18,7 @@ cargo run --example inspect -- <query>
 You can also specify additional options, for example:
 
 ```sh
-cargo run --example inspect -- --mobile-to-desktop 'last 2 versions, not dead`
+cargo run --example inspect -- --mobile-to-desktop 'last 2 versions, not dead'
 ```
 
 To get more help, you can run:
