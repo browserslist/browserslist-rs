@@ -1,6 +1,9 @@
+#[cfg(feature = "node")]
+use napi_derive::*;
 use serde::{Deserialize, Serialize};
 
 /// Options for controlling the behavior of browserslist.
+#[cfg_attr(feature = "node", napi(object))]
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Opts {

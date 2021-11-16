@@ -12,6 +12,8 @@ pub use {error::Error, opts::Opts, queries::Distrib};
 
 mod data;
 mod error;
+#[cfg(feature = "node")]
+mod node;
 mod opts;
 mod parser;
 mod queries;

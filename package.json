@@ -7,13 +7,19 @@
   "scripts": {
     "sync": "ts-node ./scripts/sync.ts",
     "test": "mocha -r=ts-node/register test.ts",
+    "build:napi": "napi build --features=node --cargo-name=browserslist --release",
+    "build:napi:dev": "napi build --features=node --cargo-name=browserslist",
     "build:wasm:node": "wasm-pack build --target=nodejs --out-dir=pkg/node && ts-node ./scripts/post-node-build-wasm.ts",
     "build:wasm:node:dev": "wasm-pack build --target=nodejs --out-dir=pkg/node --dev && ts-node ./scripts/post-node-build-wasm.ts",
     "build:wasm:web": "wasm-pack build --target=web --out-dir=pkg/web && ts-node ./scripts/post-web-build-wasm.ts",
     "build:wasm:web:dev": "wasm-pack build --target=web --out-dir=pkg/web --dev && ts-node ./scripts/post-web-build-wasm.ts"
   },
+  "napi": {
+    "name": "browserslist"
+  },
   "devDependencies": {
     "@gplane/tsconfig": "^5.0.0",
+    "@napi-rs/cli": "^1.3.5",
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.11.7",
     "browserslist": "^4.18.1",
