@@ -14,7 +14,7 @@ pub fn run_compare(query: &str, opts: &Opts) {
     let expected = output
         .trim()
         .split('\n')
-        .filter(|line| *line != "")
+        .filter(|line| !line.is_empty())
         .collect::<Vec<_>>();
 
     let actual = resolve([query], opts)
