@@ -53,11 +53,6 @@ jobs:
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v2
-      - name: Setup node
-        uses: actions/setup-node@v2
-        with:
-          node-version: 14
-          check-latest: true
       - name: Install
         uses: actions-rs/toolchain@v1
         with:
@@ -88,3 +83,20 @@ jobs:
         with:
           name: bindings-${{ matrix.settings.target }}
           path: browserslist-rs.*.node
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    - uses: actions/checkout@v2
+    - uses: pnpm/action-setup@v2.0.1
+      with:
+        version: 6.21.1
+        run_install: true
+    - name: Download all artifacts
+      uses: actions/download-artifact@v2
+      with:
+        path: artifacts
+    - name: Move artifacts
+      run: pnpm napi artifacts
+    - name: List packages
+      run: ls -R ./npm
