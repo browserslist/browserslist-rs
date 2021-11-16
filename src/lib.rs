@@ -4,6 +4,43 @@
 #![deny(clippy::trivial_regex)]
 #![deny(clippy::unimplemented)]
 
+//! **browserslist-rs** is a Rust-based implementation of [Browserslist](https://github.com/browserslist/browserslist).
+//!
+//! This library bundles Can I Use data, Electron versions list and Node.js releases list,
+//! so it won't and doesn't need to access any data files.
+//!
+//! It provides a simple API for querying which accepts a sequence of strings and options [`Opts`],
+//! then returns the result.
+//!
+//! ```
+//! use browserslist::{Distrib, Opts, resolve, Error};
+//!
+//! assert_eq!(
+//!     resolve(["ie <= 6"], &Opts::new()).unwrap(),
+//!     vec![Distrib::new("ie", "6"), Distrib::new("ie", "5.5")]
+//! );
+//!
+//! assert_eq!(
+//!     resolve(["yuru 1.0"], &Opts::new()),
+//!     Err(Error::BrowserNotFound(String::from("yuru")))
+//! );
+//! ```
+//!
+//! The result isn't a list of strings, instead, it's a tuple struct called [`Distrib`].
+//! If you need to retrieve something like JavaScript-based implementation of
+//! [Browserslist](https://github.com/browserslist/browserslist),
+//! you can convert them to strings:
+//!
+//! ```
+//! use browserslist::{Distrib, Opts, resolve, Error};
+//!
+//! let distribs = resolve(["ie <= 6"], &Opts::new()).unwrap();
+//! assert_eq!(
+//!     distribs.into_iter().map(|d| d.to_string()).collect::<Vec<_>>(),
+//!     vec![String::from("ie 6"), String::from("ie 5.5")]
+//! );
+//! ```
+
 use parser::{parse, Query};
 use std::cmp::Ordering;
 #[cfg(target_arch = "wasm32")]
