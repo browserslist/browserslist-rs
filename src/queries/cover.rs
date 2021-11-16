@@ -1,10 +1,15 @@
 use super::{Distrib, Selector, SelectorResult};
 use crate::{data::caniuse::CANIUSE_LITE_USAGE, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use std::ops::ControlFlow;
 
-static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^cover\s+(\d*\.?\d+)%$").unwrap());
+static REGEX: Lazy<Regex> = Lazy::new(|| {
+    RegexBuilder::new(r"^cover\s+(\d*\.?\d+)%$")
+        .case_insensitive(true)
+        .build()
+        .unwrap()
+});
 
 pub(super) struct CoverSelector;
 
@@ -41,6 +46,7 @@ mod tests {
     use test_case::test_case;
 
     #[test_case("cover 0.1%"; "global")]
+    #[test_case("Cover 0.1%"; "global case insensitive")]
     fn valid(query: &str) {
         run_compare(query, &Opts::new());
     }

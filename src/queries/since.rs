@@ -48,19 +48,7 @@ impl Selector for SinceSelector {
                 .map(|(name, stat)| {
                     stat.release_date
                         .iter()
-                        .filter(|(_, date)| match date {
-                            Some(date) => *date >= time,
-                            // This is for matching original "browserslist":
-                            // For unreleased browsers like `safari TP`,
-                            // their released date value are `null`.
-                            // When querying `since 1970`,
-                            // its corresponding UNIX timestamp is `0`.
-                            // In JavaScript, `null >= 0` will be evaluate to `true`.
-                            // Thus, for the query `since 1970`,
-                            // unreleased browsers versions will be included,
-                            // and here we're behaving as same as "browserslist" in JavaScript.
-                            None => time == 0,
-                        })
+                        .filter(|(_, date)| matches!(date, Some(date) if *date >= time))
                         .map(|(version, _)| Distrib::new(name, version))
                 })
                 .flatten()
