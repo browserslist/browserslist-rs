@@ -1,6 +1,15 @@
 use crate::{opts::Opts, resolve};
-use napi::bindgen_prelude::*;
+use napi::{bindgen_prelude::*, JsObject, NodeVersion};
 use napi_derive::*;
+use once_cell::sync::OnceCell;
+
+pub static CURRENT_NODE: OnceCell<NodeVersion> = OnceCell::new();
+
+#[module_exports]
+fn init(_exports: JsObject, env: Env) -> Result<()> {
+    let _ = CURRENT_NODE.set(env.get_node_version()?);
+    Ok(())
+}
 
 #[napi]
 fn execute(query: Either<String, Vec<String>>, opts: Option<Opts>) -> Result<Vec<String>> {
