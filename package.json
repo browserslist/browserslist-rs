@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "author": "Pig Fang <g-plane@hotmail.com>",
   "license": "MIT",
-  "private": true,
+  "repository": "https://github.com/g-plane/browserslist-rs",
+  "main": "index.js",
   "scripts": {
     "sync": "ts-node ./scripts/sync.ts",
     "test:napi": "mocha -r=ts-node/register tests/napi.test.ts",
@@ -25,6 +26,9 @@
       ]
     }
   },
+  "dependencies": {
+    "@node-rs/helper": "^1.2.1"
+  },
   "devDependencies": {
     "@gplane/tsconfig": "^5.0.0",
     "@napi-rs/cli": "^1.3.5",
@@ -36,5 +40,12 @@
     "node-releases": "^2.0.1",
     "ts-node": "^10.4.0",
     "typescript": "^4.4.4"
+  },
+  "optionalDependencies": {
+    "browserslist-rs-darwin-arm64": "0.0.0",
+    "browserslist-rs-darwin-x64": "0.0.0",
+    "browserslist-rs-linux-x64-gnu": "0.0.0",
+    "browserslist-rs-linux-x64-musl": "0.0.0",
+    "browserslist-rs-win32-x64-msvc": "0.0.0"
   }
 }
