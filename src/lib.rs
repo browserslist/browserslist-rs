@@ -24,10 +24,11 @@
 //! ```
 //! use browserslist::{Distrib, Opts, resolve, Error};
 //!
-//! assert_eq!(
-//!     resolve(["ie <= 6"], &Opts::new()).unwrap(),
-//!     vec![Distrib::new("ie", "6"), Distrib::new("ie", "5.5")]
-//! );
+//! let distribs = resolve(["ie <= 6"], &Opts::new()).unwrap();
+//! assert_eq!(distribs[0].name(), "ie");
+//! assert_eq!(distribs[0].version(), "6");
+//! assert_eq!(distribs[1].name(), "ie");
+//! assert_eq!(distribs[1].version(), "5.5");
 //!
 //! assert_eq!(
 //!     resolve(["yuru 1.0"], &Opts::new()),
@@ -84,10 +85,11 @@ mod wasm;
 /// ```
 /// use browserslist::{Distrib, Opts, resolve};
 ///
-/// assert_eq!(
-///     resolve(["ie <= 6"], &Opts::new()).unwrap(),
-///     vec![Distrib::new("ie", "6"), Distrib::new("ie", "5.5")]
-/// );
+/// let distribs = resolve(["ie <= 6"], &Opts::new()).unwrap();
+/// assert_eq!(distribs[0].name(), "ie");
+/// assert_eq!(distribs[0].version(), "6");
+/// assert_eq!(distribs[1].name(), "ie");
+/// assert_eq!(distribs[1].version(), "5.5");
 /// ```
 pub fn resolve<I, S>(queries: I, opts: &Opts) -> Result<Vec<Distrib>, Error>
 where

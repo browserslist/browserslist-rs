@@ -38,30 +38,30 @@ mod years;
 /// [browserslist](https://github.com/browserslist/browserslist). For example:
 ///
 /// ```
-/// use browserslist::Distrib;
+/// use browserslist::{Opts, resolve};
 ///
-/// assert_eq!(Distrib::new("firefox", "93").to_string(), "firefox 93".to_string());
-/// assert_eq!(Distrib::new("op_mini", "all").to_string(), "op_mini all".to_string());
-/// assert_eq!(Distrib::new("node", "16.0.0").to_string(), "node 16.0.0".to_string());
+/// let distrib = &resolve(["firefox 93"], &Opts::new()).unwrap()[0];
+///
+/// assert_eq!(distrib.name(), "firefox");
+/// assert_eq!(distrib.version(), "93");
 /// ```
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Distrib(&'static str, Cow<'static, str>);
 
 impl Distrib {
-    /// Create a new distribution with browser name (or `node`) and version.
     #[inline]
-    pub fn new<S: Into<Cow<'static, str>>>(name: &'static str, version: S) -> Self {
+    fn new<S: Into<Cow<'static, str>>>(name: &'static str, version: S) -> Self {
         Self(name, version.into())
     }
 
     /// Return browser name, or `node`.
     ///
     /// ```
-    /// use browserslist::Distrib;
+    /// use browserslist::{Opts, resolve};
     ///
-    /// assert_eq!(Distrib::new("firefox", "93").name(), "firefox");
-    /// assert_eq!(Distrib::new("op_mini", "all").name(), "op_mini");
-    /// assert_eq!(Distrib::new("node", "16.0.0").name(), "node");
+    /// let distrib = &resolve(["firefox 93"], &Opts::new()).unwrap()[0];
+    ///
+    /// assert_eq!(distrib.name(), "firefox");
     /// ```
     #[inline]
     pub fn name(&self) -> &str {
@@ -71,11 +71,11 @@ impl Distrib {
     /// Return version string.
     ///
     /// ```
-    /// use browserslist::Distrib;
+    /// use browserslist::{Opts, resolve};
     ///
-    /// assert_eq!(Distrib::new("firefox", "93").version(), "93");
-    /// assert_eq!(Distrib::new("op_mini", "all").version(), "all");
-    /// assert_eq!(Distrib::new("node", "16.0.0").version(), "16.0.0");
+    /// let distrib = &resolve(["firefox 93"], &Opts::new()).unwrap()[0];
+    ///
+    /// assert_eq!(distrib.version(), "93");
     /// ```
     #[inline]
     pub fn version(&self) -> &str {
