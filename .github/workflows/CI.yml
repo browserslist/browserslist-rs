@@ -20,6 +20,7 @@ jobs:
         with:
           version: 6.21.1
           run_install: true
+      - run: pnpm why caniuse-lite electron-to-chromium node-releases
       - run: cargo test
 
   lint:
