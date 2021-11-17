@@ -2,7 +2,17 @@
 
 The tool like [Browserslist](https://github.com/browserslist/browserslist), but written in Rust.
 
-For the project status, please see [Project #1](https://github.com/g-plane/browserslist-rs/projects/1).
+## Project Status
+
+> Can I use this library?
+
+If you don't rely on the features mentioned in the [Limitations](#limitations) section,
+you can use it.
+
+We have supported most widely or most frequently used queries,
+and there are over 100 tests to make sure it works correctly.
+
+For more detail about development status, please see [Project #1](https://github.com/g-plane/browserslist-rs/projects/1).
 
 ## Usage
 
@@ -17,11 +27,37 @@ npm i -D browserslist-rs
 Since the **main** API is same as [JavaScript-based Browserslist](https://github.com/browserslist/browserslist),
 you can just do as before:
 
-```diff
-- const browserslist = require('browserslist')
-+ const browserslist = require('browserslist-rs')
+```js
+const browserslist = require('browserslist-rs')
 
 browserslist('last 2 versions, not dead')
+```
+
+Note that we don't plan to provide full API compatibility,
+so only the main exported API is available.
+
+### Using as a Rust crate
+
+Please refer to [crate documentation](docs.rs/browserslist-rs/).
+
+## Try as Rust crate example
+
+You can try and inspect query result by running example with Cargo:
+
+```sh
+cargo run --example inspect -- <query>
+```
+
+You can also specify additional options, for example:
+
+```sh
+cargo run --example inspect -- --mobile-to-desktop 'last 2 versions, not dead'
+```
+
+To get more help, you can run:
+
+```sh
+cargo run --example inspect -- -h
 ```
 
 ## Limitations
@@ -33,6 +69,9 @@ The features below aren't supported currently:
 - Extending custom config like `extends browserslist-config-mycompany`.
 - Specifying feature name like `supports es6-module`.
 - The `browserslist config` query.
+
+Also, we haven't support reading configuration from config file or `package.json` currently,
+but it will be implemented in the future.
 
 ## License
 
