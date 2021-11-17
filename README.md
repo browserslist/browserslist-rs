@@ -4,27 +4,24 @@ The tool like [Browserslist](https://github.com/browserslist/browserslist), but 
 
 For the project status, please see [Project #1](https://github.com/g-plane/browserslist-rs/projects/1).
 
-## Try it out
+## Usage
 
-Before trying this crate, you're required to get [Rust](https://www.rust-lang.org/) installed.
-Then, clone this repository.
+### Using as an NPM package
 
-Now, you can try and inspect query result by running example with Cargo:
+Install it:
 
-```sh
-cargo run --example inspect -- <query>
+```
+npm i -D browserslist-rs
 ```
 
-You can also specify additional options, for example:
+Since the **main** API is same as [JavaScript-based Browserslist](https://github.com/browserslist/browserslist),
+you can just do as before:
 
-```sh
-cargo run --example inspect -- --mobile-to-desktop 'last 2 versions, not dead'
-```
+```diff
+- const browserslist = require('browserslist')
++ const browserslist = require('browserslist-rs')
 
-To get more help, you can run:
-
-```sh
-cargo run --example inspect -- -h
+browserslist('last 2 versions, not dead')
 ```
 
 ## Limitations
