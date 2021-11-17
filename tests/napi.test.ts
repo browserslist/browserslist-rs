@@ -15,10 +15,15 @@ describe('should match `browserslist` library', () => {
     assert.deepStrictEqual(execute('defaults'), browserslist('defaults'))
   })
 
-  it('electron', () => {
+  it('queries as array', () => {
+    const queries = ['last 1 firefox version', 'last 2 firefox version']
+    assert.deepStrictEqual(execute(queries), browserslist(queries))
+  })
+
+  it('optional properties', () => {
     assert.deepStrictEqual(
-      execute('electron >= 10.0'),
-      browserslist('electron >= 10.0')
+      execute('node 3', { ignoreUnknownVersions: true }),
+      browserslist('node 3', { ignoreUnknownVersions: true })
     )
   })
 })

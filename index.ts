@@ -3,8 +3,8 @@ import { loadBinding } from '@node-rs/helper'
 const bindings = loadBinding(__dirname, 'browserslist-rs', 'browserslist-rs')
 
 interface Opts {
-  mobileToDesktop: boolean
-  ignoreUnknownVersions: boolean
+  mobileToDesktop?: boolean
+  ignoreUnknownVersions?: boolean
 }
 
 interface Execute {
