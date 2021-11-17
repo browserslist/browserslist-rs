@@ -5,6 +5,9 @@
   "license": "MIT",
   "repository": "https://github.com/g-plane/browserslist-rs",
   "main": "index.js",
+  "files": [
+    "index.js"
+  ],
   "scripts": {
     "sync": "ts-node ./scripts/sync.ts",
     "test:napi": "mocha -r=ts-node/register tests/napi.test.ts",
