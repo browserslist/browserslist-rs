@@ -5,8 +5,10 @@
   "license": "MIT",
   "repository": "https://github.com/g-plane/browserslist-rs",
   "main": "index.js",
+  "types": "index.d.ts",
   "files": [
-    "index.js"
+    "index.js",
+    "index.d.ts"
   ],
   "scripts": {
     "sync": "ts-node ./scripts/sync.ts",
@@ -18,7 +20,7 @@
     "build:wasm:node:dev": "wasm-pack build --target=nodejs --out-dir=pkg/node --dev && ts-node ./scripts/post-node-build-wasm.ts",
     "build:wasm:web": "wasm-pack build --target=web --out-dir=pkg/web && ts-node ./scripts/post-web-build-wasm.ts",
     "build:wasm:web:dev": "wasm-pack build --target=web --out-dir=pkg/web --dev && ts-node ./scripts/post-web-build-wasm.ts",
-    "prepublishOnly": "napi prepublish -t npm"
+    "prepublishOnly": "tsc -p ./tsconfig.build.json && napi prepublish -t npm"
   },
   "napi": {
     "name": "browserslist-rs",
