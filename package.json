@@ -20,7 +20,7 @@
     "build:wasm:node:dev": "wasm-pack build --target=nodejs --out-dir=pkg/node --dev && ts-node ./scripts/post-node-build-wasm.ts",
     "build:wasm:web": "wasm-pack build --target=web --out-dir=pkg/web && ts-node ./scripts/post-web-build-wasm.ts",
     "build:wasm:web:dev": "wasm-pack build --target=web --out-dir=pkg/web --dev && ts-node ./scripts/post-web-build-wasm.ts",
-    "prepublishOnly": "tsc -p ./tsconfig.build.json && napi prepublish -t npm"
+    "prepublishOnly": "tsc -p ./tsconfig.build.json && napi prepublish -t npm --skip-gh-release"
   },
   "napi": {
     "name": "browserslist-rs",
