@@ -73,6 +73,10 @@ The features below aren't supported currently:
 Also, we haven't support reading configuration from config file or `package.json` currently,
 but it will be implemented in the future.
 
+## Credits
+
+Thanks [Andrey Sitnik](https://github.com/ai) for creating the [JavaScript-based Browserslist](https://github.com/browserslist/browserslist) which is under MIT License.
+
 ## License
 
 MIT License
