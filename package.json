@@ -46,12 +46,5 @@
     "node-releases": "^2.0.1",
     "ts-node": "^10.4.0",
     "typescript": "^4.4.4"
-  },
-  "optionalDependencies": {
-    "browserslist-rs-darwin-arm64": "0.0.0",
-    "browserslist-rs-darwin-x64": "0.0.0",
-    "browserslist-rs-linux-x64-gnu": "0.0.0",
-    "browserslist-rs-linux-x64-musl": "0.0.0",
-    "browserslist-rs-win32-x64-msvc": "0.0.0"
   }
 }
