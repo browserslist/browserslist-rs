@@ -53,4 +53,20 @@ pub enum Error {
     /// Query can't be recognized.
     #[error("unknown browser query: '{0}'")]
     UnknownQuery(String),
+
+    /// Duplicated section in configuration.
+    #[error("duplicated section '{0}' in config")]
+    DuplicatedSection(String),
+
+    /// Failed to read config.
+    #[error("failed to read config file: {0}")]
+    FailedToReadConfig(String),
+
+    /// Missing `browserslist` field in `package.json` file.
+    #[error("missing 'browserslist' field in '{0}' file")]
+    MissingFieldInPkg(String),
+
+    /// Duplicated configuration found.
+    #[error("duplicated: '{0}' directory contains both {1} and {2}.")]
+    DuplicatedConfig(String, &'static str, &'static str),
 }

@@ -15,6 +15,7 @@ name = "browserslist"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+either = "1.6"
 itertools = "0.10"
 napi = { version = "2.0.0-alpha.3", features = ["serde-json"], optional = true }
 napi-derive = { version = "2.0.0-alpha.4", optional = true }

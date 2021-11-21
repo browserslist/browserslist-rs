@@ -73,6 +73,7 @@ use std::cmp::Ordering;
 pub use wasm::execute;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
+mod config;
 mod data;
 mod error;
 #[cfg(feature = "node")]
@@ -86,7 +87,7 @@ mod test;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 
-/// Execute browserslist querying.
+/// Resolve browserslist queries.
 ///
 /// Example:
 ///
@@ -152,4 +153,19 @@ where
     distribs.dedup();
 
     Ok(distribs)
+}
+
+/// Resolve the queries if custom queries are given;
+/// otherwise, load queries from configuration.
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "node")))]
+pub fn execute<I, S>(queries: Option<I>, opts: &Opts) -> Result<Vec<Distrib>, Error>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    if let Some(queries) = queries {
+        resolve(queries, opts)
+    } else {
+        resolve(config::load(opts)?, opts)
+    }
 }
