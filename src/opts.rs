@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "node", napi(object))]
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Opts<'a> {
+pub struct Opts {
     #[serde(default)]
     pub(crate) mobile_to_desktop: bool,
 
@@ -14,16 +14,16 @@ pub struct Opts<'a> {
     pub(crate) ignore_unknown_versions: bool,
 
     #[serde(default)]
-    pub(crate) config: Option<&'a str>,
+    pub(crate) config: Option<String>,
 
     #[serde(default)]
-    pub(crate) env: Option<&'a str>,
+    pub(crate) env: Option<String>,
 
     #[serde(default)]
-    pub(crate) path: Option<&'a str>,
+    pub(crate) path: Option<String>,
 }
 
-impl<'a> Opts<'a> {
+impl Opts {
     /// Create new options with default values.
     pub fn new() -> Self {
         Self::default()
@@ -43,20 +43,20 @@ impl<'a> Opts<'a> {
     }
 
     /// Path to configuration file with queries.
-    pub fn config(&mut self, config_path: &'a str) -> &mut Self {
-        self.config = Some(config_path);
+    pub fn config<S: AsRef<str>>(&mut self, config_path: S) -> &mut Self {
+        self.config = Some(config_path.as_ref().to_string());
         self
     }
 
     /// Processing environment. It will be used to take right queries from config file.
-    pub fn env(&mut self, env: &'a str) -> &mut Self {
-        self.env = Some(env);
+    pub fn env<S: AsRef<str>>(&mut self, env: S) -> &mut Self {
+        self.env = Some(env.as_ref().to_string());
         self
     }
 
     /// File or directory path for looking for configuration file.
-    pub fn path(&mut self, path: &'a str) -> &mut Self {
-        self.path = Some(path);
+    pub fn path<S: AsRef<str>>(&mut self, path: S) -> &mut Self {
+        self.path = Some(path.as_ref().to_string());
         self
     }
 }

@@ -54,6 +54,7 @@ pub fn load(opts: &Opts) -> Result<Vec<String>, Error> {
         Ok(vec![query])
     } else if let Some(config_path) = opts
         .config
+        .as_ref()
         .map(Cow::from)
         .or_else(|| env::var("BROWSERSLIST_CONFIG").ok().map(Cow::from))
         .as_deref()
@@ -79,7 +80,7 @@ pub fn load(opts: &Opts) -> Result<Vec<String>, Error> {
                 Ok(config.env.unwrap_or(config.defaults))
             }
         }
-    } else if let Some(path) = opts.path {
+    } else if let Some(path) = &opts.path {
         match find_config(path)? {
             Either::Left(s) => {
                 let config = parse(&s, get_env(opts))?;
@@ -171,6 +172,7 @@ fn find_config<P: AsRef<Path>>(path: P) -> Result<Either<String, PkgConfig>, Err
 
 fn get_env<'a>(opts: &'a Opts) -> Cow<'a, str> {
     opts.env
+        .as_ref()
         .map(Cow::from)
         .or_else(|| env::var("BROWSERSLIST_ENV").ok().map(Cow::from))
         .or_else(|| env::var("NODE_ENV").ok().map(Cow::from))
