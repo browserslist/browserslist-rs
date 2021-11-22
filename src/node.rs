@@ -1,4 +1,4 @@
-use crate::{opts::Opts, resolve};
+use crate::{config, opts::Opts, resolve};
 use napi::{bindgen_prelude::*, JsObject, NodeVersion};
 use napi_derive::*;
 use once_cell::sync::OnceCell;
@@ -13,14 +13,21 @@ fn init(_exports: JsObject, env: Env) -> Result<()> {
 }
 
 #[napi]
-fn execute(query: Either<String, Vec<String>>, opts: Option<Value>) -> Result<Vec<String>> {
-    let queries = match query {
-        Either::A(query) => vec![query],
-        Either::B(queries) => queries,
-    };
+fn execute(
+    query: Either4<String, Vec<String>, Undefined, Null>,
+    opts: Option<Value>,
+) -> Result<Vec<String>> {
     let opts = match opts {
         Some(opts) => from_value(opts).map_err(|e| Error::from_reason(format!("{}", e)))?,
         None => Opts::default(),
+    };
+
+    let queries = match query {
+        Either4::A(query) => vec![query],
+        Either4::B(queries) => queries,
+        Either4::C(_) | Either4::D(_) => {
+            config::load(&opts).map_err(|e| Error::from_reason(format!("{}", e)))?
+        }
     };
 
     resolve(&queries, &opts)
