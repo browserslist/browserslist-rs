@@ -10,7 +10,7 @@ use std::{
     env,
     fs::{self, File},
     io::{BufReader, Read},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 mod parser;
@@ -80,7 +80,11 @@ pub fn load(opts: &Opts) -> Result<Vec<String>, Error> {
                 Ok(config.env.unwrap_or(config.defaults))
             }
         }
-    } else if let Some(path) = &opts.path {
+    } else {
+        let path = match &opts.path {
+            Some(path) => PathBuf::from(path),
+            None => env::current_dir().map_err(|_| Error::FailedToAccessCurrentDir)?,
+        };
         match find_config(path)? {
             Either::Left(s) => {
                 let config = parse(&s, get_env(opts))?;
@@ -88,8 +92,6 @@ pub fn load(opts: &Opts) -> Result<Vec<String>, Error> {
             }
             Either::Right(config) => Ok(pick_queries_by_env(config, &get_env(opts))),
         }
-    } else {
-        Ok(vec![])
     }
 }
 
@@ -389,6 +391,15 @@ last 1 version
         );
 
         fs::remove_dir_all(tmp.join("browserslist")).unwrap();
+
+        // load config from current directory if no options set
+        assert!(load(&Opts::new()).unwrap().is_empty());
+        let original_cwd = env::current_dir().unwrap();
+        fs::write(tmp.join(".browserslistrc"), "not dead").unwrap();
+        env::set_current_dir(&tmp).unwrap();
+        assert_eq!(load(&Opts::new()).as_deref().unwrap(), ["not dead"]);
+        env::set_current_dir(original_cwd).unwrap();
+
         fs::remove_file(tmp.join(".browserslistrc")).unwrap();
     }
 }

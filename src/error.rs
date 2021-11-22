@@ -69,4 +69,8 @@ pub enum Error {
     /// Duplicated configuration found.
     #[error("duplicated: '{0}' directory contains both {1} and {2}.")]
     DuplicatedConfig(String, &'static str, &'static str),
+
+    /// Failed to access the current working directory.
+    #[error("failed to access current working directory")]
+    FailedToAccessCurrentDir,
 }
