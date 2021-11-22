@@ -170,7 +170,7 @@ fn find_config<P: AsRef<Path>>(path: P) -> Result<Either<String, PkgConfig>, Err
     Ok(Either::Right(Default::default()))
 }
 
-fn get_env<'a>(opts: &'a Opts) -> Cow<'a, str> {
+fn get_env(opts: &Opts) -> Cow<str> {
     opts.env
         .as_ref()
         .map(Cow::from)
