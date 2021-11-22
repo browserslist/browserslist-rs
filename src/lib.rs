@@ -89,7 +89,10 @@ mod wasm;
 
 /// Resolve browserslist queries.
 ///
-/// Example:
+/// This is a low-level API.
+/// If you want to load queries from configuration file and
+/// resolve them automatically,
+/// use the higher-level API [`execute`] instead.
 ///
 /// ```
 /// use browserslist::{Distrib, Opts, resolve};
@@ -155,17 +158,18 @@ where
     Ok(distribs)
 }
 
-/// Resolve the queries if custom queries are given;
-/// otherwise, load queries from configuration.
+/// Load queries from configuration with environment information,
+/// then resolve those queries.
+///
+/// If you want to resolve custom queries (not from configuration file),
+/// use the lower-level API [`resolve`] instead.
+///
+/// ```
+/// use browserslist::{Opts, execute};
+///
+/// assert!(execute(&Opts::new()).unwrap().is_empty());
+/// ```
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "node")))]
-pub fn execute<I, S>(queries: Option<I>, opts: &Opts) -> Result<Vec<Distrib>, Error>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<str>,
-{
-    if let Some(queries) = queries {
-        resolve(queries, opts)
-    } else {
-        resolve(config::load(opts)?, opts)
-    }
+pub fn execute(opts: &Opts) -> Result<Vec<Distrib>, Error> {
+    resolve(config::load(opts)?, opts)
 }
