@@ -11,17 +11,6 @@ Promise.all([
     JSON.stringify(browserslist.data)
   ),
   fs.writeFile(
-    path.join(dest, 'caniuse-lite-usage.json'),
-    JSON.stringify(
-      Object.entries(browserslist.usage.global!)
-        .map(([v, usage]) => {
-          const [name, version] = v.split(' ')
-          return [name, version, usage] as const
-        })
-        .sort(([, , a], [, , b]) => b - a)
-    )
-  ),
-  fs.writeFile(
     path.join(dest, 'caniuse-lite-version-aliases.json'),
     JSON.stringify(browserslist.versionAliases)
   ),

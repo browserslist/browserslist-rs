@@ -20,8 +20,13 @@ pub static CANIUSE_LITE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
     serde_json::from_str(include_str!("../../data/caniuse-lite-browsers.json")).unwrap()
 });
 
-pub static CANIUSE_LITE_USAGE: Lazy<Vec<(String, String, f32)>> =
-    Lazy::new(|| serde_json::from_str(include_str!("../../data/caniuse-lite-usage.json")).unwrap());
+pub static CANIUSE_LITE_USAGE: Lazy<Vec<(String, String, f32)>> = Lazy::new(|| {
+    serde_json::from_str(include_str!(concat!(
+        env!("OUT_DIR"),
+        "/caniuse-usage.json"
+    )))
+    .unwrap()
+});
 
 pub static CANIUSE_LITE_VERSION_ALIASES: Lazy<HashMap<String, HashMap<String, String>>> =
     Lazy::new(|| {

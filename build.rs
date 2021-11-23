@@ -7,6 +7,7 @@ use std::{
 
 const E2C: &str = "1.3.906";
 const NODE: &str = "2.0.1";
+const CANIUSE: &str = "1.0.30001282";
 
 fn main() -> Result<()> {
     #[cfg(feature = "node")]
@@ -19,6 +20,7 @@ fn main() -> Result<()> {
     fetch_electron_to_chromium()?;
     fetch_node_versions()?;
     fetch_node_release_schedule()?;
+    fetch_caniuse_global()?;
 
     Ok(())
 }
@@ -104,6 +106,45 @@ fn fetch_node_release_schedule() -> Result<()> {
                 })
                 .collect::<HashMap<_, _>>(),
         )?,
+    )?;
+
+    Ok(())
+}
+
+fn fetch_caniuse_global() -> Result<()> {
+    #[derive(Deserialize)]
+    struct Caniuse {
+        agents: HashMap<String, Agent>,
+    }
+
+    #[derive(Deserialize)]
+    struct Agent {
+        usage_global: HashMap<String, f32>,
+    }
+
+    let data = ureq::get(&format!(
+        "https://cdn.jsdelivr.net/npm/caniuse-db@{}/fulldata-json/data-2.0.json",
+        CANIUSE
+    ))
+    .call()?
+    .into_json::<Caniuse>()?;
+
+    let mut global_usage = data
+        .agents
+        .iter()
+        .map(|(name, agent)| {
+            agent
+                .usage_global
+                .iter()
+                .map(|(version, usage)| (name.clone(), version.clone(), usage))
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    global_usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
+
+    fs::write(
+        format!("{}/caniuse-usage.json", env::var("OUT_DIR")?),
+        &serde_json::to_string(&global_usage)?,
     )?;
 
     Ok(())
