@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::{collections::BTreeMap, env, fs};
 
-const E2C: &str = "1.3.901";
+const E2C: &str = "1.3.906";
 
 fn main() -> Result<()> {
     #[cfg(feature = "node")]
