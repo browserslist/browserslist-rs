@@ -2,7 +2,6 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import browserslist from 'browserslist'
-import { versions as e2c } from 'electron-to-chromium'
 import nodeVersions from 'node-releases/data/processed/envs.json'
 import nodeReleaseSchedule from 'node-releases/data/release-schedule/release-schedule.json'
 
@@ -27,12 +26,6 @@ Promise.all([
   fs.writeFile(
     path.join(dest, 'caniuse-lite-version-aliases.json'),
     JSON.stringify(browserslist.versionAliases)
-  ),
-  fs.writeFile(
-    path.join(dest, 'electron-to-chromium.json'),
-    JSON.stringify(
-      Object.entries(e2c).map(([k, v]) => [Number.parseFloat(k), v])
-    )
   ),
   fs.writeFile(
     path.join(dest, 'node-versions.json'),
