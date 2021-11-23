@@ -35,17 +35,20 @@ impl Selector for LastNMajorBrowsersSelector {
                 };
 
                 let minimum: u32 = stat
-                    .released
+                    .version_list
                     .iter()
+                    .filter(|version| version.release_date.is_some())
                     .rev()
-                    .map(|version| version.split('.').next().unwrap())
+                    .map(|version| version.version.split('.').next().unwrap())
                     .dedup()
                     .nth(count - 1)
                     .and_then(|minimum| minimum.parse().ok())
                     .unwrap_or(0);
 
-                stat.released
+                stat.version_list
                     .iter()
+                    .filter(|version| version.release_date.is_some())
+                    .map(|version| &*version.version)
                     .filter(move |version| {
                         version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
                     })

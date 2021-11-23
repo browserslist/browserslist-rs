@@ -39,8 +39,10 @@ impl Selector for BrowserUnboundedRangeSelector {
             .unwrap_or_default();
 
         let versions = stat
-            .released
+            .version_list
             .iter()
+            .filter(|version| version.release_date.is_some())
+            .map(|version| &*version.version)
             .filter(|v| {
                 let v: Version = v.parse().unwrap_or_default();
                 match sign {

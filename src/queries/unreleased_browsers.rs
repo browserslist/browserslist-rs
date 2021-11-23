@@ -22,10 +22,10 @@ impl Selector for UnreleasedBrowsersSelector {
                 .keys()
                 .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
                 .map(|(name, stat)| {
-                    stat.versions
+                    stat.version_list
                         .iter()
-                        .filter(|version| !stat.released.contains(version))
-                        .map(|version| Distrib::new(name, version))
+                        .filter(|version| version.release_date.is_none())
+                        .map(|version| Distrib::new(name, &*version.version))
                 })
                 .flatten()
                 .collect();

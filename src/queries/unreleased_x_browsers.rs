@@ -19,10 +19,10 @@ impl Selector for UnreleasedXBrowsersSelector {
             let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
                 .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
             let versions = stat
-                .versions
+                .version_list
                 .iter()
-                .filter(|version| !stat.released.contains(version))
-                .map(|version| Distrib::new(name, version))
+                .filter(|version| version.release_date.is_none())
+                .map(|version| Distrib::new(name, &*version.version))
                 .collect();
             Ok(Some(versions))
         } else {

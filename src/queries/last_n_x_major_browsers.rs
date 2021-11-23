@@ -30,8 +30,10 @@ impl Selector for LastNXMajorBrowsersSelector {
             count
         };
         let minimum = stat
-            .released
+            .version_list
             .iter()
+            .filter(|version| version.release_date.is_some())
+            .map(|version| &*version.version)
             .rev()
             .map(|version| version.split('.').next().unwrap())
             .dedup()
@@ -40,8 +42,10 @@ impl Selector for LastNXMajorBrowsersSelector {
             .unwrap_or(0);
 
         let versions = stat
-            .released
+            .version_list
             .iter()
+            .filter(|version| version.release_date.is_some())
+            .map(|version| &*version.version)
             .filter(move |version| {
                 version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
             })

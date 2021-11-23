@@ -29,11 +29,13 @@ impl Selector for YearsSelector {
             let versions = CANIUSE_LITE_BROWSERS
                 .keys()
                 .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-                .map(|(name,stat)| {
-                    stat.released
+                .map(|(name, stat)| {
+                    stat.version_list
                         .iter()
-                        .filter(|version| matches!(stat.release_date.get(*version), Some(Some(date)) if *date >= time))
-                        .map(|version| Distrib::new(name, version))
+                        .filter(
+                            |version| matches!(version.release_date, Some(date) if date >= time),
+                        )
+                        .map(|version| Distrib::new(name, &*version.version))
                 })
                 .flatten()
                 .collect();

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
     env, fs,
@@ -120,6 +120,19 @@ fn fetch_caniuse_global() -> Result<()> {
     #[derive(Deserialize)]
     struct Agent {
         usage_global: HashMap<String, f32>,
+        version_list: Vec<VersionDetail>,
+    }
+
+    #[derive(Serialize)]
+    struct BrowserStat {
+        name: String,
+        version_list: Vec<VersionDetail>,
+    }
+
+    #[derive(Clone, Deserialize, Serialize)]
+    struct VersionDetail {
+        version: String,
+        release_date: Option<i64>,
     }
 
     let data = ureq::get(&format!(
@@ -128,6 +141,24 @@ fn fetch_caniuse_global() -> Result<()> {
     ))
     .call()?
     .into_json::<Caniuse>()?;
+
+    let browsers = data
+        .agents
+        .iter()
+        .map(|(name, agent)| {
+            (
+                name,
+                BrowserStat {
+                    name: name.to_string(),
+                    version_list: agent.version_list.clone(),
+                },
+            )
+        })
+        .collect::<HashMap<_, _>>();
+    fs::write(
+        format!("{}/caniuse-browsers.json", env::var("OUT_DIR")?),
+        &serde_json::to_string(&browsers)?,
+    )?;
 
     let mut global_usage = data
         .agents
@@ -141,7 +172,6 @@ fn fetch_caniuse_global() -> Result<()> {
         .flatten()
         .collect::<Vec<_>>();
     global_usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
-
     fs::write(
         format!("{}/caniuse-usage.json", env::var("OUT_DIR")?),
         &serde_json::to_string(&global_usage)?,

@@ -30,11 +30,12 @@ impl Selector for LastNXBrowsersSelector {
         };
 
         let versions = stat
-            .released
+            .version_list
             .iter()
+            .filter(|version| version.release_date.is_some())
             .rev()
             .take(count)
-            .map(|version| Distrib::new(name, version))
+            .map(|version| Distrib::new(name, &*version.version))
             .collect();
         Ok(Some(versions))
     }

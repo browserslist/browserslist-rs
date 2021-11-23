@@ -8,16 +8,23 @@ pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 #[derive(Clone, Debug, Deserialize)]
 pub struct BrowserStat {
     name: String,
-    pub versions: Vec<String>,
-    pub released: Vec<String>,
-    #[serde(rename = "releaseDate")]
-    pub release_date: HashMap<String, Option<i64>>,
+    pub version_list: Vec<VersionDetail>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct VersionDetail {
+    pub version: String,
+    pub release_date: Option<i64>,
 }
 
 pub type CaniuseData = HashMap<String, BrowserStat>;
 
 pub static CANIUSE_LITE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
-    serde_json::from_str(include_str!("../../data/caniuse-lite-browsers.json")).unwrap()
+    serde_json::from_str(include_str!(concat!(
+        env!("OUT_DIR"),
+        "/caniuse-browsers.json"
+    )))
+    .unwrap()
 });
 
 pub static CANIUSE_LITE_USAGE: Lazy<Vec<(String, String, f32)>> = Lazy::new(|| {
@@ -40,49 +47,38 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     let chrome = CANIUSE_LITE_BROWSERS.get("chrome").unwrap();
     let mut android = CANIUSE_LITE_BROWSERS.get("android").unwrap().clone();
 
-    android.released = normalize_android_versions(android.released, &chrome.released);
-    android.versions = normalize_android_versions(android.versions, &chrome.versions);
+    android.version_list = android
+        .version_list
+        .into_iter()
+        .filter(|version| REGEX_NON_DESKTOP_ANDROID.is_match(&version.version))
+        .chain(
+            chrome.version_list.iter().cloned().skip(
+                chrome.version_list.len()
+                    - (chrome
+                        .version_list
+                        .last()
+                        .unwrap()
+                        .version
+                        .parse::<usize>()
+                        .unwrap()
+                        - (ANDROID_EVERGREEN_FIRST as usize)
+                        + 1),
+            ),
+        )
+        .collect();
 
     android
 });
-
-fn normalize_android_versions(
-    android_versions: Vec<String>,
-    chrome_versions: &[String],
-) -> Vec<String> {
-    android_versions
-        .into_iter()
-        .filter(|version| REGEX_NON_DESKTOP_ANDROID.is_match(version))
-        .chain(chrome_versions.iter().cloned().skip(
-            chrome_versions.len()
-                - (chrome_versions.last().unwrap().parse::<usize>().unwrap()
-                    - (ANDROID_EVERGREEN_FIRST as usize)
-                    + 1),
-        ))
-        .collect()
-}
 
 static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     let mut op_mob = CANIUSE_LITE_BROWSERS.get("opera").unwrap().clone();
 
     if let Some(v) = op_mob
-        .versions
+        .version_list
         .iter_mut()
-        .find(|version| version.as_str() == "10.0-10.1")
+        .find(|version| version.version.as_str() == "10.0-10.1")
     {
-        *v = "10".to_string();
-    }
-
-    if let Some(v) = op_mob
-        .released
-        .iter_mut()
-        .find(|version| version.as_str() == "10.0-10.1")
-    {
-        *v = "10".to_string();
-    }
-
-    if let Some(value) = op_mob.release_date.remove("10.0-10.1") {
-        op_mob.release_date.insert("10".to_string(), value);
+        v.version = "10".to_string();
     }
 
     op_mob
@@ -161,15 +157,15 @@ pub(crate) fn normalize_version<'a>(
     stat: &'static BrowserStat,
     version: &'a str,
 ) -> Option<&'a str> {
-    if stat.versions.iter().any(|v| v == version) {
+    if stat.version_list.iter().any(|v| v.version == version) {
         Some(version)
     } else if let Some(version) = CANIUSE_LITE_VERSION_ALIASES
         .get(&stat.name)
         .and_then(|aliases| aliases.get(version).map(|s| s.as_str()))
     {
         Some(version)
-    } else if stat.versions.len() == 1 {
-        stat.versions.first().map(|s| s.as_str())
+    } else if stat.version_list.len() == 1 {
+        stat.version_list.first().map(|s| s.version.as_str())
     } else {
         None
     }

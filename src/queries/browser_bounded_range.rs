@@ -38,8 +38,10 @@ impl Selector for BrowserBoundedRangeSelector {
                 .unwrap_or_default();
 
             let versions = stat
-                .released
+                .version_list
                 .iter()
+                .filter(|version| version.release_date.is_some())
+                .map(|version| &*version.version)
                 .filter(|version| {
                     let version = version.parse().unwrap_or_default();
                     from <= version && version <= to

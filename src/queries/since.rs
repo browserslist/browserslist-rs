@@ -46,10 +46,12 @@ impl Selector for SinceSelector {
                 .keys()
                 .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
                 .map(|(name, stat)| {
-                    stat.release_date
+                    stat.version_list
                         .iter()
-                        .filter(|(_, date)| matches!(date, Some(date) if *date >= time))
-                        .map(|(version, _)| Distrib::new(name, version))
+                        .filter(
+                            |version| matches!(version.release_date, Some(date) if date >= time),
+                        )
+                        .map(|version| Distrib::new(name, &*version.version))
                 })
                 .flatten()
                 .collect();

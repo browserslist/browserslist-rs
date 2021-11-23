@@ -146,13 +146,18 @@ pub fn should_filter_android(name: &str, mobile_to_desktop: bool) -> bool {
 }
 
 pub fn count_android_filter(count: usize, mobile_to_desktop: bool) -> usize {
-    let released = &caniuse::get_browser_stat("android", mobile_to_desktop)
+    let last_released = &caniuse::get_browser_stat("android", mobile_to_desktop)
         .unwrap()
         .1
-        .released;
-    let diff = (released.last().unwrap().parse::<f32>().unwrap()
-        - caniuse::ANDROID_EVERGREEN_FIRST
-        - (count as f32)) as usize;
+        .version_list
+        .iter()
+        .filter(|version| version.release_date.is_some())
+        .map(|version| &*version.version)
+        .last()
+        .unwrap()
+        .parse::<f32>()
+        .unwrap();
+    let diff = (last_released - caniuse::ANDROID_EVERGREEN_FIRST - (count as f32)) as usize;
     if diff > 0 {
         1
     } else {

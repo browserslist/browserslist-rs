@@ -33,11 +33,12 @@ impl Selector for LastNBrowsersSelector {
                     count
                 };
 
-                stat.released
+                stat.version_list
                     .iter()
+                    .filter(|version| version.release_date.is_some())
                     .rev()
                     .take(count)
-                    .map(move |version| Distrib::new(name, version))
+                    .map(move |version| Distrib::new(name, &*version.version))
             })
             .flatten()
             .collect();
