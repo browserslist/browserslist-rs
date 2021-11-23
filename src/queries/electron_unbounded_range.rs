@@ -26,7 +26,7 @@ impl Selector for ElectronUnboundedRangeSelector {
                     "<=" => *electron_version <= version,
                     _ => *electron_version >= version,
                 })
-                .map(|(_, chrome_version)| Distrib::new("chrome", chrome_version))
+                .map(|(_, chromium_version)| Distrib::new("chrome", chromium_version))
                 .collect();
             Ok(Some(versions))
         } else {

@@ -20,7 +20,7 @@ impl Selector for ElectronAccurateSelector {
             let versions = ELECTRON_VERSIONS
                 .iter()
                 .find(|(electron_version, _)| *electron_version == version)
-                .map(|(_, chrome_version)| vec![Distrib::new("chrome", chrome_version)])
+                .map(|(_, chromium_version)| vec![Distrib::new("chrome", chromium_version)])
                 .ok_or_else(|| Error::UnknownElectronVersion(version.to_string()))?;
             Ok(Some(versions))
         } else {

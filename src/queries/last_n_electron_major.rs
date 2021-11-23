@@ -32,7 +32,7 @@ impl Selector for LastNElectronMajorSelector {
             .iter()
             .filter(|(electron_version, _)| electron_version >= minimum)
             .rev()
-            .map(|(_, chrome_version)| Distrib::new("chrome", chrome_version))
+            .map(|(_, chromium_version)| Distrib::new("chrome", chromium_version))
             .collect();
 
         Ok(Some(versions))
