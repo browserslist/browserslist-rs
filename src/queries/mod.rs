@@ -27,6 +27,7 @@ mod op_mini;
 mod percentage;
 mod phantom;
 mod since;
+mod supports;
 mod unreleased_browsers;
 mod unreleased_electron;
 mod unreleased_x_browsers;
@@ -110,6 +111,7 @@ pub fn query(query_string: &str, opts: &Opts) -> Result<Vec<Distrib>, Error> {
         Box::new(since::SinceSelector),
         Box::new(percentage::PercentageSelector),
         Box::new(cover::CoverSelector),
+        Box::new(supports::SupportsSelector),
         Box::new(electron_bounded_range::ElectronBoundedRangeSelector),
         Box::new(node_bounded_range::NodeBoundedRangeSelector),
         Box::new(browser_bounded_range::BrowserBoundedRangeSelector),

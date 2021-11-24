@@ -46,6 +46,10 @@ pub enum Error {
     #[error("current environment for querying `current node` is not supported")]
     UnsupportedCurrentNode,
 
+    /// Unknown browser feature.
+    #[error("unknown browser feature: '{0}'")]
+    UnknownBrowserFeature(String),
+
     /// Version string is missing when querying.
     #[error("specify versions in Browserslist query for browser '{0}'")]
     VersionRequired(String),

@@ -67,7 +67,6 @@ The features below aren't supported currently:
 - Custom usage like `> 0.5% in my stats` or `> 0.5% in XX`.
 - Custom usage like `cover 99.5% in my stats` or `cover 99.5% in XX`.
 - Extending custom config like `extends browserslist-config-mycompany`.
-- Specifying feature name like `supports es6-module`.
 - The `browserslist config` query.
 
 Also, we haven't support reading configuration from config file or `package.json` currently,
