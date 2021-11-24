@@ -1,5 +1,5 @@
 use super::{Distrib, Selector, SelectorResult};
-use crate::{data::caniuse::CANIUSE_LITE_USAGE, error::Error, opts::Opts};
+use crate::{data::caniuse::CANIUSE_LITE_BROWSERS, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::Regex;
 
@@ -17,15 +17,23 @@ impl Selector for PercentageSelector {
         let sign = &cap[1];
         let popularity: f32 = cap[2].parse().map_err(Error::ParsePercentage)?;
 
-        let versions = CANIUSE_LITE_USAGE
+        let versions = CANIUSE_LITE_BROWSERS
             .iter()
-            .filter(|(_, _, usage)| match sign {
-                ">" => *usage > popularity,
-                "<" => *usage < popularity,
-                "<=" => *usage <= popularity,
-                _ => *usage >= popularity,
+            .map(|(name, stat)| {
+                stat.version_list
+                    .iter()
+                    .filter(|version| {
+                        let usage = version.global_usage;
+                        match sign {
+                            ">" => usage > popularity,
+                            "<" => usage < popularity,
+                            "<=" => usage <= popularity,
+                            _ => usage >= popularity,
+                        }
+                    })
+                    .map(|version| Distrib::new(name, &*version.version))
             })
-            .map(|(name, version, _)| Distrib::new(name, version))
+            .flatten()
             .collect();
         Ok(Some(versions))
     }

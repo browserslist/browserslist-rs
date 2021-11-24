@@ -14,6 +14,7 @@ pub struct BrowserStat {
 #[derive(Clone, Debug, Deserialize)]
 pub struct VersionDetail {
     pub version: String,
+    pub global_usage: f32,
     pub release_date: Option<i64>,
 }
 

@@ -132,6 +132,7 @@ fn fetch_caniuse_global() -> Result<()> {
     #[derive(Clone, Deserialize, Serialize)]
     struct VersionDetail {
         version: String,
+        global_usage: f32,
         release_date: Option<i64>,
     }
 
