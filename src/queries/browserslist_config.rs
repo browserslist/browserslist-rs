@@ -1,12 +1,24 @@
 use super::{Selector, SelectorResult};
-use crate::{execute, opts::Opts};
+use crate::opts::Opts;
 
 pub(super) struct BrowserslistConfigSelector;
 
 impl Selector for BrowserslistConfigSelector {
     fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         if text.eq_ignore_ascii_case("browserslist config") {
-            execute(opts).map(Some)
+            #[cfg(target_arch = "wasm32")]
+            {
+                use super::query;
+
+                query("defaults", opts).map(Some)
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                use crate::execute;
+
+                execute(opts).map(Some)
+            }
         } else {
             Ok(None)
         }

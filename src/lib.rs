@@ -73,6 +73,7 @@ use std::cmp::Ordering;
 pub use wasm::execute;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
+#[cfg(not(target_arch = "wasm32"))]
 mod config;
 mod data;
 mod error;
