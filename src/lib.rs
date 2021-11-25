@@ -167,7 +167,8 @@ where
 /// ```
 /// use browserslist::{Opts, execute};
 ///
-/// assert!(execute(&Opts::new()).unwrap().is_empty());
+/// // when no config found, it use `defaults` query
+/// assert!(!execute(&Opts::new()).unwrap().is_empty());
 /// ```
 #[cfg(not(target_arch = "wasm32"))]
 pub fn execute(opts: &Opts) -> Result<Vec<Distrib>, Error> {
