@@ -5,7 +5,7 @@ use std::{
     env, fs, io,
 };
 
-const E2C: &str = "1.3.906";
+const E2C: &str = "1.4.0";
 const NODE: &str = "2.0.1";
 const CANIUSE: &str = "1.0.30001282";
 
@@ -26,18 +26,12 @@ fn main() -> Result<()> {
 }
 
 fn fetch_electron_to_chromium() -> Result<()> {
-    let source = ureq::get(&format!(
-        "https://cdn.jsdelivr.net/npm/electron-to-chromium@{}/versions.js",
+    let mut data = ureq::get(&format!(
+        "https://cdn.jsdelivr.net/npm/electron-to-chromium@{}/versions.json",
         E2C
     ))
     .call()?
-    .into_string()?;
-
-    let mut data = serde_json::from_str::<BTreeMap<String, String>>(
-        source
-            .trim_start_matches("module.exports = ")
-            .trim_end_matches(';'),
-    )?
+    .into_json::<BTreeMap<String, String>>()?
     .into_iter()
     .map(|(electron_version, chromium_version)| {
         (electron_version.parse::<f32>().unwrap(), chromium_version)
