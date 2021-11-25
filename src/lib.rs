@@ -169,7 +169,7 @@ where
 ///
 /// assert!(execute(&Opts::new()).unwrap().is_empty());
 /// ```
-#[cfg(all(not(target_arch = "wasm32"), not(feature = "node")))]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn execute(opts: &Opts) -> Result<Vec<Distrib>, Error> {
     resolve(config::load(opts)?, opts)
 }
