@@ -5,6 +5,7 @@ use std::{borrow::Cow, fmt::Display};
 mod browser_accurate;
 mod browser_bounded_range;
 mod browser_unbounded_range;
+mod browserslist_config;
 mod cover;
 mod current_node;
 mod dead;
@@ -126,6 +127,7 @@ pub fn query(query_string: &str, opts: &Opts) -> Result<Vec<Distrib>, Error> {
         Box::new(maintained_node::MaintainedNodeSelector),
         Box::new(phantom::PhantomSelector),
         Box::new(browser_accurate::BrowserAccurateSelector),
+        Box::new(browserslist_config::BrowserslistConfigSelector),
         Box::new(defaults::DefaultsSelector),
         Box::new(dead::DeadSelector),
     ];

@@ -169,7 +169,7 @@ fn find_config<P: AsRef<Path>>(path: P) -> Result<Either<String, PkgConfig>, Err
         };
     }
 
-    Ok(Either::Right(Default::default()))
+    Ok(Either::Left(String::from("defaults")))
 }
 
 fn get_env(opts: &Opts) -> Cow<str> {
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn load_config() {
-        assert!(load(&Opts::new()).unwrap().is_empty());
+        assert_eq!(&*load(&Opts::new()).unwrap(), ["defaults"]);
 
         // read queries from env
         set_var("BROWSERSLIST", "last 2 versions");
@@ -393,7 +393,7 @@ last 1 version
         fs::remove_dir_all(tmp.join("browserslist")).unwrap();
 
         // load config from current directory if no options set
-        assert!(load(&Opts::new()).unwrap().is_empty());
+        assert_eq!(&*load(&Opts::new()).unwrap(), ["defaults"]);
         let original_cwd = env::current_dir().unwrap();
         fs::write(tmp.join(".browserslistrc"), "not dead").unwrap();
         env::set_current_dir(&tmp).unwrap();
