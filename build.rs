@@ -7,7 +7,7 @@ use std::{
 
 const E2C: &str = "1.4.0";
 const NODE: &str = "2.0.1";
-const CANIUSE: &str = "1.0.30001282";
+const CANIUSE: &str = "1.0.30001283";
 
 fn main() -> Result<()> {
     #[cfg(feature = "node")]
