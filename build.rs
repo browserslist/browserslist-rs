@@ -26,6 +26,13 @@ fn main() -> Result<()> {
 }
 
 fn fetch_electron_to_chromium() -> Result<()> {
+    let path = format!("{}/electron-to-chromium.json", env::var("OUT_DIR")?);
+
+    if env::var("DOCS_RS").is_ok() {
+        fs::write(path, "[]")?;
+        return Ok(());
+    }
+
     let mut data = ureq::get(&format!(
         "https://cdn.jsdelivr.net/npm/electron-to-chromium@{}/versions.json",
         E2C
@@ -39,10 +46,7 @@ fn fetch_electron_to_chromium() -> Result<()> {
     .collect::<Vec<_>>();
     data.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap());
 
-    fs::write(
-        format!("{}/electron-to-chromium.json", env::var("OUT_DIR")?),
-        &serde_json::to_string(&data)?,
-    )?;
+    fs::write(path, &serde_json::to_string(&data)?)?;
 
     Ok(())
 }
@@ -53,6 +57,13 @@ fn fetch_node_versions() -> Result<()> {
         version: String,
     }
 
+    let path = format!("{}/node-versions.json", env::var("OUT_DIR")?);
+
+    if env::var("DOCS_RS").is_ok() {
+        fs::write(path, "[]")?;
+        return Ok(());
+    }
+
     let releases = ureq::get(&format!(
         "https://cdn.jsdelivr.net/npm/node-releases@{}/data/processed/envs.json",
         NODE
@@ -61,7 +72,7 @@ fn fetch_node_versions() -> Result<()> {
     .into_json::<Vec<NodeRelease>>()?;
 
     fs::write(
-        format!("{}/node-versions.json", env::var("OUT_DIR")?),
+        path,
         &serde_json::to_string(
             &releases
                 .into_iter()
@@ -80,6 +91,13 @@ fn fetch_node_release_schedule() -> Result<()> {
         end: String,
     }
 
+    let path = format!("{}/node-release-schedule.json", env::var("OUT_DIR")?);
+
+    if env::var("DOCS_RS").is_ok() {
+        fs::write(path, "{}")?;
+        return Ok(());
+    }
+
     let schedule = ureq::get(&format!(
         "https://cdn.jsdelivr.net/npm/node-releases@{}/data/release-schedule/release-schedule.json",
         NODE
@@ -88,7 +106,7 @@ fn fetch_node_release_schedule() -> Result<()> {
     .into_json::<HashMap<String, NodeRelease>>()?;
 
     fs::write(
-        format!("{}/node-release-schedule.json", env::var("OUT_DIR")?),
+        path,
         &serde_json::to_string(
             &schedule
                 .into_iter()
@@ -139,6 +157,17 @@ fn fetch_caniuse_global() -> Result<()> {
     }
 
     let out_dir = env::var("OUT_DIR")?;
+
+    if env::var("DOCS_RS").is_ok() {
+        fs::write(format!("{}/caniuse-browsers.json", &out_dir), "{}")?;
+        fs::write(format!("{}/caniuse-usage.json", &out_dir), "[]")?;
+        fs::write(
+            format!("{}/caniuse-feature-matching.rs", &out_dir),
+            "match name { _ => unreachable!() }",
+        )?;
+        fs::write(format!("{}/caniuse-features-list.json", &out_dir), "[]")?;
+        return Ok(());
+    }
 
     let data = ureq::get(&format!(
         "https://cdn.jsdelivr.net/npm/caniuse-db@{}/fulldata-json/data-2.0.json",
