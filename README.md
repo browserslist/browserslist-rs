@@ -68,9 +68,6 @@ The features below aren't supported currently:
 - Custom usage like `cover 99.5% in my stats` or `cover 99.5% in XX`.
 - Extending custom config like `extends browserslist-config-mycompany`.
 
-Also, we haven't support reading configuration from config file or `package.json` currently,
-but it will be implemented in the future.
-
 ## Credits
 
 Thanks [Andrey Sitnik](https://github.com/ai) for creating the [JavaScript-based Browserslist](https://github.com/browserslist/browserslist) which is under MIT License.
