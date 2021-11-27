@@ -5,7 +5,7 @@ use std::{
     env, fs, io,
 };
 
-const E2C: &str = "1.4.0";
+const E2C: &str = "1.4.4";
 const NODE: &str = "2.0.1";
 const CANIUSE: &str = "1.0.30001283";
 
