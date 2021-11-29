@@ -1,5 +1,6 @@
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use curl::easy::Easy;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
     env, fs, io,
@@ -8,6 +9,23 @@ use std::{
 const E2C: &str = "1.4.4";
 const NODE: &str = "2.0.1";
 const CANIUSE: &str = "1.0.30001283";
+
+fn fetch_json<T: DeserializeOwned, S: AsRef<str>>(url: S) -> Result<T> {
+    let mut dst = Vec::new();
+    let mut easy = Easy::new();
+    easy.url(url.as_ref())?;
+
+    {
+        let mut transfer = easy.transfer();
+        transfer.write_function(|data| {
+            dst.extend_from_slice(data);
+            Ok(data.len())
+        })?;
+        transfer.perform()?;
+    }
+
+    serde_json::from_slice(&dst).map_err(anyhow::Error::from)
+}
 
 fn main() -> Result<()> {
     #[cfg(feature = "node")]
@@ -33,12 +51,10 @@ fn fetch_electron_to_chromium() -> Result<()> {
         return Ok(());
     }
 
-    let mut data = ureq::get(&format!(
+    let mut data = fetch_json::<BTreeMap<String, String>, _>(format!(
         "https://cdn.jsdelivr.net/npm/electron-to-chromium@{}/versions.json",
         E2C
-    ))
-    .call()?
-    .into_json::<BTreeMap<String, String>>()?
+    ))?
     .into_iter()
     .map(|(electron_version, chromium_version)| {
         (electron_version.parse::<f32>().unwrap(), chromium_version)
@@ -64,12 +80,10 @@ fn fetch_node_versions() -> Result<()> {
         return Ok(());
     }
 
-    let releases = ureq::get(&format!(
+    let releases: Vec<NodeRelease> = fetch_json(format!(
         "https://cdn.jsdelivr.net/npm/node-releases@{}/data/processed/envs.json",
         NODE
-    ))
-    .call()?
-    .into_json::<Vec<NodeRelease>>()?;
+    ))?;
 
     fs::write(
         path,
@@ -98,12 +112,10 @@ fn fetch_node_release_schedule() -> Result<()> {
         return Ok(());
     }
 
-    let schedule = ureq::get(&format!(
+    let schedule: HashMap<String, NodeRelease> = fetch_json(format!(
         "https://cdn.jsdelivr.net/npm/node-releases@{}/data/release-schedule/release-schedule.json",
         NODE
-    ))
-    .call()?
-    .into_json::<HashMap<String, NodeRelease>>()?;
+    ))?;
 
     fs::write(
         path,
@@ -169,12 +181,10 @@ fn fetch_caniuse_global() -> Result<()> {
         return Ok(());
     }
 
-    let data = ureq::get(&format!(
+    let data: Caniuse = fetch_json(format!(
         "https://cdn.jsdelivr.net/npm/caniuse-db@{}/fulldata-json/data-2.0.json",
         CANIUSE
-    ))
-    .call()?
-    .into_json::<Caniuse>()?;
+    ))?;
 
     let browsers = data
         .agents
