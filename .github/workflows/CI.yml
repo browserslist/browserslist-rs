@@ -85,5 +85,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v2
-      - run: cargo build --all-features --target aarch64-unknown-linux-musl
-        uses: docker://ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+      - uses: docker://ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+        with:
+          entrypoint: cargo
+          args: build --all-features
