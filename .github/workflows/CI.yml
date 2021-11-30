@@ -85,4 +85,4 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v2
-      - run: cargo build --all-features
+      - run: cargo build --all-features --target aarch64-unknown-linux-musl
