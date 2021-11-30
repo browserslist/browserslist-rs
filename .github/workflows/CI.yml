@@ -92,5 +92,5 @@ jobs:
           override: true
           toolchain: stable
           target: x86_64-unknown-linux-musl
-      - run: apk add pkgconf openssl-dev
+      - run: apk add curl-dev
       - run: cargo build --all-features --target x86_64-unknown-linux-musl
