@@ -84,7 +84,12 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - run: uname -a
       - uses: actions/checkout@v2
-      - run: rustup target add aarch64-unknown-linux-musl
-      - run: rustup default aarch64-unknown-linux-musl
-      - run: cargo build --all-features --target aarch64-unknown-linux-musl
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          override: true
+          toolchain: stable
+          target: x86_64-unknown-linux-musl
+      - run: cargo build --all-features --target x86_64-unknown-linux-musl
