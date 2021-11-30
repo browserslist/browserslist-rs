@@ -78,13 +78,7 @@ jobs:
   musl:
     name: musl
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - run: uname -a
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -92,5 +86,12 @@ jobs:
           override: true
           toolchain: stable
           target: x86_64-unknown-linux-musl
-      - run: apk add curl-dev
-      - run: cargo build --all-features --target x86_64-unknown-linux-musl
+      - run: |
+          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD $DOCKER_REGISTRY_URL
+          docker pull $DOCKER_REGISTRY_URL/napi-rs/napi-rs/nodejs-rust:lts-alpine
+          docker tag $DOCKER_REGISTRY_URL/napi-rs/napi-rs/nodejs-rust:lts-alpine builder
+        env:
+          DOCKER_REGISTRY_URL: ghcr.io
+          DOCKER_USERNAME: ${{ github.actor }}
+          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      - run: docker run --rm -v ~/.cargo/git:/root/.cargo/git -v ~/.cargo/registry:/root/.cargo/registry -v $(pwd):/build -w /build builder apk add curl-dev && cargo build --all-features --target x86_64-unknown-linux-musl
