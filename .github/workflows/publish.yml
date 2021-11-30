@@ -58,6 +58,8 @@ jobs:
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
       - name: Install
         uses: actions-rs/toolchain@v1
         with:
@@ -96,6 +98,8 @@ jobs:
       - build
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
       - uses: pnpm/action-setup@v2.0.1
         with:
           version: 6.21.1
