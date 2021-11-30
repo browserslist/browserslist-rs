@@ -24,6 +24,7 @@ regex = "1.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
+ustr = { version = "0.8", features = ["serialization"] }
 
 [dev-dependencies]
 clap = "2.33"

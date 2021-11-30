@@ -2,12 +2,13 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
 use std::{borrow::Cow, collections::HashMap};
+use ustr::{Ustr, UstrMap};
 
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct BrowserStat {
-    name: String,
+    name: Ustr,
     pub version_list: Vec<VersionDetail>,
 }
 
@@ -18,7 +19,7 @@ pub struct VersionDetail {
     pub release_date: Option<i64>,
 }
 
-pub type CaniuseData = HashMap<String, BrowserStat>;
+pub type CaniuseData = UstrMap<BrowserStat>;
 
 pub static CANIUSE_LITE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
     serde_json::from_str(include_str!(concat!(
@@ -28,7 +29,7 @@ pub static CANIUSE_LITE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static CANIUSE_LITE_USAGE: Lazy<Vec<(String, String, f32)>> = Lazy::new(|| {
+pub static CANIUSE_LITE_USAGE: Lazy<Vec<(Ustr, String, f32)>> = Lazy::new(|| {
     serde_json::from_str(include_str!(concat!(
         env!("OUT_DIR"),
         "/caniuse-usage.json"
@@ -36,17 +37,19 @@ pub static CANIUSE_LITE_USAGE: Lazy<Vec<(String, String, f32)>> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static CANIUSE_LITE_VERSION_ALIASES: Lazy<HashMap<String, HashMap<String, String>>> =
-    Lazy::new(|| {
-        serde_json::from_str(include_str!("../../data/caniuse-lite-version-aliases.json")).unwrap()
-    });
+pub static CANIUSE_LITE_VERSION_ALIASES: Lazy<UstrMap<HashMap<String, String>>> = Lazy::new(|| {
+    serde_json::from_str(include_str!("../../data/caniuse-lite-version-aliases.json")).unwrap()
+});
 
 static REGEX_NON_DESKTOP_ANDROID: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^(?:[2-4]\.|[34]$)").unwrap());
 
 static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
-    let chrome = CANIUSE_LITE_BROWSERS.get("chrome").unwrap();
-    let mut android = CANIUSE_LITE_BROWSERS.get("android").unwrap().clone();
+    let chrome = CANIUSE_LITE_BROWSERS.get(&Ustr::from("chrome")).unwrap();
+    let mut android = CANIUSE_LITE_BROWSERS
+        .get(&Ustr::from("android"))
+        .unwrap()
+        .clone();
 
     android.version_list = android
         .version_list
@@ -72,7 +75,10 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
 });
 
 static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
-    let mut op_mob = CANIUSE_LITE_BROWSERS.get("opera").unwrap().clone();
+    let mut op_mob = CANIUSE_LITE_BROWSERS
+        .get(&Ustr::from("opera"))
+        .unwrap()
+        .clone();
 
     if let Some(v) = op_mob
         .version_list
@@ -102,17 +108,17 @@ pub fn get_browser_stat(
                 "android" => Some(("android", &ANDROID_TO_DESKTOP)),
                 "op_mob" => Some(("op_mob", &OPERA_MOBILE_TO_DESKTOP)),
                 _ => CANIUSE_LITE_BROWSERS
-                    .get(desktop_name)
+                    .get(&Ustr::from(desktop_name))
                     .map(|stat| (get_mobile_by_desktop_name(desktop_name), stat)),
             }
         } else {
             CANIUSE_LITE_BROWSERS
-                .get(name)
+                .get(&Ustr::from(name))
                 .map(|stat| (&*stat.name, stat))
         }
     } else {
         CANIUSE_LITE_BROWSERS
-            .get(name)
+            .get(&Ustr::from(name))
             .map(|stat| (&*stat.name, stat))
     }
 }
