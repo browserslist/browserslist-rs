@@ -1,12 +1,13 @@
 use super::{Distrib, Selector, SelectorResult};
 use crate::{
-    data::caniuse::{get_browser_stat, normalize_version},
+    data::caniuse::{get_browser_stat, CANIUSE_LITE_VERSION_ALIASES},
     error::Error,
     opts::Opts,
     semver::Version,
 };
 use once_cell::sync::Lazy;
 use regex::Regex;
+use ustr::Ustr;
 
 static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+)\s*([<>]=?)\s*([\d.]+)$").unwrap());
 
@@ -31,7 +32,9 @@ impl Selector for BrowserUnboundedRangeSelector {
                 Error::BrowserNotFound(name.to_string())
             }
         })?;
-        let version: Version = normalize_version(stat, version)
+        let version: Version = CANIUSE_LITE_VERSION_ALIASES
+            .get(&Ustr::from(name))
+            .and_then(|alias| alias.get(version).map(|s| s.as_str()))
             .unwrap_or(version)
             .parse()
             .unwrap_or_default();
