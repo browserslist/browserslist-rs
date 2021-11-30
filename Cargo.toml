@@ -8,7 +8,14 @@ repository = "https://github.com/g-plane/browserslist-rs"
 license = "MIT"
 keywords = ["web", "javascript"]
 categories = ["web-programming", "config"]
-include = ["/data", "**/*.rs", "Cargo.toml"]
+include = [
+    "/data",
+    "**/*.rs",
+    "Cargo.toml",
+    "vendor/caniuse/fulldata-json/data-2.0.json",
+    "vendor/electron-to-chromium/versions.json",
+    "vendor/node-releases/data/**/*.json",
+]
 
 [lib]
 name = "browserslist"
