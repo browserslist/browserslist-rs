@@ -88,4 +88,4 @@ jobs:
       - uses: docker://ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
         with:
           entrypoint: cargo
-          args: build --all-features
+          args: build --all-features --target aarch64-unknown-linux-musl
