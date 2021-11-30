@@ -40,6 +40,8 @@ so only the main exported API is available.
 
 Please refer to [crate documentation](docs.rs/browserslist-rs/).
 
+Note that cURL is required by the build script, so make sure `curl-dev` has been installed on your system.
+
 ## Try as Rust crate example
 
 You can try and inspect query result by running example with Cargo:
