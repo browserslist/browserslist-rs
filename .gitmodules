@@ -1,0 +1,9 @@
+[submodule "vendor/electron-to-chromium"]
+	path = vendor/electron-to-chromium
+	url = https://github.com/Kilian/electron-to-chromium.git
+[submodule "vendor/node-releases"]
+	path = vendor/node-releases
+	url = https://github.com/chicoxyzzy/node-releases.git
+[submodule "vendor/caniuse"]
+	path = vendor/caniuse
+	url = https://github.com/Fyrd/caniuse.git

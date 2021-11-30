@@ -1,31 +1,9 @@
 use anyhow::Result;
-use curl::easy::Easy;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
     env, fs, io,
 };
-
-const E2C: &str = "1.4.4";
-const NODE: &str = "2.0.1";
-const CANIUSE: &str = "1.0.30001283";
-
-fn fetch_json<T: DeserializeOwned, S: AsRef<str>>(url: S) -> Result<T> {
-    let mut dst = Vec::new();
-    let mut easy = Easy::new();
-    easy.url(url.as_ref())?;
-
-    {
-        let mut transfer = easy.transfer();
-        transfer.write_function(|data| {
-            dst.extend_from_slice(data);
-            Ok(data.len())
-        })?;
-        transfer.perform()?;
-    }
-
-    serde_json::from_slice(&dst).map_err(anyhow::Error::from)
-}
 
 fn main() -> Result<()> {
     #[cfg(feature = "node")]
@@ -33,28 +11,23 @@ fn main() -> Result<()> {
         napi_build::setup();
     }
 
-    println!("cargo:rerun-if-changed=build.rs");
-
-    fetch_electron_to_chromium()?;
-    fetch_node_versions()?;
-    fetch_node_release_schedule()?;
-    fetch_caniuse_global()?;
+    build_electron_to_chromium()?;
+    build_node_versions()?;
+    build_node_release_schedule()?;
+    build_caniuse_global()?;
 
     Ok(())
 }
 
-fn fetch_electron_to_chromium() -> Result<()> {
+fn build_electron_to_chromium() -> Result<()> {
+    println!("cargo:rerun-if-changed=vendor/electron-to-chromium/versions.json");
+
     let path = format!("{}/electron-to-chromium.json", env::var("OUT_DIR")?);
 
-    if env::var("DOCS_RS").is_ok() {
-        fs::write(path, "[]")?;
-        return Ok(());
-    }
-
-    let mut data = fetch_json::<BTreeMap<String, String>, _>(format!(
-        "https://cdn.jsdelivr.net/npm/electron-to-chromium@{}/versions.json",
-        E2C
-    ))?
+    let mut data = serde_json::from_slice::<BTreeMap<String, String>>(&fs::read(format!(
+        "{}/vendor/electron-to-chromium/versions.json",
+        env::var("CARGO_MANIFEST_DIR")?
+    ))?)?
     .into_iter()
     .map(|(electron_version, chromium_version)| {
         (electron_version.parse::<f32>().unwrap(), chromium_version)
@@ -67,11 +40,13 @@ fn fetch_electron_to_chromium() -> Result<()> {
     Ok(())
 }
 
-fn fetch_node_versions() -> Result<()> {
+fn build_node_versions() -> Result<()> {
     #[derive(Deserialize)]
     struct NodeRelease {
         version: String,
     }
+
+    println!("cargo:rerun-if-changed=vendor/node-releases/data/processed/envs.json");
 
     let path = format!("{}/node-versions.json", env::var("OUT_DIR")?);
 
@@ -80,10 +55,10 @@ fn fetch_node_versions() -> Result<()> {
         return Ok(());
     }
 
-    let releases: Vec<NodeRelease> = fetch_json(format!(
-        "https://cdn.jsdelivr.net/npm/node-releases@{}/data/processed/envs.json",
-        NODE
-    ))?;
+    let releases: Vec<NodeRelease> = serde_json::from_slice(&fs::read(format!(
+        "{}/vendor/node-releases/data/processed/envs.json",
+        env::var("CARGO_MANIFEST_DIR")?
+    ))?)?;
 
     fs::write(
         path,
@@ -98,7 +73,11 @@ fn fetch_node_versions() -> Result<()> {
     Ok(())
 }
 
-fn fetch_node_release_schedule() -> Result<()> {
+fn build_node_release_schedule() -> Result<()> {
+    println!(
+        "cargo:rerun-if-changed=vendor/node-releases/data/release-schedule/release-schedule.json"
+    );
+
     #[derive(Deserialize)]
     struct NodeRelease {
         start: String,
@@ -112,10 +91,10 @@ fn fetch_node_release_schedule() -> Result<()> {
         return Ok(());
     }
 
-    let schedule: HashMap<String, NodeRelease> = fetch_json(format!(
-        "https://cdn.jsdelivr.net/npm/node-releases@{}/data/release-schedule/release-schedule.json",
-        NODE
-    ))?;
+    let schedule: HashMap<String, NodeRelease> = serde_json::from_slice(&fs::read(format!(
+        "{}/vendor/node-releases/data/release-schedule/release-schedule.json",
+        env::var("CARGO_MANIFEST_DIR")?
+    ))?)?;
 
     fs::write(
         path,
@@ -135,7 +114,7 @@ fn fetch_node_release_schedule() -> Result<()> {
     Ok(())
 }
 
-fn fetch_caniuse_global() -> Result<()> {
+fn build_caniuse_global() -> Result<()> {
     use itertools::Itertools;
 
     #[derive(Deserialize)]
@@ -168,6 +147,8 @@ fn fetch_caniuse_global() -> Result<()> {
         stats: HashMap<String, HashMap<String, String>>,
     }
 
+    println!("cargo:rerun-if-changed=vendor/caniuse/fulldata-json/data-2.0.json");
+
     let out_dir = env::var("OUT_DIR")?;
 
     if env::var("DOCS_RS").is_ok() {
@@ -181,10 +162,10 @@ fn fetch_caniuse_global() -> Result<()> {
         return Ok(());
     }
 
-    let data: Caniuse = fetch_json(format!(
-        "https://cdn.jsdelivr.net/npm/caniuse-db@{}/fulldata-json/data-2.0.json",
-        CANIUSE
-    ))?;
+    let data: Caniuse = serde_json::from_slice(&fs::read(format!(
+        "{}/vendor/caniuse/fulldata-json/data-2.0.json",
+        env::var("CARGO_MANIFEST_DIR")?
+    ))?)?;
 
     let browsers = data
         .agents
