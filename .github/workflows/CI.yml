@@ -74,3 +74,14 @@ jobs:
           run_install: true
       - run: pnpm build:napi:dev
       - run: pnpm test:napi
+
+  musl:
+    name: musl
+    container:
+      image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo build --all-features
