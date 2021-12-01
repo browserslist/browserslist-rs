@@ -1,15 +1,14 @@
 [package]
 name = "browserslist-rs"
-version = "0.4.0-beta.1"
+version = "0.4.0"
 authors = ["Pig Fang <g-plane@hotmail.com>"]
 edition = "2021"
-description = "Rust-ported browserslist."
+description = "Rust-ported Browserslist."
 repository = "https://github.com/g-plane/browserslist-rs"
 license = "MIT"
 keywords = ["web", "javascript"]
 categories = ["web-programming", "config"]
 include = [
-    "/data",
     "**/*.rs",
     "Cargo.toml",
     "vendor/caniuse/fulldata-json/data-2.0.json",
