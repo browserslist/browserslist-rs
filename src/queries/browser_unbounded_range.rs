@@ -1,6 +1,6 @@
 use super::{Distrib, Selector, SelectorResult};
 use crate::{
-    data::caniuse::{get_browser_stat, CANIUSE_LITE_VERSION_ALIASES},
+    data::caniuse::{get_browser_stat, BROWSER_VERSION_ALIASES},
     error::Error,
     opts::Opts,
     semver::Version,
@@ -32,7 +32,7 @@ impl Selector for BrowserUnboundedRangeSelector {
                 Error::BrowserNotFound(name.to_string())
             }
         })?;
-        let version: Version = CANIUSE_LITE_VERSION_ALIASES
+        let version: Version = BROWSER_VERSION_ALIASES
             .get(&Ustr::from(name))
             .and_then(|alias| alias.get(version).map(|s| *s))
             .unwrap_or(version)

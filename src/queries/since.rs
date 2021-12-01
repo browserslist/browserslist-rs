@@ -1,6 +1,6 @@
 use super::{Distrib, Selector, SelectorResult};
 use crate::{
-    data::caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
+    data::caniuse::{get_browser_stat, CANIUSE_BROWSERS},
     error::Error,
     opts::Opts,
 };
@@ -42,7 +42,7 @@ impl Selector for SinceSelector {
                 _ => return Err(Error::InvalidDate(cap[1].to_string())),
             };
 
-            let versions = CANIUSE_LITE_BROWSERS
+            let versions = CANIUSE_BROWSERS
                 .keys()
                 .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
                 .map(|(name, stat)| {

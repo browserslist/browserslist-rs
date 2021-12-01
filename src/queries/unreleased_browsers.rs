@@ -1,6 +1,6 @@
 use super::{Distrib, Selector, SelectorResult};
 use crate::{
-    data::caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
+    data::caniuse::{get_browser_stat, CANIUSE_BROWSERS},
     opts::Opts,
 };
 use once_cell::sync::Lazy;
@@ -18,7 +18,7 @@ pub(super) struct UnreleasedBrowsersSelector;
 impl Selector for UnreleasedBrowsersSelector {
     fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
         if REGEX.is_match(text) {
-            let versions = CANIUSE_LITE_BROWSERS
+            let versions = CANIUSE_BROWSERS
                 .keys()
                 .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
                 .map(|(name, stat)| {

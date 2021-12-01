@@ -1,6 +1,6 @@
 use super::{Distrib, Selector, SelectorResult};
 use crate::{
-    data::caniuse::{get_browser_stat, CANIUSE_LITE_BROWSERS},
+    data::caniuse::{get_browser_stat, CANIUSE_BROWSERS},
     error::Error,
     opts::Opts,
 };
@@ -26,7 +26,7 @@ impl Selector for YearsSelector {
             let duration = Duration::seconds((count * ONE_YEAR_IN_SECONDS) as i64);
             let time = (Utc::now() - duration).timestamp();
 
-            let versions = CANIUSE_LITE_BROWSERS
+            let versions = CANIUSE_BROWSERS
                 .keys()
                 .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
                 .map(|(name, stat)| {
