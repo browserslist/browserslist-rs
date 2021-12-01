@@ -50,11 +50,6 @@ fn build_node_versions() -> Result<()> {
 
     let path = format!("{}/node-versions.json", env::var("OUT_DIR")?);
 
-    if env::var("DOCS_RS").is_ok() {
-        fs::write(path, "[]")?;
-        return Ok(());
-    }
-
     let releases: Vec<NodeRelease> = serde_json::from_slice(&fs::read(format!(
         "{}/vendor/node-releases/data/processed/envs.json",
         env::var("CARGO_MANIFEST_DIR")?
@@ -85,11 +80,6 @@ fn build_node_release_schedule() -> Result<()> {
     }
 
     let path = format!("{}/node-release-schedule.json", env::var("OUT_DIR")?);
-
-    if env::var("DOCS_RS").is_ok() {
-        fs::write(path, "{}")?;
-        return Ok(());
-    }
 
     let schedule: HashMap<String, NodeRelease> = serde_json::from_slice(&fs::read(format!(
         "{}/vendor/node-releases/data/release-schedule/release-schedule.json",
@@ -150,17 +140,6 @@ fn build_caniuse_global() -> Result<()> {
     println!("cargo:rerun-if-changed=vendor/caniuse/fulldata-json/data-2.0.json");
 
     let out_dir = env::var("OUT_DIR")?;
-
-    if env::var("DOCS_RS").is_ok() {
-        fs::write(format!("{}/caniuse-browsers.json", &out_dir), "{}")?;
-        fs::write(format!("{}/caniuse-usage.json", &out_dir), "[]")?;
-        fs::write(
-            format!("{}/caniuse-feature-matching.rs", &out_dir),
-            "match name { _ => unreachable!() }",
-        )?;
-        fs::write(format!("{}/caniuse-features-list.json", &out_dir), "[]")?;
-        return Ok(());
-    }
 
     let data: Caniuse = serde_json::from_slice(&fs::read(format!(
         "{}/vendor/caniuse/fulldata-json/data-2.0.json",
