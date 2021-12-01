@@ -34,7 +34,7 @@ impl Selector for BrowserUnboundedRangeSelector {
         })?;
         let version: Version = BROWSER_VERSION_ALIASES
             .get(&Ustr::from(name))
-            .and_then(|alias| alias.get(version).map(|s| *s))
+            .and_then(|alias| alias.get(version).copied())
             .unwrap_or(version)
             .parse()
             .unwrap_or_default();
