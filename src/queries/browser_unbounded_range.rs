@@ -34,7 +34,7 @@ impl Selector for BrowserUnboundedRangeSelector {
         })?;
         let version: Version = CANIUSE_LITE_VERSION_ALIASES
             .get(&Ustr::from(name))
-            .and_then(|alias| alias.get(version).map(|s| s.as_str()))
+            .and_then(|alias| alias.get(version).map(|s| *s))
             .unwrap_or(version)
             .parse()
             .unwrap_or_default();

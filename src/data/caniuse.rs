@@ -37,13 +37,42 @@ pub static CANIUSE_LITE_USAGE: Lazy<Vec<(Ustr, String, f32)>> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static CANIUSE_LITE_VERSION_ALIASES: Lazy<UstrMap<HashMap<String, String>>> = Lazy::new(|| {
-    serde_json::from_str(include_str!(concat!(
-        env!("OUT_DIR"),
-        "/browsers-version-aliases.json"
-    )))
-    .unwrap()
-});
+pub static CANIUSE_LITE_VERSION_ALIASES: Lazy<UstrMap<HashMap<&'static str, &'static str>>> =
+    Lazy::new(|| {
+        let mut aliases = CANIUSE_LITE_BROWSERS
+            .iter()
+            .filter_map(|(name, stat)| {
+                let aliases = stat
+                    .version_list
+                    .iter()
+                    .filter_map(|version| {
+                        version
+                            .version
+                            .split_once('-')
+                            .map(|(bottom, top)| (bottom, top, version.version.as_str()))
+                    })
+                    .fold(
+                        HashMap::<&str, &str>::new(),
+                        move |mut aliases, (bottom, top, version)| {
+                            let _ = aliases.insert(bottom, version);
+                            let _ = aliases.insert(top, version);
+                            aliases
+                        },
+                    );
+                if aliases.is_empty() {
+                    None
+                } else {
+                    Some((*name, aliases))
+                }
+            })
+            .collect::<UstrMap<_>>();
+        let _ = aliases.insert(Ustr::from("op_mob"), {
+            let mut aliases = HashMap::new();
+            let _ = aliases.insert("59", "58");
+            aliases
+        });
+        aliases
+    });
 
 static REGEX_NON_DESKTOP_ANDROID: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^(?:[2-4]\.|[34]$)").unwrap());
@@ -172,7 +201,7 @@ pub(crate) fn normalize_version<'a>(
         Some(version)
     } else if let Some(version) = CANIUSE_LITE_VERSION_ALIASES
         .get(&stat.name)
-        .and_then(|aliases| aliases.get(version).map(|s| s.as_str()))
+        .and_then(|aliases| aliases.get(version))
     {
         Some(version)
     } else if stat.version_list.len() == 1 {

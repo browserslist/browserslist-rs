@@ -225,39 +225,5 @@ fn build_caniuse_global() -> Result<()> {
         serde_json::to_string(&data.data.keys().collect::<Vec<_>>())?,
     )?;
 
-    let mut aliases = data
-        .agents
-        .iter()
-        .map(|(name, agent)| {
-            let aliases = agent
-                .version_list
-                .iter()
-                .filter_map(|version| {
-                    version
-                        .version
-                        .split_once('-')
-                        .map(|(bottom, top)| (bottom, top, version.version.as_str()))
-                })
-                .fold(
-                    HashMap::<&str, &str>::new(),
-                    move |mut aliases, (bottom, top, version)| {
-                        let _ = aliases.insert(bottom, version);
-                        let _ = aliases.insert(top, version);
-                        aliases
-                    },
-                );
-            (name.as_str(), aliases)
-        })
-        .collect::<HashMap<_, _>>();
-    let _ = aliases.insert("op_mob", {
-        let mut aliases = HashMap::new();
-        let _ = aliases.insert("59", "58");
-        aliases
-    });
-    fs::write(
-        format!("{}/browsers-version-aliases.json", &out_dir),
-        serde_json::to_string(&aliases)?,
-    )?;
-
     Ok(())
 }
