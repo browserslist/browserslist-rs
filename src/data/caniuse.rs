@@ -38,7 +38,11 @@ pub static CANIUSE_LITE_USAGE: Lazy<Vec<(Ustr, String, f32)>> = Lazy::new(|| {
 });
 
 pub static CANIUSE_LITE_VERSION_ALIASES: Lazy<UstrMap<HashMap<String, String>>> = Lazy::new(|| {
-    serde_json::from_str(include_str!("../../data/caniuse-lite-version-aliases.json")).unwrap()
+    serde_json::from_str(include_str!(concat!(
+        env!("OUT_DIR"),
+        "/browsers-version-aliases.json"
+    )))
+    .unwrap()
 });
 
 static REGEX_NON_DESKTOP_ANDROID: Lazy<Regex> =

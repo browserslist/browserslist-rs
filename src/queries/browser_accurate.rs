@@ -81,6 +81,7 @@ mod tests {
     #[test_case("and_uc 10"; "cutted version")]
     #[test_case("chromeandroid 53"; "missing mobile versions 1")]
     #[test_case("and_ff 60"; "missing mobile versions 2")]
+    #[test_case("op_mob 59"; "special opera mobile version")]
     fn default_options(query: &str) {
         run_compare(query, &Opts::new());
     }
