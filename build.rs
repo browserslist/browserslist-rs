@@ -177,7 +177,7 @@ fn build_caniuse_global() -> Result<()> {
         .collect::<Vec<_>>();
     global_usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
     fs::write(
-        format!("{}/caniuse-usage.json", &out_dir),
+        format!("{}/caniuse-global-usage.json", &out_dir),
         &serde_json::to_string(&global_usage)?,
     )?;
 

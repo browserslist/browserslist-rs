@@ -30,10 +30,10 @@ pub static CANIUSE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static CANIUSE_USAGE: Lazy<Vec<(Ustr, String, f32)>> = Lazy::new(|| {
+pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(Ustr, String, f32)>> = Lazy::new(|| {
     serde_json::from_str(include_str!(concat!(
         env!("OUT_DIR"),
-        "/caniuse-usage.json"
+        "/caniuse-global-usage.json"
     )))
     .unwrap()
 });

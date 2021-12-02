@@ -1,5 +1,5 @@
 use super::{Distrib, Selector, SelectorResult};
-use crate::{data::caniuse::CANIUSE_USAGE, error::Error, opts::Opts};
+use crate::{data::caniuse::CANIUSE_GLOBAL_USAGE, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use std::ops::ControlFlow;
@@ -17,7 +17,7 @@ impl Selector for CoverSelector {
     fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
         if let Some(cap) = REGEX.captures(text) {
             let coverage = cap[1].parse().map_err(Error::ParsePercentage)?;
-            let result = CANIUSE_USAGE.iter().try_fold(
+            let result = CANIUSE_GLOBAL_USAGE.iter().try_fold(
                 (vec![], 0.0f32),
                 |(mut versions, total), (name, version, usage)| {
                     if total >= coverage || *usage == 0.0 {
