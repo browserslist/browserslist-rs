@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 
 #[doc(hidden)]
 #[wasm_bindgen]
-pub fn execute(query: String, opts: JsValue) -> Result<JsValue, JsValue> {
+pub fn browserslist(query: String, opts: JsValue) -> Result<JsValue, JsValue> {
     let opts: Option<Opts> = opts.into_serde().unwrap_or_default();
 
     serde_wasm_bindgen::to_value(
