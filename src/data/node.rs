@@ -1,6 +1,6 @@
+use ahash::AHashMap;
 use chrono::{NaiveDate, NaiveDateTime};
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
 
 pub static NODE_VERSIONS: Lazy<Vec<String>> = Lazy::new(|| {
     serde_json::from_str(include_str!(concat!(
@@ -10,11 +10,11 @@ pub static NODE_VERSIONS: Lazy<Vec<String>> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static RELEASE_SCHEDULE: Lazy<HashMap<String, (NaiveDateTime, NaiveDateTime)>> =
+pub static RELEASE_SCHEDULE: Lazy<AHashMap<String, (NaiveDateTime, NaiveDateTime)>> =
     Lazy::new(|| {
         let date_format = "%Y-%m-%d";
 
-        serde_json::from_str::<HashMap<String, (String, String)>>(include_str!(concat!(
+        serde_json::from_str::<AHashMap<String, (String, String)>>(include_str!(concat!(
             env!("OUT_DIR"),
             "/node-release-schedule.json"
         )))

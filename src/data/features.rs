@@ -1,8 +1,6 @@
+use ahash::AHashMap;
 use once_cell::sync::Lazy;
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
 type Feature = Vec<(&'static str, &'static str)>;
 
@@ -14,8 +12,8 @@ static FEATURES_LIST: Lazy<Vec<&'static str>> = Lazy::new(|| {
     .unwrap()
 });
 
-static FEATURES: Lazy<RwLock<HashMap<String, Arc<Feature>>>> =
-    Lazy::new(|| RwLock::new(HashMap::new()));
+static FEATURES: Lazy<RwLock<AHashMap<String, Arc<Feature>>>> =
+    Lazy::new(|| RwLock::new(AHashMap::new()));
 
 pub(crate) fn get_feature_stat(name: &str) -> Option<Arc<Feature>> {
     if !FEATURES_LIST.contains(&name) {

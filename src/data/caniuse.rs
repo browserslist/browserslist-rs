@@ -1,7 +1,8 @@
+use ahash::AHashMap;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
-use std::{borrow::Cow, collections::HashMap};
+use std::borrow::Cow;
 use ustr::{Ustr, UstrMap};
 
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
@@ -37,7 +38,7 @@ pub static CANIUSE_USAGE: Lazy<Vec<(Ustr, String, f32)>> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static BROWSER_VERSION_ALIASES: Lazy<UstrMap<HashMap<&'static str, &'static str>>> =
+pub static BROWSER_VERSION_ALIASES: Lazy<UstrMap<AHashMap<&'static str, &'static str>>> =
     Lazy::new(|| {
         let mut aliases = CANIUSE_BROWSERS
             .iter()
@@ -52,7 +53,7 @@ pub static BROWSER_VERSION_ALIASES: Lazy<UstrMap<HashMap<&'static str, &'static 
                             .map(|(bottom, top)| (bottom, top, version.version.as_str()))
                     })
                     .fold(
-                        HashMap::<&str, &str>::new(),
+                        AHashMap::<&str, &str>::new(),
                         move |mut aliases, (bottom, top, version)| {
                             let _ = aliases.insert(bottom, version);
                             let _ = aliases.insert(top, version);
@@ -67,7 +68,7 @@ pub static BROWSER_VERSION_ALIASES: Lazy<UstrMap<HashMap<&'static str, &'static 
             })
             .collect::<UstrMap<_>>();
         let _ = aliases.insert(Ustr::from("op_mob"), {
-            let mut aliases = HashMap::new();
+            let mut aliases = AHashMap::new();
             let _ = aliases.insert("59", "58");
             aliases
         });

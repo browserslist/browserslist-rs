@@ -1,4 +1,5 @@
 use crate::{error::Error, opts::Opts};
+use ahash::AHashMap;
 use either::Either;
 use parser::parse;
 use serde::Deserialize;
@@ -6,7 +7,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::{
     borrow::Cow,
-    collections::HashMap,
     env,
     fs::{self, File},
     io::{BufReader, Read},
@@ -15,7 +15,7 @@ use std::{
 
 mod parser;
 
-type Config = HashMap<String, Vec<String>>;
+type Config = AHashMap<String, Vec<String>>;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
@@ -35,7 +35,7 @@ enum PkgConfig {
 
 impl Default for PkgConfig {
     fn default() -> Self {
-        Self::Obj(HashMap::default())
+        Self::Obj(AHashMap::default())
     }
 }
 
@@ -267,7 +267,7 @@ mod tests {
         );
 
         // package.json with object format
-        let mut config_obj = HashMap::new();
+        let mut config_obj = AHashMap::new();
         let _ = config_obj.insert("production".into(), vec!["> 1%".into(), "not dead".into()]);
         let _ = config_obj.insert("modern".into(), vec!["last 1 version".into()]);
         let _ = config_obj.insert("xp".into(), vec!["chrome >= 49".into()]);
