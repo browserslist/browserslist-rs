@@ -26,6 +26,7 @@ mod node_bounded_range;
 mod node_unbounded_range;
 mod op_mini;
 mod percentage;
+mod percentage_by_region;
 mod phantom;
 mod since;
 mod supports;
@@ -111,6 +112,7 @@ pub fn query(query_string: &str, opts: &Opts) -> Result<Vec<Distrib>, Error> {
         Box::new(years::YearsSelector),
         Box::new(since::SinceSelector),
         Box::new(percentage::PercentageSelector),
+        Box::new(percentage_by_region::PercentageByRegionSelector),
         Box::new(cover::CoverSelector),
         Box::new(supports::SupportsSelector),
         Box::new(electron_bounded_range::ElectronBoundedRangeSelector),

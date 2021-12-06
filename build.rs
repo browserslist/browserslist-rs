@@ -5,6 +5,30 @@ use std::{
     env, fs, io,
 };
 
+#[derive(Deserialize)]
+struct Caniuse {
+    agents: HashMap<String, Agent>,
+    data: BTreeMap<String, Feature>,
+}
+
+#[derive(Deserialize)]
+struct Agent {
+    usage_global: HashMap<String, f32>,
+    version_list: Vec<VersionDetail>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+struct VersionDetail {
+    version: String,
+    global_usage: f32,
+    release_date: Option<i64>,
+}
+
+#[derive(Deserialize)]
+struct Feature {
+    stats: HashMap<String, HashMap<String, String>>,
+}
+
 fn main() -> Result<()> {
     #[cfg(feature = "node")]
     {
@@ -15,6 +39,7 @@ fn main() -> Result<()> {
     build_node_versions()?;
     build_node_release_schedule()?;
     build_caniuse_global()?;
+    build_caniuse_region()?;
 
     Ok(())
 }
@@ -107,44 +132,15 @@ fn build_node_release_schedule() -> Result<()> {
 fn build_caniuse_global() -> Result<()> {
     use itertools::Itertools;
 
-    #[derive(Deserialize)]
-    struct Caniuse {
-        agents: HashMap<String, Agent>,
-        data: BTreeMap<String, Feature>,
-    }
-
-    #[derive(Deserialize)]
-    struct Agent {
-        usage_global: HashMap<String, f32>,
-        version_list: Vec<VersionDetail>,
-    }
-
     #[derive(Serialize)]
     struct BrowserStat {
         name: String,
         version_list: Vec<VersionDetail>,
     }
 
-    #[derive(Clone, Deserialize, Serialize)]
-    struct VersionDetail {
-        version: String,
-        global_usage: f32,
-        release_date: Option<i64>,
-    }
-
-    #[derive(Deserialize)]
-    struct Feature {
-        stats: HashMap<String, HashMap<String, String>>,
-    }
-
-    println!("cargo:rerun-if-changed=vendor/caniuse/fulldata-json/data-2.0.json");
-
     let out_dir = env::var("OUT_DIR")?;
 
-    let data: Caniuse = serde_json::from_slice(&fs::read(format!(
-        "{}/vendor/caniuse/fulldata-json/data-2.0.json",
-        env::var("CARGO_MANIFEST_DIR")?
-    ))?)?;
+    let data = parse_caniuse_global()?;
 
     let browsers = data
         .agents
@@ -225,6 +221,105 @@ fn build_caniuse_global() -> Result<()> {
     fs::write(
         format!("{}/caniuse-feature-matching.rs", &out_dir),
         caniuse_features_matching,
+    )?;
+
+    Ok(())
+}
+
+fn parse_caniuse_global() -> Result<Caniuse> {
+    println!("cargo:rerun-if-changed=vendor/caniuse/fulldata-json/data-2.0.json");
+
+    Ok(serde_json::from_slice(&fs::read(format!(
+        "{}/vendor/caniuse/fulldata-json/data-2.0.json",
+        env::var("CARGO_MANIFEST_DIR")?
+    ))?)?)
+}
+
+fn build_caniuse_region() -> Result<()> {
+    use itertools::Itertools;
+
+    #[derive(Deserialize)]
+    struct RegionData {
+        data: HashMap<String, HashMap<String, Option<f32>>>,
+    }
+
+    let files = fs::read_dir(format!(
+        "{}/vendor/caniuse/region-usage-json",
+        env::var("CARGO_MANIFEST_DIR")?
+    ))?
+    .map(|entry| entry.map_err(anyhow::Error::from))
+    .collect::<Result<Vec<_>>>()?;
+
+    files.iter().for_each(|entry| {
+        println!(
+            "cargo:rerun-if-changed=vendor/caniuse/region-usage-json/{}",
+            entry.file_name().into_string().unwrap()
+        )
+    });
+
+    let out_dir = env::var("OUT_DIR")?;
+
+    let Caniuse { agents, .. } = parse_caniuse_global()?;
+
+    let region_dir = format!("{}/region", &out_dir);
+    if matches!(fs::File::open(&region_dir), Err(e) if e.kind() == io::ErrorKind::NotFound) {
+        fs::create_dir(&region_dir)?;
+    }
+
+    for file in &files {
+        let RegionData { data } = serde_json::from_slice(&fs::read(file.path())?)?;
+        let mut usage = data
+            .into_iter()
+            .map(|(name, stat)| {
+                dbg!(&name);
+                let agent = agents.get(&name).unwrap();
+                stat.into_iter().filter_map(move |(version, usage)| {
+                    let version = if version.as_str() == "0" {
+                        agent.version_list.last().unwrap().version.clone()
+                    } else {
+                        version
+                    };
+                    usage.map(|usage| (name.clone(), version, usage))
+                })
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+        usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
+        fs::write(
+            format!("{}/region/{}", &out_dir, file.file_name().to_str().unwrap()),
+            serde_json::to_string(&usage)?,
+        )?;
+    }
+    let arms = files
+        .iter()
+        .map(|file| {
+            format!(
+                r#"    "{0}" => {{
+        static USAGE: Lazy<Vec<(Ustr, &'static str, f32)>> = Lazy::new(|| {{
+            from_str(include_str!(concat!(env!("OUT_DIR"), "/region/{0}.json"))).unwrap()
+        }});
+        Some(&*USAGE)
+    }},"#,
+                file.path().file_stem().unwrap().to_str().unwrap()
+            )
+        })
+        .join("\n");
+    let caniuse_region_matching = format!(
+        "{{
+use once_cell::sync::Lazy;
+use serde_json::from_str;
+use ustr::Ustr;
+
+match region {{
+{}
+    _ => None,
+}}
+}}",
+        &arms
+    );
+    fs::write(
+        format!("{}/caniuse-region-matching.rs", &out_dir),
+        caniuse_region_matching,
     )?;
 
     Ok(())
