@@ -52,7 +52,7 @@ mod tests {
     #[test_case(">10%"; "no space")]
     #[test_case("> 10.2%"; "with float")]
     #[test_case("> .2%"; "with float that has a leading dot")]
-    fn default_options(query: &str) {
+    fn valid(query: &str) {
         run_compare(query, &Opts::new());
     }
 }
