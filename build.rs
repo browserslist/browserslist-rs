@@ -208,21 +208,22 @@ fn build_caniuse_global() -> Result<()> {
         .keys()
         .map(|name| {
             format!(
-                r#"    "{0}" => include_str!(concat!(env!("OUT_DIR"), "/features/{0}.json")),"#,
+                r#"    "{0}" => {{
+        use once_cell::sync::Lazy;
+        use serde_json::from_str;
+        static STAT: Lazy<Vec<(&'static str, &'static str)>> = Lazy::new(|| {{
+            from_str(include_str!(concat!(env!("OUT_DIR"), "/features/{0}.json"))).unwrap()
+        }});
+        Some(&*STAT)
+    }},"#,
                 name
             )
         })
         .join("\n");
-    let caniuse_features_matching =
-        format!("match name {{\n{}\n    _ => unreachable!()\n}}", &arms);
+    let caniuse_features_matching = format!("match name {{\n{}\n    _ => None\n}}", &arms);
     fs::write(
         format!("{}/caniuse-feature-matching.rs", &out_dir),
         caniuse_features_matching,
-    )?;
-
-    fs::write(
-        format!("{}/caniuse-features-list.json", &out_dir),
-        serde_json::to_string(&data.data.keys().collect::<Vec<_>>())?,
     )?;
 
     Ok(())
