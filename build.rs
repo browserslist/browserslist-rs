@@ -211,7 +211,8 @@ fn build_caniuse_global() -> Result<()> {
                 r#"    "{0}" => {{
         use once_cell::sync::Lazy;
         use serde_json::from_str;
-        static STAT: Lazy<Vec<(&'static str, &'static str)>> = Lazy::new(|| {{
+        use ustr::Ustr;
+        static STAT: Lazy<Vec<(Ustr, &'static str)>> = Lazy::new(|| {{
             from_str(include_str!(concat!(env!("OUT_DIR"), "/features/{0}.json"))).unwrap()
         }});
         Some(&*STAT)
