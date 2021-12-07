@@ -1,35 +1,21 @@
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
-
-static REGEX_OR: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"\s+or\s+|\s*,\s*")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
-
-static REGEX_AND: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"\s+and\s+")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
-
 pub enum Query<'a> {
     And(&'a str),
     Or(&'a str),
 }
 
 pub fn parse(query: &str) -> impl Iterator<Item = Query> {
-    REGEX_OR.split(query).into_iter().flat_map(|s| {
-        REGEX_AND.split(s).enumerate().map(|(i, text)| {
-            if i == 0 {
-                Query::Or(text)
-            } else {
-                Query::And(text)
-            }
+    query
+        .split(" or ")
+        .flat_map(|s| s.split(','))
+        .flat_map(|s| {
+            s.split(" and ").enumerate().map(|(i, text)| {
+                if i == 0 {
+                    Query::Or(text.trim())
+                } else {
+                    Query::And(text.trim())
+                }
+            })
         })
-    })
 }
 
 #[cfg(test)]
