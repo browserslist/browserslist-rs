@@ -24,6 +24,10 @@ pub enum Error {
     #[error("invalid date: {0}")]
     InvalidDate(String),
 
+    /// Query can't start with a negated query which starts with `not`.
+    #[error("query cannot start with 'not'; add any other queries before '{0}'")]
+    NotAtFirst(String),
+
     /// The given browser name can't be found.
     #[error("unknown browser: '{0}'")]
     BrowserNotFound(String),

@@ -29,7 +29,7 @@ impl Selector for DeadSelector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::run_compare;
+    use crate::test::{run_compare, should_failed};
     use test_case::test_case;
 
     #[test_case("dead"; "basic")]
@@ -41,5 +41,13 @@ mod tests {
     #[test_case("> 0%, dead"; "all browsers")]
     fn mobile_to_desktop(query: &str) {
         run_compare(query, Opts::new().mobile_to_desktop(true));
+    }
+
+    #[test]
+    fn invalid() {
+        assert_eq!(
+            should_failed("not dead", &Opts::new()),
+            Error::NotAtFirst(String::from("not dead"))
+        );
     }
 }

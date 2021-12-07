@@ -111,36 +111,41 @@ where
 {
     let mut distribs = vec![];
 
-    for query in queries {
-        parse(query.as_ref()).try_fold(&mut distribs, |distribs, current| {
-            let query_string = match current {
-                Query::And(s) => s,
-                Query::Or(s) => s,
-            };
+    for (i, query) in queries.into_iter().enumerate() {
+        parse(query.as_ref())
+            .enumerate()
+            .try_fold(&mut distribs, |distribs, (j, current)| {
+                let query_string = match current {
+                    Query::And(s) => s,
+                    Query::Or(s) => s,
+                };
 
-            let is_exclude = query_string.starts_with("not");
-            let query_string = if is_exclude {
-                &query_string[4..]
-            } else {
-                query_string
-            };
+                let is_exclude = query_string.starts_with("not");
+                if is_exclude && i == 0 && j == 0 {
+                    return Err(Error::NotAtFirst(query_string.to_string()));
+                }
+                let query_string = if is_exclude {
+                    &query_string[4..]
+                } else {
+                    query_string
+                };
 
-            let mut queries = queries::query(query_string, opts)?;
-            if is_exclude {
-                distribs.retain(|q| !queries.contains(q));
-            } else {
-                match current {
-                    Query::And(_) => {
-                        distribs.retain(|q| queries.contains(q));
-                    }
-                    Query::Or(_) => {
-                        distribs.append(&mut queries);
+                let mut queries = queries::query(query_string, opts)?;
+                if is_exclude {
+                    distribs.retain(|q| !queries.contains(q));
+                } else {
+                    match current {
+                        Query::And(_) => {
+                            distribs.retain(|q| queries.contains(q));
+                        }
+                        Query::Or(_) => {
+                            distribs.append(&mut queries);
+                        }
                     }
                 }
-            }
 
-            Ok::<_, Error>(distribs)
-        })?;
+                Ok::<_, Error>(distribs)
+            })?;
     }
 
     distribs.sort_by(|a, b| match a.name().cmp(b.name()) {
