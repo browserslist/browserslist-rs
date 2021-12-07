@@ -71,7 +71,7 @@ mod tests {
     #[test_case("last 2 major versions"; "basic")]
     #[test_case("last 1 major version"; "support pluralization")]
     #[test_case("Last 01 MaJoR Version"; "case insensitive")]
-    fn default_options(query: &str) {
+    fn valid(query: &str) {
         run_compare(query, &Opts::new());
     }
 }

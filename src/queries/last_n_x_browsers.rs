@@ -54,7 +54,7 @@ mod tests {
     #[test_case("Last 01 IE Version"; "case insensitive")]
     #[test_case("last 4 android versions"; "android 1")]
     #[test_case("last 31 android versions"; "android 2")]
-    fn default_options(query: &str) {
+    fn valid(query: &str) {
         run_compare(query, &Opts::new());
     }
 }
