@@ -5,6 +5,9 @@ const bindings = loadBinding(__dirname, 'browserslist-rs', 'browserslist-rs')
 interface Opts {
   mobileToDesktop?: boolean
   ignoreUnknownVersions?: boolean
+  config?: string
+  env?: string
+  path?: string
 }
 
 interface Execute {
