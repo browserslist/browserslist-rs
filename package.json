@@ -11,7 +11,6 @@
     "index.d.ts"
   ],
   "scripts": {
-    "sync": "ts-node ./scripts/sync.ts",
     "test:napi": "mocha -r=ts-node/register tests/napi.test.ts",
     "build:napi": "napi build --features=node --cargo-name=browserslist --platform --release",
     "build:napi:dev": "napi build --features=node --cargo-name=browserslist",
