@@ -205,9 +205,6 @@ fn build_caniuse_global() -> Result<()> {
         .map(|name| {
             format!(
                 r#"    "{0}" => {{
-        use once_cell::sync::Lazy;
-        use serde_json::from_str;
-        use ustr::Ustr;
         static STAT: Lazy<Vec<(Ustr, &'static str)>> = Lazy::new(|| {{
             from_str(include_str!(concat!(env!("OUT_DIR"), "/features/{0}.json"))).unwrap()
         }});
@@ -217,7 +214,19 @@ fn build_caniuse_global() -> Result<()> {
             )
         })
         .join("\n");
-    let caniuse_features_matching = format!("match name {{\n{}\n    _ => None\n}}", &arms);
+    let caniuse_features_matching = format!(
+        "{{
+use once_cell::sync::Lazy;
+use serde_json::from_str;
+use ustr::Ustr;
+
+match name {{
+{}
+    _ => None,
+}}
+}}",
+        &arms
+    );
     fs::write(
         format!("{}/caniuse-feature-matching.rs", &out_dir),
         caniuse_features_matching,
