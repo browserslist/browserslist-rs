@@ -67,6 +67,7 @@
 //! If you're targeting Node.js, we recommend you to use N-API over WebAssembly,
 //! because it's faster and less-limited than the WebAssembly-build.
 
+use itertools::Itertools;
 use parser::{parse, Query};
 use std::cmp::Ordering;
 #[cfg(target_arch = "wasm32")]
@@ -106,47 +107,46 @@ mod wasm;
 /// ```
 pub fn resolve<I, S>(queries: I, opts: &Opts) -> Result<Vec<Distrib>, Error>
 where
-    S: AsRef<str>,
+    S: AsRef<str> + std::fmt::Display,
     I: IntoIterator<Item = S>,
 {
+    let query = queries.into_iter().join(", ");
     let mut distribs = vec![];
 
-    for (i, query) in queries.into_iter().enumerate() {
-        parse(query.as_ref())
-            .enumerate()
-            .try_fold(&mut distribs, |distribs, (j, current)| {
-                let query_string = match current {
-                    Query::And(s) => s,
-                    Query::Or(s) => s,
-                };
+    parse(&query)
+        .enumerate()
+        .try_fold(&mut distribs, |distribs, (i, current)| {
+            let query_string = match current {
+                Query::And(s) => s,
+                Query::Or(s) => s,
+            };
 
-                let is_exclude = query_string.starts_with("not");
-                if is_exclude && i == 0 && j == 0 {
-                    return Err(Error::NotAtFirst(query_string.to_string()));
-                }
-                let query_string = if is_exclude {
-                    &query_string[4..]
-                } else {
-                    query_string
-                };
+            let is_exclude = query_string.starts_with("not");
+            if is_exclude && i == 0 {
+                return Err(Error::NotAtFirst(query_string.to_string()));
+            }
+            let query_string = if is_exclude {
+                &query_string[4..]
+            } else {
+                query_string
+            };
 
-                let mut queries = queries::query(query_string, opts)?;
-                if is_exclude {
-                    distribs.retain(|q| !queries.contains(q));
-                } else {
-                    match current {
-                        Query::And(_) => {
-                            distribs.retain(|q| queries.contains(q));
-                        }
-                        Query::Or(_) => {
-                            distribs.append(&mut queries);
-                        }
+            let mut queries = queries::query(query_string, opts)?;
+            if is_exclude {
+                distribs.retain(|q| !queries.contains(q));
+            } else {
+                match current {
+                    Query::And(_) => {
+                        distribs.retain(|q| queries.contains(q));
+                    }
+                    Query::Or(_) => {
+                        distribs.append(&mut queries);
                     }
                 }
+            }
 
-                Ok::<_, Error>(distribs)
-            })?;
-    }
+            Ok::<_, Error>(distribs)
+        })?;
 
     distribs.sort_by(|a, b| match a.name().cmp(b.name()) {
         Ordering::Equal => {
