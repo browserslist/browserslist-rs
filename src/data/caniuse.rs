@@ -5,6 +5,9 @@ use serde::Deserialize;
 use std::borrow::Cow;
 use ustr::{Ustr, UstrMap};
 
+pub(crate) mod features;
+pub(crate) mod region;
+
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 
 #[derive(Clone, Debug, Deserialize)]

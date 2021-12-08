@@ -1,5 +1,5 @@
 use super::{Distrib, Selector, SelectorResult};
-use crate::{data::region::get_usage_by_region, error::Error, opts::Opts};
+use crate::{data::caniuse::region::get_usage_by_region, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::Regex;
 

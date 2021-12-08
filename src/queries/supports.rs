@@ -1,5 +1,5 @@
 use super::{Distrib, Selector, SelectorResult};
-use crate::{data::features::get_feature_stat, error::Error, opts::Opts};
+use crate::{data::caniuse::features::get_feature_stat, error::Error, opts::Opts};
 use once_cell::sync::Lazy;
 use regex::Regex;
 
