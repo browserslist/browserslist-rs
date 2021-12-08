@@ -33,8 +33,8 @@ mod tests {
     use test_case::test_case;
 
     #[test_case("supports objectrtc"; "case 1")]
-    #[test_case("supports rtcpeerconnection"; "case 2")]
-    #[test_case("supports arrow-functions"; "case 3")]
+    #[test_case("supports    rtcpeerconnection"; "case 2")]
+    #[test_case("supports        arrow-functions"; "case 3")]
     fn valid(query: &str) {
         run_compare(query, &Opts::new());
     }
