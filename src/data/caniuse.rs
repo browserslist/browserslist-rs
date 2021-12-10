@@ -1,6 +1,5 @@
 use ahash::AHashMap;
 use once_cell::sync::Lazy;
-use regex::Regex;
 use serde::Deserialize;
 use std::borrow::Cow;
 use ustr::{Ustr, UstrMap};
@@ -78,9 +77,6 @@ pub static BROWSER_VERSION_ALIASES: Lazy<UstrMap<AHashMap<&'static str, &'static
         aliases
     });
 
-static REGEX_NON_DESKTOP_ANDROID: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^(?:[2-4]\.|[34]$)").unwrap());
-
 static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     let chrome = CANIUSE_BROWSERS.get(&Ustr::from("chrome")).unwrap();
     let mut android = CANIUSE_BROWSERS
@@ -91,7 +87,14 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     android.version_list = android
         .version_list
         .into_iter()
-        .filter(|version| REGEX_NON_DESKTOP_ANDROID.is_match(&version.version))
+        .filter(|version| {
+            let version = &version.version;
+            version.starts_with("2.")
+                || version.starts_with("3.")
+                || version.starts_with("4.")
+                || version == "3"
+                || version == "4"
+        })
         .chain(
             chrome.version_list.iter().cloned().skip(
                 chrome.version_list.len()
