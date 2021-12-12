@@ -8,7 +8,7 @@ impl FromStr for Version {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // this allows something like `4.4.3-4.4.4`
-        let mut segments = s.split('-').next().unwrap().split('.');
+        let mut segments = s.split_once('-').map(|(v, _)| v).unwrap_or(s).split('.');
         let major = match segments.next() {
             Some(n) => n.parse()?,
             None => 0,
