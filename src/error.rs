@@ -3,7 +3,7 @@ use thiserror::Error;
 /// The errors may occur when querying with browserslist.
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
 pub enum Error {
-    /// [`nom`](https://github.com/Geal/nom) context error.
+    /// Error of parsing query.
     #[error("failed to parse the rest of input: ...'{0}'")]
     Nom(String),
 
