@@ -1,35 +1,26 @@
-use super::{query, Selector, SelectorResult};
-use crate::{error::Error, opts::Opts};
+use super::QueryResult;
+use crate::{opts::Opts, resolve};
 
-pub(super) struct DeadSelector;
-
-impl Selector for DeadSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
-        if text.eq_ignore_ascii_case("dead") {
-            [
-                "ie <= 10",
-                "ie_mob <= 11",
-                "bb <= 10",
-                "op_mob <= 12.1",
-                "samsung 4",
-            ]
-            .into_iter()
-            .map(|q| query(q, opts))
-            .try_fold(Vec::with_capacity(20), |mut result, current| {
-                result.append(&mut current?);
-                Ok::<_, Error>(result)
-            })
-            .map(Some)
-        } else {
-            Ok(None)
-        }
-    }
+pub(super) fn dead(opts: &Opts) -> QueryResult {
+    resolve(
+        [
+            "ie <= 10",
+            "ie_mob <= 11",
+            "bb <= 10",
+            "op_mob <= 12.1",
+            "samsung 4",
+        ],
+        opts,
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::{run_compare, should_failed};
+    use crate::{
+        error::Error,
+        test::{run_compare, should_failed},
+    };
     use test_case::test_case;
 
     #[test_case("dead"; "basic")]

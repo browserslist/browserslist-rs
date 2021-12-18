@@ -1,31 +1,12 @@
-use super::{Distrib, Selector, SelectorResult};
-use crate::opts::Opts;
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
+use super::{Distrib, QueryResult};
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^(?:operamini|op_mini)\s+all$")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
-
-pub(super) struct OperaMiniSelector;
-
-impl Selector for OperaMiniSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
-        if REGEX.is_match(text) {
-            Ok(Some(vec![Distrib::new("op_mini", "all")]))
-        } else {
-            Ok(None)
-        }
-    }
+pub(super) fn op_mini() -> QueryResult {
+    Ok(vec![Distrib::new("op_mini", "all")])
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test::run_compare;
+    use crate::{opts::Opts, test::run_compare};
     use test_case::test_case;
 
     #[test_case("op_mini all"; "short")]

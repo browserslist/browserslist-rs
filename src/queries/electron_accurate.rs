@@ -1,38 +1,28 @@
-use super::{Distrib, Selector, SelectorResult};
-use crate::{data::electron::ELECTRON_VERSIONS, error::Error, opts::Opts};
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
+use super::{Distrib, QueryResult};
+use crate::{
+    data::electron::{parse_version, ELECTRON_VERSIONS},
+    error::Error,
+};
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^electron\s+(\d+(?:\.\d+)?)(?:\.\d+)?$")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
+pub(super) fn electron_accurate(version: &str) -> QueryResult {
+    let version_str = version;
+    let version: f32 = parse_version(version)?;
 
-pub(super) struct ElectronAccurateSelector;
-
-impl Selector for ElectronAccurateSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
-        if let Some(cap) = REGEX.captures(text) {
-            let version: f32 = cap[1].parse().map_err(Error::ParseVersion)?;
-
-            let versions = ELECTRON_VERSIONS
-                .iter()
-                .find(|(electron_version, _)| *electron_version == version)
-                .map(|(_, chromium_version)| vec![Distrib::new("chrome", chromium_version)])
-                .ok_or_else(|| Error::UnknownElectronVersion(version.to_string()))?;
-            Ok(Some(versions))
-        } else {
-            Ok(None)
-        }
-    }
+    let distribs = ELECTRON_VERSIONS
+        .iter()
+        .find(|(electron_version, _)| *electron_version == version)
+        .map(|(_, chromium_version)| vec![Distrib::new("chrome", chromium_version)])
+        .ok_or_else(|| Error::UnknownElectronVersion(version_str.to_string()))?;
+    Ok(distribs)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::{run_compare, should_failed};
+    use crate::{
+        opts::Opts,
+        test::{run_compare, should_failed},
+    };
     use test_case::test_case;
 
     #[test_case("electron 1.1"; "basic")]
@@ -47,7 +37,7 @@ mod tests {
         "unknown version"
     )]
     #[test_case(
-        "electron 8.a", Error::UnknownQuery(String::from("electron 8.a"));
+        "electron 8.a", Error::Nom(String::from("a"));
         "malformed version 1"
     )]
     #[test_case(
@@ -57,6 +47,10 @@ mod tests {
     #[test_case(
         "electron 7.01", Error::UnknownElectronVersion(String::from("7.01"));
         "malformed version 3"
+    )]
+    #[test_case(
+        "electron 999.0", Error::UnknownElectronVersion(String::from("999.0"));
+        "malformed version 4"
     )]
     fn invalid(query: &str, error: Error) {
         assert_eq!(should_failed(query, &Opts::new()), error);

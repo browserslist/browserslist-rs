@@ -1,44 +1,32 @@
-use super::{Distrib, Selector, SelectorResult};
-use crate::{data::electron::ELECTRON_VERSIONS, error::Error, opts::Opts};
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
+use super::{Distrib, QueryResult};
+use crate::{
+    data::electron::{parse_version, ELECTRON_VERSIONS},
+    parser::Comparator,
+};
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^electron\s*([<>]=?)\s*(\d+\.\d+)(?:\.\d+)?$")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
+pub(super) fn electron_unbounded_range(comparator: Comparator, version: &str) -> QueryResult {
+    let version: f32 = parse_version(version)?;
 
-pub(super) struct ElectronUnboundedRangeSelector;
-
-impl Selector for ElectronUnboundedRangeSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
-        if let Some(cap) = REGEX.captures(text) {
-            let sign = &cap[1];
-            let version: f32 = cap[2].parse().map_err(Error::ParseVersion)?;
-
-            let versions = ELECTRON_VERSIONS
-                .iter()
-                .filter(|(electron_version, _)| match sign {
-                    ">" => *electron_version > version,
-                    "<" => *electron_version < version,
-                    "<=" => *electron_version <= version,
-                    _ => *electron_version >= version,
-                })
-                .map(|(_, chromium_version)| Distrib::new("chrome", chromium_version))
-                .collect();
-            Ok(Some(versions))
-        } else {
-            Ok(None)
-        }
-    }
+    let distribs = ELECTRON_VERSIONS
+        .iter()
+        .filter(|(electron_version, _)| match comparator {
+            Comparator::Greater => *electron_version > version,
+            Comparator::Less => *electron_version < version,
+            Comparator::GreaterOrEqual => *electron_version >= version,
+            Comparator::LessOrEqual => *electron_version <= version,
+        })
+        .map(|(_, chromium_version)| Distrib::new("chrome", chromium_version))
+        .collect();
+    Ok(distribs)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test::{run_compare, should_failed};
+    use crate::{
+        error::Error,
+        opts::Opts,
+        test::{run_compare, should_failed},
+    };
     use test_case::test_case;
 
     #[test_case("electron <= 0.21"; "basic")]
@@ -49,7 +37,7 @@ mod tests {
     }
 
     #[test_case(
-        "electron < 8.a", Error::UnknownQuery(String::from("electron < 8.a"));
+        "electron < 8.a", Error::Nom(String::from("a"));
         "malformed version 1"
     )]
     #[test_case(

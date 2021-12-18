@@ -1,58 +1,35 @@
-use super::{Distrib, Selector, SelectorResult};
+use super::{Distrib, QueryResult};
 use crate::{
     data::caniuse::{get_browser_stat, normalize_version},
     error::Error,
     opts::Opts,
     semver::Version,
 };
-use once_cell::sync::Lazy;
-use regex::Regex;
 
-static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+)\s+([\d.]+)\s*-\s*([\d.]+)$").unwrap());
+pub(super) fn browser_bounded_range(name: &str, from: &str, to: &str, opts: &Opts) -> QueryResult {
+    let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
+        .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
+    let from: Version = normalize_version(stat, from)
+        .unwrap_or(from)
+        .parse()
+        .unwrap_or_default();
+    let to: Version = normalize_version(stat, to)
+        .unwrap_or(to)
+        .parse()
+        .unwrap_or_default();
 
-pub(super) struct BrowserBoundedRangeSelector;
-
-impl Selector for BrowserBoundedRangeSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
-        if let Some(cap) = REGEX.captures(text) {
-            let name = &cap[1];
-            let from = &cap[2];
-            let to = &cap[3];
-
-            let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop).ok_or_else(|| {
-                if name.eq_ignore_ascii_case("node") {
-                    Error::UnknownNodejsVersion(format!("{} - {}", from, to))
-                } else if name.eq_ignore_ascii_case("electron") {
-                    Error::UnknownElectronVersion(format!("{} - {}", from, to))
-                } else {
-                    Error::BrowserNotFound(name.to_string())
-                }
-            })?;
-            let from: Version = normalize_version(stat, from)
-                .unwrap_or(from)
-                .parse()
-                .unwrap_or_default();
-            let to: Version = normalize_version(stat, to)
-                .unwrap_or(to)
-                .parse()
-                .unwrap_or_default();
-
-            let versions = stat
-                .version_list
-                .iter()
-                .filter(|version| version.release_date.is_some())
-                .map(|version| &*version.version)
-                .filter(|version| {
-                    let version = version.parse().unwrap_or_default();
-                    from <= version && version <= to
-                })
-                .map(|version| Distrib::new(name, version))
-                .collect();
-            Ok(Some(versions))
-        } else {
-            Ok(None)
-        }
-    }
+    let distribs = stat
+        .version_list
+        .iter()
+        .filter(|version| version.release_date.is_some())
+        .map(|version| &*version.version)
+        .filter(|version| {
+            let version = version.parse().unwrap_or_default();
+            from <= version && version <= to
+        })
+        .map(|version| Distrib::new(name, version))
+        .collect();
+    Ok(distribs)
 }
 
 #[cfg(test)]

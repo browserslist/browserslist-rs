@@ -4,6 +4,10 @@ use thiserror::Error;
 /// The errors may occur when querying with browserslist.
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
 pub enum Error {
+    /// [`nom`](https://github.com/Geal/nom) context error.
+    #[error("failed to parse the rest of input: ...'{0}'")]
+    Nom(String),
+
     /// Failed to parse version string.
     #[error("invalid version string: {0:?}")]
     ParseVersion(num::ParseFloatError),
@@ -85,4 +89,13 @@ pub enum Error {
     /// Failed to access the current working directory.
     #[error("failed to access current working directory")]
     FailedToAccessCurrentDir,
+}
+
+impl<'a> From<nom::Err<nom::error::Error<&'a str>>> for Error {
+    fn from(e: nom::Err<nom::error::Error<&'a str>>) -> Self {
+        match e {
+            nom::Err::Error(e) | nom::Err::Failure(e) => Self::Nom(e.input.to_owned()),
+            _ => unreachable!(),
+        }
+    }
 }

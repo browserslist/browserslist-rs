@@ -1,7 +1,6 @@
 #![allow(clippy::float_cmp)]
 #![deny(clippy::if_not_else)]
 #![deny(clippy::needless_borrow)]
-#![deny(clippy::trivial_regex)]
 #![deny(clippy::unimplemented)]
 #![warn(missing_docs)]
 
@@ -68,7 +67,7 @@
 //! because it's faster and less-limited than the WebAssembly-build.
 
 use itertools::Itertools;
-use parser::{parse, Query};
+use parser::parse_browserslist_query;
 use std::cmp::Ordering;
 #[cfg(target_arch = "wasm32")]
 pub use wasm::browserslist;
@@ -111,38 +110,23 @@ where
     I: IntoIterator<Item = S>,
 {
     let query = queries.into_iter().join(", ");
-    let mut distribs = vec![];
 
-    parse(&query)
+    let mut distribs = parse_browserslist_query(&query)?
+        .1
+        .into_iter()
         .enumerate()
-        .try_fold(&mut distribs, |distribs, (i, current)| {
-            let query_string = match current {
-                Query::And(s) => s,
-                Query::Or(s) => s,
-            };
-
-            let is_exclude = query_string.starts_with("not");
-            if is_exclude && i == 0 {
-                return Err(Error::NotAtFirst(query_string.to_string()));
+        .try_fold(vec![], |mut distribs, (i, current)| {
+            if i == 0 && current.negated {
+                return Err(Error::NotAtFirst(current.raw.to_string()));
             }
-            let query_string = if is_exclude {
-                &query_string[4..]
-            } else {
-                query_string
-            };
 
-            let mut queries = queries::query(query_string, opts)?;
-            if is_exclude {
-                distribs.retain(|q| !queries.contains(q));
+            let mut dist = queries::query(current.atom, opts)?;
+            if current.negated {
+                distribs.retain(|distrib| !dist.contains(distrib));
+            } else if current.is_and {
+                distribs.retain(|distrib| dist.contains(distrib));
             } else {
-                match current {
-                    Query::And(_) => {
-                        distribs.retain(|q| queries.contains(q));
-                    }
-                    Query::Or(_) => {
-                        distribs.append(&mut queries);
-                    }
-                }
+                distribs.append(&mut dist);
             }
 
             Ok::<_, Error>(distribs)

@@ -1,49 +1,29 @@
-use super::{Distrib, Selector, SelectorResult};
-use crate::{data::node::NODE_VERSIONS, opts::Opts, semver::compare};
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
+use super::{Distrib, QueryResult};
+use crate::{data::node::NODE_VERSIONS, parser::Comparator, semver::compare};
 use std::cmp::Ordering;
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^node\s*([<>]=?)\s*(\d+(?:\.\d+(?:\.\d+)?)?)$")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
-
-pub(super) struct NodeUnboundedRangeSelector;
-
-impl Selector for NodeUnboundedRangeSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
-        if let Some(cap) = REGEX.captures(text) {
-            let sign = &cap[1];
-            let version = &cap[2];
-
-            let versions = NODE_VERSIONS
-                .iter()
-                .filter(|v| {
-                    let ord = compare(v, version);
-                    match sign {
-                        ">" => matches!(ord, Ordering::Greater),
-                        "<" => matches!(ord, Ordering::Less),
-                        "<=" => matches!(ord, Ordering::Less | Ordering::Equal),
-                        _ => matches!(ord, Ordering::Greater | Ordering::Equal),
-                    }
-                })
-                .map(|version| Distrib::new("node", version))
-                .collect();
-            Ok(Some(versions))
-        } else {
-            Ok(None)
-        }
-    }
+pub(super) fn node_unbounded_range(comparator: Comparator, version: &str) -> QueryResult {
+    let distribs = NODE_VERSIONS
+        .iter()
+        .filter(|v| {
+            let ord = compare(v, version);
+            match comparator {
+                Comparator::Greater => matches!(ord, Ordering::Greater),
+                Comparator::Less => matches!(ord, Ordering::Less),
+                Comparator::GreaterOrEqual => matches!(ord, Ordering::Greater | Ordering::Equal),
+                Comparator::LessOrEqual => matches!(ord, Ordering::Less | Ordering::Equal),
+            }
+        })
+        .map(|version| Distrib::new("node", version))
+        .collect();
+    Ok(distribs)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         error::Error,
+        opts::Opts,
         test::{run_compare, should_failed},
     };
     use test_case::test_case;
@@ -55,17 +35,14 @@ mod tests {
     #[test_case("Node <= 5"; "case insensitive")]
     #[test_case("node > 10.12"; "with semver minor")]
     #[test_case("node > 10.12.1"; "with semver patch")]
+    #[test_case("node >= 8.8.8.8"; "malformed version")]
     fn valid(query: &str) {
         run_compare(query, &Opts::new());
     }
 
     #[test_case(
-        "node < 8.a", Error::UnknownQuery(String::from("node < 8.a"));
-        "malformed version 1"
-    )]
-    #[test_case(
-        "node >= 8.8.8.8", Error::UnknownNodejsVersion(String::from("8.8.8.8"));
-        "malformed version 2"
+        "node < 8.a", Error::Nom(String::from("a"));
+        "malformed version"
     )]
     fn invalid(query: &str, error: Error) {
         assert_eq!(should_failed(query, &Opts::new()), error);

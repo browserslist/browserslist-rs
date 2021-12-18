@@ -1,50 +1,41 @@
-use super::{Distrib, Selector, SelectorResult};
-use crate::{data::caniuse::region::get_usage_by_region, error::Error, opts::Opts};
-use once_cell::sync::Lazy;
-use regex::Regex;
+use super::{Distrib, QueryResult};
+use crate::{data::caniuse::region::get_usage_by_region, error::Error, parser::Comparator};
 
-static REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^([<>]=?)\s*(\d*\.?\d+)%\s+in\s+((?:alt-)?\w\w)$").unwrap());
+pub(super) fn percentage_by_region(
+    comparator: Comparator,
+    popularity: f32,
+    region: &str,
+) -> QueryResult {
+    let normalized_region = if region.len() == 2 {
+        region.to_uppercase()
+    } else {
+        region.to_lowercase()
+    };
 
-pub(super) struct PercentageByRegionSelector;
-
-impl Selector for PercentageByRegionSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
-        if let Some(cap) = REGEX.captures(text) {
-            let sign = &cap[1];
-            let popularity: f32 = cap[2].parse().map_err(Error::ParsePercentage)?;
-            let region = &cap[3];
-            let region = if region.len() == 2 {
-                region.to_uppercase()
-            } else {
-                region.to_lowercase()
-            };
-
-            if let Some(region_data) = get_usage_by_region(&region) {
-                let distribs = region_data
-                    .iter()
-                    .filter(|(_, _, usage)| match sign {
-                        ">" => *usage > popularity,
-                        "<" => *usage < popularity,
-                        "<=" => *usage <= popularity,
-                        _ => *usage >= popularity,
-                    })
-                    .map(|(name, version, _)| Distrib::new(&*name, *version))
-                    .collect();
-                Ok(Some(distribs))
-            } else {
-                Err(Error::UnknownRegion(cap[3].to_string()))
-            }
-        } else {
-            Ok(None)
-        }
+    if let Some(region_data) = get_usage_by_region(&normalized_region) {
+        let distribs = region_data
+            .iter()
+            .filter(|(_, _, usage)| match comparator {
+                Comparator::Greater => *usage > popularity,
+                Comparator::Less => *usage < popularity,
+                Comparator::GreaterOrEqual => *usage >= popularity,
+                Comparator::LessOrEqual => *usage <= popularity,
+            })
+            .map(|(name, version, _)| Distrib::new(&*name, *version))
+            .collect();
+        Ok(distribs)
+    } else {
+        Err(Error::UnknownRegion(region.to_string()))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::{run_compare, should_failed};
+    use crate::{
+        opts::Opts,
+        test::{run_compare, should_failed},
+    };
     use test_case::test_case;
 
     #[test_case("> 10% in US"; "greater")]

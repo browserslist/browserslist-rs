@@ -1,35 +1,13 @@
-use super::{Distrib, Selector, SelectorResult};
-use crate::opts::Opts;
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
+use super::{Distrib, QueryResult};
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"phantomjs\s+(1\.9|2\.1)")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
-
-pub(super) struct PhantomSelector;
-
-impl Selector for PhantomSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
-        if let Some(cap) = REGEX.captures(text) {
-            match &cap[1] {
-                "1.9" => Ok(Some(vec![Distrib::new("safari", "5")])),
-                "2.1" => Ok(Some(vec![Distrib::new("safari", "6")])),
-                _ => unreachable!(),
-            }
-        } else {
-            Ok(None)
-        }
-    }
+pub(super) fn phantom(is_later_version: bool) -> QueryResult {
+    let version = if is_later_version { "6" } else { "5" };
+    Ok(vec![Distrib::new("safari", version)])
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test::run_compare;
+    use crate::{opts::Opts, test::run_compare};
     use test_case::test_case;
 
     #[test_case("phantomjs 2.1"; "2.1")]

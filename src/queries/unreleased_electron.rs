@@ -1,31 +1,12 @@
-use super::{Selector, SelectorResult};
-use crate::opts::Opts;
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
+use super::QueryResult;
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^unreleased\s+electron\s+versions?$")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
-
-pub(super) struct UnreleasedElectronSelector;
-
-impl Selector for UnreleasedElectronSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
-        if REGEX.is_match(text) {
-            Ok(Some(vec![]))
-        } else {
-            Ok(None)
-        }
-    }
+pub(super) fn unreleased_electron() -> QueryResult {
+    Ok(vec![])
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test::run_compare;
+    use crate::{opts::Opts, test::run_compare};
     use test_case::test_case;
 
     #[test_case("unreleased electron versions"; "basic")]

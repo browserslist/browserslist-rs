@@ -1,48 +1,29 @@
-use super::{Distrib, Selector, SelectorResult};
-use crate::{data::electron::ELECTRON_VERSIONS, error::Error, opts::Opts};
+use super::{Distrib, QueryResult};
+use crate::data::electron::ELECTRON_VERSIONS;
 use itertools::Itertools;
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^last\s+(\d+)\s+electron\s+major\s+versions?$")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
+pub(super) fn last_n_electron_major(count: usize) -> QueryResult {
+    let minimum = ELECTRON_VERSIONS
+        .iter()
+        .rev()
+        .dedup()
+        .nth(count - 1)
+        .map(|(electron_version, _)| electron_version)
+        .unwrap_or(&0.0);
 
-pub(super) struct LastNElectronMajorSelector;
+    let distribs = ELECTRON_VERSIONS
+        .iter()
+        .filter(|(electron_version, _)| electron_version >= minimum)
+        .rev()
+        .map(|(_, chromium_version)| Distrib::new("chrome", chromium_version))
+        .collect();
 
-impl Selector for LastNElectronMajorSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
-        let count: usize = match REGEX.captures(text) {
-            Some(cap) => cap[1].parse().map_err(Error::ParseVersionsCount)?,
-            None => return Ok(None),
-        };
-
-        let minimum = ELECTRON_VERSIONS
-            .iter()
-            .rev()
-            .dedup()
-            .nth(count - 1)
-            .map(|(electron_version, _)| electron_version)
-            .unwrap_or(&0.0);
-
-        let versions = ELECTRON_VERSIONS
-            .iter()
-            .filter(|(electron_version, _)| electron_version >= minimum)
-            .rev()
-            .map(|(_, chromium_version)| Distrib::new("chrome", chromium_version))
-            .collect();
-
-        Ok(Some(versions))
-    }
+    Ok(distribs)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test::run_compare;
+    use crate::{opts::Opts, test::run_compare};
     use test_case::test_case;
 
     #[test_case("last 2 electron major versions"; "basic")]

@@ -1,48 +1,31 @@
-use super::{Distrib, Selector, SelectorResult};
-use crate::{data::caniuse::CANIUSE_BROWSERS, error::Error, opts::Opts};
-use once_cell::sync::Lazy;
-use regex::Regex;
+use super::{Distrib, QueryResult};
+use crate::{data::caniuse::CANIUSE_BROWSERS, parser::Comparator};
 
-static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([<>]=?)\s*(\d*\.?\d+)%$").unwrap());
-
-pub(super) struct PercentageSelector;
-
-impl Selector for PercentageSelector {
-    fn select<'a>(&self, text: &'a str, _: &Opts) -> SelectorResult {
-        let cap = match REGEX.captures(text) {
-            Some(cap) => cap,
-            None => return Ok(None),
-        };
-
-        let sign = &cap[1];
-        let popularity: f32 = cap[2].parse().map_err(Error::ParsePercentage)?;
-
-        let versions = CANIUSE_BROWSERS
-            .iter()
-            .map(|(name, stat)| {
-                stat.version_list
-                    .iter()
-                    .filter(|version| {
-                        let usage = version.global_usage;
-                        match sign {
-                            ">" => usage > popularity,
-                            "<" => usage < popularity,
-                            "<=" => usage <= popularity,
-                            _ => usage >= popularity,
-                        }
-                    })
-                    .map(|version| Distrib::new(name, &*version.version))
-            })
-            .flatten()
-            .collect();
-        Ok(Some(versions))
-    }
+pub(super) fn percentage(comparator: Comparator, popularity: f32) -> QueryResult {
+    let distribs = CANIUSE_BROWSERS
+        .iter()
+        .map(|(name, stat)| {
+            stat.version_list
+                .iter()
+                .filter(|version| {
+                    let usage = version.global_usage;
+                    match comparator {
+                        Comparator::Greater => usage > popularity,
+                        Comparator::GreaterOrEqual => usage >= popularity,
+                        Comparator::Less => usage < popularity,
+                        Comparator::LessOrEqual => usage <= popularity,
+                    }
+                })
+                .map(|version| Distrib::new(name, &*version.version))
+        })
+        .flatten()
+        .collect();
+    Ok(distribs)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test::run_compare;
+    use crate::{opts::Opts, test::run_compare};
     use test_case::test_case;
 
     #[test_case("> 10%"; "greater")]

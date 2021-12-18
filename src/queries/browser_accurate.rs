@@ -1,64 +1,49 @@
-use super::{Distrib, Selector, SelectorResult};
+use super::{Distrib, QueryResult};
 use crate::{
     data::caniuse::{get_browser_stat, normalize_version},
     error::Error,
     opts::Opts,
 };
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
 use std::borrow::Cow;
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^(\w+)\s+(tp|[\d\.]+)$")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
+pub(super) fn browser_accurate(name: &str, version: &str, opts: &Opts) -> QueryResult {
+    let original_name = name;
+    let original_version = version;
+    let version = if original_version.eq_ignore_ascii_case("tp") {
+        "TP"
+    } else {
+        version
+    };
 
-pub(super) struct BrowserAccurateSelector;
+    let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
+        .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
 
-impl Selector for BrowserAccurateSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
-        if let Some(cap) = REGEX.captures(text) {
-            let name = &cap[1];
-            let version = match &cap[2] {
-                version if version.eq_ignore_ascii_case("tp") => "TP",
-                version => version,
-            };
-
-            let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop).ok_or_else(|| {
-                if name.eq_ignore_ascii_case("node") {
-                    Error::UnknownNodejsVersion(version.to_string())
-                } else if name.eq_ignore_ascii_case("electron") {
-                    Error::UnknownElectronVersion(version.to_string())
-                } else {
-                    Error::BrowserNotFound(name.to_string())
-                }
-            })?;
-
-            if let Some(version) = normalize_version(stat, version) {
-                Ok(Some(vec![Distrib::new(name, version.to_owned())]))
-            } else {
-                let version = if version.contains('.') {
-                    Cow::Borrowed(version.trim_end_matches(".0"))
-                } else {
-                    let mut v = version.to_owned();
-                    v.push_str(".0");
-                    Cow::Owned(v)
-                };
-                if let Some(version) = normalize_version(stat, &version) {
-                    Ok(Some(vec![Distrib::new(name, version.to_owned())]))
-                } else if opts.ignore_unknown_versions {
-                    Ok(Some(vec![]))
-                } else {
-                    Err(Error::UnknownBrowserVersion(
-                        cap[1].to_string(),
-                        cap[2].to_string(),
-                    ))
-                }
-            }
+    if let Some(version) = normalize_version(
+        stat,
+        if original_version.eq_ignore_ascii_case("tp") {
+            "TP"
         } else {
-            Ok(None)
+            version
+        },
+    ) {
+        Ok(vec![Distrib::new(name, version.to_owned())])
+    } else {
+        let version = if version.contains('.') {
+            Cow::Borrowed(version.trim_end_matches(".0"))
+        } else {
+            let mut v = version.to_owned();
+            v.push_str(".0");
+            Cow::Owned(v)
+        };
+        if let Some(version) = normalize_version(stat, &version) {
+            Ok(vec![Distrib::new(name, version.to_owned())])
+        } else if opts.ignore_unknown_versions {
+            Ok(vec![])
+        } else {
+            Err(Error::UnknownBrowserVersion(
+                original_name.to_string(),
+                original_version.to_string(),
+            ))
         }
     }
 }

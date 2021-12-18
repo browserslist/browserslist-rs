@@ -1,49 +1,28 @@
-use super::{Distrib, Selector, SelectorResult};
+use super::{Distrib, QueryResult};
 use crate::{
     data::caniuse::{get_browser_stat, CANIUSE_BROWSERS},
-    error::Error,
     opts::Opts,
 };
 use chrono::{Duration, Utc};
-use once_cell::sync::Lazy;
-use regex::{Regex, RegexBuilder};
-
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r"^last\s+(\d*\.?\d+)\s+years?$")
-        .case_insensitive(true)
-        .build()
-        .unwrap()
-});
 
 const ONE_YEAR_IN_SECONDS: f64 = 365.259641 * 24.0 * 60.0 * 60.0;
 
-pub(super) struct YearsSelector;
+pub(super) fn years(count: f64, opts: &Opts) -> QueryResult {
+    let duration = Duration::seconds((count * ONE_YEAR_IN_SECONDS) as i64);
+    let time = (Utc::now() - duration).timestamp();
 
-impl Selector for YearsSelector {
-    fn select<'a>(&self, text: &'a str, opts: &Opts) -> SelectorResult {
-        if let Some(cap) = REGEX.captures(text) {
-            let count: f64 = cap[1].parse().map_err(Error::ParseYearsCount)?;
-            let duration = Duration::seconds((count * ONE_YEAR_IN_SECONDS) as i64);
-            let time = (Utc::now() - duration).timestamp();
-
-            let versions = CANIUSE_BROWSERS
-                .keys()
-                .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-                .map(|(name, stat)| {
-                    stat.version_list
-                        .iter()
-                        .filter(
-                            |version| matches!(version.release_date, Some(date) if date >= time),
-                        )
-                        .map(|version| Distrib::new(name, &*version.version))
-                })
-                .flatten()
-                .collect();
-            Ok(Some(versions))
-        } else {
-            Ok(None)
-        }
-    }
+    let distribs = CANIUSE_BROWSERS
+        .keys()
+        .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
+        .map(|(name, stat)| {
+            stat.version_list
+                .iter()
+                .filter(|version| matches!(version.release_date, Some(date) if date >= time))
+                .map(|version| Distrib::new(name, &*version.version))
+        })
+        .flatten()
+        .collect();
+    Ok(distribs)
 }
 
 #[cfg(test)]

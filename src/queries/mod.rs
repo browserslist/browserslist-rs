@@ -1,4 +1,9 @@
-use crate::{data::caniuse, data::caniuse::get_browser_stat, error::Error, opts::Opts};
+use crate::{
+    data::caniuse,
+    error::Error,
+    opts::Opts,
+    parser::{QueryAtom, Stats, VersionRange},
+};
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, fmt::Display};
 
@@ -92,57 +97,103 @@ impl Display for Distrib {
     }
 }
 
-pub type SelectorResult = Result<Option<Vec<Distrib>>, Error>;
+pub type QueryResult = Result<Vec<Distrib>, Error>;
 
-trait Selector {
-    fn select(&self, text: &str, opts: &Opts) -> SelectorResult;
-}
-
-pub fn query(query_string: &str, opts: &Opts) -> Result<Vec<Distrib>, Error> {
-    let selectors: Vec<Box<dyn Selector>> = vec![
-        Box::new(last_n_major_browsers::LastNMajorBrowsersSelector),
-        Box::new(last_n_browsers::LastNBrowsersSelector),
-        Box::new(last_n_electron_major::LastNElectronMajorSelector),
-        Box::new(last_n_x_major_browsers::LastNXMajorBrowsersSelector),
-        Box::new(last_n_electron::LastNElectronSelector),
-        Box::new(last_n_x_browsers::LastNXBrowsersSelector),
-        Box::new(unreleased_browsers::UnreleasedBrowsersSelector),
-        Box::new(unreleased_electron::UnreleasedElectronSelector),
-        Box::new(unreleased_x_browsers::UnreleasedXBrowsersSelector),
-        Box::new(years::YearsSelector),
-        Box::new(since::SinceSelector),
-        Box::new(percentage::PercentageSelector),
-        Box::new(percentage_by_region::PercentageByRegionSelector),
-        Box::new(cover::CoverSelector),
-        Box::new(supports::SupportsSelector),
-        Box::new(electron_bounded_range::ElectronBoundedRangeSelector),
-        Box::new(node_bounded_range::NodeBoundedRangeSelector),
-        Box::new(browser_bounded_range::BrowserBoundedRangeSelector),
-        Box::new(electron_unbounded_range::ElectronUnboundedRangeSelector),
-        Box::new(node_unbounded_range::NodeUnboundedRangeSelector),
-        Box::new(browser_unbounded_range::BrowserUnboundedRangeSelector),
-        Box::new(firefox_esr::FirefoxESRSelector),
-        Box::new(op_mini::OperaMiniSelector),
-        Box::new(electron_accurate::ElectronAccurateSelector),
-        Box::new(node_accurate::NodeAccurateSelector),
-        Box::new(current_node::CurrentNodeSelector),
-        Box::new(maintained_node::MaintainedNodeSelector),
-        Box::new(phantom::PhantomSelector),
-        Box::new(browser_accurate::BrowserAccurateSelector),
-        Box::new(browserslist_config::BrowserslistConfigSelector),
-        Box::new(defaults::DefaultsSelector),
-        Box::new(dead::DeadSelector),
-    ];
-
-    for selector in selectors {
-        if let Some(distribs) = selector.select(query_string, opts)? {
-            return Ok(distribs);
+pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
+    match atom {
+        QueryAtom::Last {
+            count,
+            major,
+            name: Some(name),
+        } if name.eq_ignore_ascii_case("electron") => {
+            let count = count as usize;
+            if major {
+                last_n_electron_major::last_n_electron_major(count)
+            } else {
+                last_n_electron::last_n_electron(count)
+            }
         }
-    }
-    if get_browser_stat(query_string, opts.mobile_to_desktop).is_some() {
-        Err(Error::VersionRequired(query_string.to_string()))
-    } else {
-        Err(Error::UnknownQuery(query_string.to_string()))
+        QueryAtom::Last {
+            count,
+            major,
+            name: Some(name),
+        } => {
+            let count = count as usize;
+            if major {
+                last_n_x_major_browsers::last_n_x_major_browsers(count, name, opts)
+            } else {
+                last_n_x_browsers::last_n_x_browsers(count, name, opts)
+            }
+        }
+        QueryAtom::Last {
+            count,
+            major,
+            name: None,
+        } => {
+            let count = count as usize;
+            if major {
+                last_n_major_browsers::last_n_major_browsers(count, opts)
+            } else {
+                last_n_browsers::last_n_browsers(count, opts)
+            }
+        }
+        QueryAtom::Unreleased(Some(name)) if name.eq_ignore_ascii_case("electron") => {
+            unreleased_electron::unreleased_electron()
+        }
+        QueryAtom::Unreleased(Some(name)) => {
+            unreleased_x_browsers::unreleased_x_browsers(name, opts)
+        }
+        QueryAtom::Unreleased(None) => unreleased_browsers::unreleased_browsers(opts),
+        QueryAtom::Years(count) => years::years(count, opts),
+        QueryAtom::Since { year, month, day } => since::since(year, month, day, opts),
+        QueryAtom::Percentage {
+            comparator,
+            popularity,
+            stats: Stats::Global,
+        } => percentage::percentage(comparator, popularity),
+        QueryAtom::Percentage {
+            comparator,
+            popularity,
+            stats: Stats::Region(region),
+        } => percentage_by_region::percentage_by_region(comparator, popularity, region),
+        QueryAtom::Cover { coverage, .. } => cover::cover(coverage),
+        QueryAtom::Supports(name) => supports::supports(name),
+        QueryAtom::Electron(VersionRange::Bounded(from, to)) => {
+            electron_bounded_range::electron_bounded_range(from, to)
+        }
+        QueryAtom::Electron(VersionRange::Unbounded(comparator, version)) => {
+            electron_unbounded_range::electron_unbounded_range(comparator, version)
+        }
+        QueryAtom::Electron(VersionRange::Accurate(version)) => {
+            electron_accurate::electron_accurate(version)
+        }
+        QueryAtom::Node(VersionRange::Bounded(from, to)) => {
+            node_bounded_range::node_bounded_range(from, to)
+        }
+        QueryAtom::Node(VersionRange::Unbounded(comparator, version)) => {
+            node_unbounded_range::node_unbounded_range(comparator, version)
+        }
+        QueryAtom::Node(VersionRange::Accurate(version)) => {
+            node_accurate::node_accurate(version, opts)
+        }
+        QueryAtom::Browser(name, VersionRange::Bounded(from, to)) => {
+            browser_bounded_range::browser_bounded_range(name, from, to, opts)
+        }
+        QueryAtom::Browser(name, VersionRange::Unbounded(comparator, version)) => {
+            browser_unbounded_range::browser_unbounded_range(name, comparator, version, opts)
+        }
+        QueryAtom::Browser(name, VersionRange::Accurate(version)) => {
+            browser_accurate::browser_accurate(name, version, opts)
+        }
+        QueryAtom::FirefoxESR => firefox_esr::firefox_esr(),
+        QueryAtom::OperaMini => op_mini::op_mini(),
+        QueryAtom::CurrentNode => current_node::current_node(),
+        QueryAtom::MaintainedNode => maintained_node::maintained_node(),
+        QueryAtom::Phantom(is_later_version) => phantom::phantom(is_later_version),
+        QueryAtom::BrowserslistConfig => browserslist_config::browserslist_config(opts),
+        QueryAtom::Defaults => defaults::defaults(opts),
+        QueryAtom::Dead => dead::dead(opts),
+        QueryAtom::Unknown(query) => Err(Error::UnknownQuery(query.into())),
     }
 }
 

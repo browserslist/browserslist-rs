@@ -1,35 +1,25 @@
-use super::{Distrib, Selector, SelectorResult};
-use crate::{data::caniuse::features::get_feature_stat, error::Error, opts::Opts};
-use once_cell::sync::Lazy;
-use regex::Regex;
+use super::{Distrib, QueryResult};
+use crate::{data::caniuse::features::get_feature_stat, error::Error};
 
-static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^supports\s+([\w-]+)$").unwrap());
-
-pub(super) struct SupportsSelector;
-
-impl Selector for SupportsSelector {
-    fn select(&self, text: &str, _: &Opts) -> SelectorResult {
-        if let Some(cap) = REGEX.captures(text) {
-            let name = &cap[1];
-            if let Some(feature) = get_feature_stat(name) {
-                let distribs = feature
-                    .iter()
-                    .map(|(name, version)| Distrib::new(&*name, *version))
-                    .collect();
-                Ok(Some(distribs))
-            } else {
-                Err(Error::UnknownBrowserFeature(name.to_string()))
-            }
-        } else {
-            Ok(None)
-        }
+pub(super) fn supports(name: &str) -> QueryResult {
+    if let Some(feature) = get_feature_stat(name) {
+        let distribs = feature
+            .iter()
+            .map(|(name, version)| Distrib::new(&*name, *version))
+            .collect();
+        Ok(distribs)
+    } else {
+        Err(Error::UnknownBrowserFeature(name.to_string()))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::{run_compare, should_failed};
+    use crate::{
+        opts::Opts,
+        test::{run_compare, should_failed},
+    };
     use test_case::test_case;
 
     #[test_case("supports objectrtc"; "case 1")]
