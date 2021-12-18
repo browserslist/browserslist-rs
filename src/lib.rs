@@ -66,7 +66,6 @@
 //! If you're targeting Node.js, we recommend you to use N-API over WebAssembly,
 //! because it's faster and less-limited than the WebAssembly-build.
 
-use itertools::Itertools;
 use parser::parse_browserslist_query;
 use std::cmp::Ordering;
 #[cfg(target_arch = "wasm32")]
@@ -106,10 +105,19 @@ mod wasm;
 /// ```
 pub fn resolve<I, S>(queries: I, opts: &Opts) -> Result<Vec<Distrib>, Error>
 where
-    S: AsRef<str> + std::fmt::Display,
+    S: AsRef<str>,
     I: IntoIterator<Item = S>,
 {
-    let query = queries.into_iter().join(", ");
+    let query = queries
+        .into_iter()
+        .enumerate()
+        .fold(String::new(), |mut s, (i, query)| {
+            if i > 0 {
+                s.push_str(", ");
+            }
+            s.push_str(query.as_ref());
+            s
+        });
 
     let mut distribs = parse_browserslist_query(&query)?
         .1
