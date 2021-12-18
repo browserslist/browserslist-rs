@@ -8,22 +8,6 @@ pub enum Error {
     #[error("failed to parse the rest of input: ...'{0}'")]
     Nom(String),
 
-    /// Failed to parse version string.
-    #[error("invalid version string: {0:?}")]
-    ParseVersion(num::ParseFloatError),
-
-    /// Failed to parse number as percentage value.
-    #[error("invalid percentage string: {0:?}")]
-    ParsePercentage(num::ParseFloatError),
-
-    /// Failed to parse number as versions count.
-    #[error("invalid versions count: {0:?}")]
-    ParseVersionsCount(num::ParseIntError),
-
-    /// Failed to parse number as years count.
-    #[error("invalid years count: {0:?}")]
-    ParseYearsCount(num::ParseFloatError),
-
     /// Date format is invalid.
     #[error("invalid date: {0}")]
     InvalidDate(String),
@@ -61,10 +45,6 @@ pub enum Error {
     /// Unknown Can I Use region.
     #[error("unknown region: '{0}'")]
     UnknownRegion(String),
-
-    /// Version string is missing when querying.
-    #[error("specify versions in Browserslist query for browser '{0}'")]
-    VersionRequired(String),
 
     /// Query can't be recognized.
     #[error("unknown browser query: '{0}'")]
