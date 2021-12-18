@@ -12,6 +12,8 @@ include = [
     "**/*.rs",
     "Cargo.toml",
     "vendor/caniuse/fulldata-json/data-2.0.json",
+    "vendor/canisue/features-json/*.json",
+    "vendor/caniuse/region-usage-json/*.json",
     "vendor/electron-to-chromium/versions.json",
     "vendor/node-releases/data/**/*.json",
 ]
