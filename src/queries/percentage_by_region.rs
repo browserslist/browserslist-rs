@@ -40,12 +40,8 @@ mod tests {
 
     #[test_case("> 10% in US"; "greater")]
     #[test_case(">= 5% in US"; "greater or equal")]
-    // TODO: Tests ignored.
-    // In JS-implementation, `null < percentage` will be `true`,
-    // however some browser usages in Can I Use are `null` which causes those browsers
-    // will be included in final result.
-    // #[test_case("< 5% in US"; "less")]
-    // #[test_case("<= 5% in US"; "less or equal")]
+    #[test_case("< 5% in US"; "less")]
+    #[test_case("<= 5% in US"; "less or equal")]
     #[test_case("> 10.2% in US"; "with float")]
     #[test_case("> .2% in US"; "with float that has a leading dot")]
     #[test_case("> 10.2% in us"; "fixes country case")]
