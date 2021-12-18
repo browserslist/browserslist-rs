@@ -1,4 +1,3 @@
-use std::num;
 use thiserror::Error;
 
 /// The errors may occur when querying with browserslist.

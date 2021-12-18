@@ -16,7 +16,6 @@ pub static ELECTRON_VERSIONS: Lazy<Vec<(f32, String)>> = Lazy::new(|| {
 });
 
 pub(crate) fn parse_version(version: &str) -> Result<f32, Error> {
-    dbg!(version);
     all_consuming(terminated(float, opt(pair(char('.'), u16))))(version)
         .map(|(_, v)| v)
         .map_err(|_: nom::Err<nom::error::Error<_>>| {
