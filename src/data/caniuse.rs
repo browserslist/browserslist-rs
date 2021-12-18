@@ -69,7 +69,7 @@ pub static BROWSER_VERSION_ALIASES: Lazy<UstrMap<AHashMap<&'static str, &'static
                 }
             })
             .collect::<UstrMap<_>>();
-        let _ = aliases.insert(Ustr::from("op_mob"), {
+        let _ = aliases.insert("op_mob".into(), {
             let mut aliases = AHashMap::new();
             let _ = aliases.insert("59", "58");
             aliases
@@ -78,11 +78,8 @@ pub static BROWSER_VERSION_ALIASES: Lazy<UstrMap<AHashMap<&'static str, &'static
     });
 
 static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
-    let chrome = CANIUSE_BROWSERS.get(&Ustr::from("chrome")).unwrap();
-    let mut android = CANIUSE_BROWSERS
-        .get(&Ustr::from("android"))
-        .unwrap()
-        .clone();
+    let chrome = CANIUSE_BROWSERS.get(&"chrome".into()).unwrap();
+    let mut android = CANIUSE_BROWSERS.get(&"android".into()).unwrap().clone();
 
     android.version_list = android
         .version_list
@@ -115,7 +112,7 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
 });
 
 static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
-    let mut op_mob = CANIUSE_BROWSERS.get(&Ustr::from("opera")).unwrap().clone();
+    let mut op_mob = CANIUSE_BROWSERS.get(&"opera".into()).unwrap().clone();
 
     if let Some(v) = op_mob
         .version_list
@@ -145,17 +142,17 @@ pub fn get_browser_stat(
                 "android" => Some(("android", &ANDROID_TO_DESKTOP)),
                 "op_mob" => Some(("op_mob", &OPERA_MOBILE_TO_DESKTOP)),
                 _ => CANIUSE_BROWSERS
-                    .get(&Ustr::from(desktop_name))
+                    .get(&desktop_name.into())
                     .map(|stat| (get_mobile_by_desktop_name(desktop_name), stat)),
             }
         } else {
             CANIUSE_BROWSERS
-                .get(&Ustr::from(name))
+                .get(&name.into())
                 .map(|stat| (&*stat.name, stat))
         }
     } else {
         CANIUSE_BROWSERS
-            .get(&Ustr::from(name))
+            .get(&name.into())
             .map(|stat| (&*stat.name, stat))
     }
 }
