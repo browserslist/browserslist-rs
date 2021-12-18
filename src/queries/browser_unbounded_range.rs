@@ -6,7 +6,6 @@ use crate::{
     parser::Comparator,
     semver::Version,
 };
-use ustr::Ustr;
 
 pub(super) fn browser_unbounded_range(
     name: &str,
@@ -17,7 +16,7 @@ pub(super) fn browser_unbounded_range(
     let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
         .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
     let version: Version = BROWSER_VERSION_ALIASES
-        .get(&Ustr::from(name))
+        .get(&name.into())
         .and_then(|alias| alias.get(version).copied())
         .unwrap_or(version)
         .parse()
