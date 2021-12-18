@@ -18,6 +18,9 @@ pub struct Opts {
 
     #[serde(default)]
     pub(crate) path: Option<String>,
+
+    #[serde(default)]
+    pub(crate) throw_on_missing: bool,
 }
 
 impl Opts {
@@ -54,6 +57,12 @@ impl Opts {
     /// File or directory path for looking for configuration file.
     pub fn path<S: AsRef<str>>(&mut self, path: S) -> &mut Self {
         self.path = Some(path.as_ref().to_string());
+        self
+    }
+
+    /// Throw error on missing env.
+    pub fn throw_on_missing(&mut self, flag: bool) -> &mut Self {
+        self.throw_on_missing = flag;
         self
     }
 }

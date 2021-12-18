@@ -68,6 +68,10 @@ pub enum Error {
     /// Failed to access the current working directory.
     #[error("failed to access current working directory")]
     FailedToAccessCurrentDir,
+
+    /// Missing config corresponding to specific environment.
+    #[error("missing config for Browserslist environment '{0}'")]
+    MissingEnv(String),
 }
 
 impl<'a> From<nom::Err<nom::error::Error<&'a str>>> for Error {

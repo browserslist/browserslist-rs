@@ -1,13 +1,17 @@
 use super::PartialConfig;
 use crate::error::Error;
-use std::collections::HashSet;
+use ahash::AHashSet;
 
-pub(crate) fn parse<S: AsRef<str>>(source: &str, env: S) -> Result<PartialConfig, Error> {
+pub(crate) fn parse<S: AsRef<str>>(
+    source: &str,
+    env: S,
+    throw_on_missing: bool,
+) -> Result<PartialConfig, Error> {
     let env = env.as_ref();
-    let mut encountered_sections = HashSet::new();
+    let mut encountered_sections = AHashSet::new();
     let mut current_section = Some("defaults");
 
-    source
+    let config = source
         .lines()
         .map(|line| {
             if let Some(index) = line.find('#') {
@@ -62,7 +66,13 @@ pub(crate) fn parse<S: AsRef<str>>(source: &str, env: S) -> Result<PartialConfig
                 }
             },
         )
-        .map(|(defaults, env)| PartialConfig { defaults, env })
+        .map(|(defaults, env)| PartialConfig { defaults, env });
+
+    if throw_on_missing && env != "defaults" && !encountered_sections.contains(env) {
+        Err(Error::MissingEnv(env.to_string()))
+    } else {
+        config
+    }
 }
 
 #[cfg(test)]
@@ -72,7 +82,7 @@ mod tests {
     #[test]
     fn empty() {
         let source = "  \t  \n  \r\n  # comment ";
-        let config = parse(source, "production").unwrap();
+        let config = parse(source, "production", false).unwrap();
         assert!(config.defaults.is_empty());
         assert!(config.env.is_none());
     }
@@ -83,7 +93,7 @@ mod tests {
 last 2 versions
 not dead
 ";
-        let config = parse(source, "production").unwrap();
+        let config = parse(source, "production", false).unwrap();
         assert_eq!(&*config.defaults, ["last 2 versions", "not dead"]);
         assert!(config.env.is_none());
     }
@@ -91,7 +101,7 @@ not dead
     #[test]
     fn single_line() {
         let source = r"last 2 versions, not dead";
-        let config = parse(source, "production").unwrap();
+        let config = parse(source, "production", false).unwrap();
         assert_eq!(&*config.defaults, ["last 2 versions, not dead"]);
         assert!(config.env.is_none());
     }
@@ -104,7 +114,7 @@ last 2 versions
 
 not dead
 ";
-        let config = parse(source, "production").unwrap();
+        let config = parse(source, "production", false).unwrap();
         assert_eq!(&*config.defaults, ["last 2 versions", "not dead"]);
         assert!(config.env.is_none());
     }
@@ -116,7 +126,7 @@ last 2 versions  #trailing comment
 #line comment
 not dead
 ";
-        let config = parse(source, "production").unwrap();
+        let config = parse(source, "production", false).unwrap();
         assert_eq!(&*config.defaults, ["last 2 versions", "not dead"]);
         assert!(config.env.is_none());
     }
@@ -124,7 +134,7 @@ not dead
     #[test]
     fn spaces() {
         let source = "    last 2 versions     \n  not dead    ";
-        let config = parse(source, "production").unwrap();
+        let config = parse(source, "production", false).unwrap();
         assert_eq!(&*config.defaults, ["last 2 versions", "not dead"]);
         assert!(config.env.is_none());
     }
@@ -136,7 +146,7 @@ not dead
 last 2 versions
 not dead
 ";
-        let config = parse(source, "production").unwrap();
+        let config = parse(source, "production", false).unwrap();
         assert!(config.defaults.is_empty());
         assert_eq!(
             config.env.as_deref().unwrap(),
@@ -153,7 +163,7 @@ not dead
 last 2 versions
 not dead
 ";
-        let config = parse(source, "production").unwrap();
+        let config = parse(source, "production", false).unwrap();
         assert_eq!(&*config.defaults, ["> 1%"]);
         assert_eq!(
             config.env.as_deref().unwrap(),
@@ -175,18 +185,18 @@ last 1 firefox version
 [ssr  ]
 node 12
 ";
-        let config = parse(source, "production").unwrap();
+        let config = parse(source, "production", false).unwrap();
         assert!(config.defaults.is_empty());
         assert_eq!(config.env.as_deref().unwrap(), ["> 1%", "ie 10"]);
 
-        let config = parse(source, "modern").unwrap();
+        let config = parse(source, "modern", false).unwrap();
         assert!(config.defaults.is_empty());
         assert_eq!(
             config.env.as_deref().unwrap(),
             ["last 1 chrome version", "last 1 firefox version"]
         );
 
-        let config = parse(source, "ssr").unwrap();
+        let config = parse(source, "ssr", false).unwrap();
         assert!(config.defaults.is_empty());
         assert_eq!(config.env.as_deref().unwrap(), ["node 12"]);
     }
@@ -198,7 +208,7 @@ node 12
 > 1%
 ie 10
 ";
-        let config = parse(source, "development").unwrap();
+        let config = parse(source, "development", false).unwrap();
         assert!(config.defaults.is_empty());
         assert_eq!(config.env.as_deref().unwrap(), ["> 1%", "ie 10"]);
     }
@@ -211,7 +221,7 @@ ie 10
 ie 10
 ";
         assert_eq!(
-            parse(source, "testing"),
+            parse(source, "testing", false),
             Err(Error::DuplicatedSection("production".into()))
         );
 
@@ -227,7 +237,7 @@ not dead
 last 1 firefox version
 ";
         assert_eq!(
-            parse(source, "testing"),
+            parse(source, "testing", false),
             Err(Error::DuplicatedSection("development".into()))
         );
     }
@@ -239,7 +249,38 @@ last 1 firefox version
 > 1%
 ie 10
 ";
-        let config = parse(source, "development").unwrap();
+        let config = parse(source, "development", false).unwrap();
+        assert!(config.defaults.is_empty());
+        assert!(config.env.is_none());
+    }
+
+    #[test]
+    fn throw_on_missing_env() {
+        let source = "node 16";
+        let err = parse(source, "SSR", true).unwrap_err();
+        assert_eq!(err, Error::MissingEnv("SSR".into()));
+    }
+
+    #[test]
+    fn dont_throw_if_existed() {
+        let source = r"
+[production]
+> 1%
+ie 10
+";
+        let config = parse(source, "production", true).unwrap();
+        assert!(config.defaults.is_empty());
+        assert!(config.env.is_some());
+    }
+
+    #[test]
+    fn dont_throw_for_defaults() {
+        let source = r"
+[production]
+> 1%
+ie 10
+";
+        let config = parse(source, "defaults", true).unwrap();
         assert!(config.defaults.is_empty());
         assert!(config.env.is_none());
     }

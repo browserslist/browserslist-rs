@@ -66,17 +66,18 @@ pub fn load(opts: &Opts) -> Result<Vec<String>, Error> {
                     .map_err(|_| Error::FailedToReadConfig(format!("{}", config_path.display())))?;
                 let pkg: PackageJson = serde_json::from_slice(&content)
                     .map_err(|_| Error::FailedToReadConfig(format!("{}", config_path.display())))?;
-                Ok(pick_queries_by_env(
+                pick_queries_by_env(
                     pkg.browserslist.ok_or_else(|| {
                         Error::MissingFieldInPkg(format!("{}", config_path.display()))
                     })?,
                     &get_env(opts),
-                ))
+                    opts.throw_on_missing,
+                )
             }
             _ => {
                 let content = fs::read_to_string(config_path)
                     .map_err(|_| Error::FailedToReadConfig(format!("{}", config_path.display())))?;
-                let config = parse(&content, get_env(opts))?;
+                let config = parse(&content, get_env(opts), opts.throw_on_missing)?;
                 Ok(config.env.unwrap_or(config.defaults))
             }
         }
@@ -87,10 +88,12 @@ pub fn load(opts: &Opts) -> Result<Vec<String>, Error> {
         };
         match find_config(path)? {
             Either::Left(s) => {
-                let config = parse(&s, get_env(opts))?;
+                let config = parse(&s, get_env(opts), opts.throw_on_missing)?;
                 Ok(config.env.unwrap_or(config.defaults))
             }
-            Either::Right(config) => Ok(pick_queries_by_env(config, &get_env(opts))),
+            Either::Right(config) => {
+                pick_queries_by_env(config, &get_env(opts), opts.throw_on_missing)
+            }
         }
     }
 }
@@ -181,14 +184,23 @@ fn get_env(opts: &Opts) -> Cow<str> {
         .unwrap_or_else(|| Cow::from("production"))
 }
 
-fn pick_queries_by_env(config: PkgConfig, env: &str) -> Vec<String> {
+fn pick_queries_by_env(
+    config: PkgConfig,
+    env: &str,
+    throw_on_missing: bool,
+) -> Result<Vec<String>, Error> {
     match config {
-        PkgConfig::Str(query) => vec![query],
-        PkgConfig::Arr(queries) => queries,
-        PkgConfig::Obj(mut config) => config
-            .remove(env)
-            .or_else(|| config.remove("defaults"))
-            .unwrap_or_default(),
+        PkgConfig::Str(query) => Ok(vec![query]),
+        PkgConfig::Arr(queries) => Ok(queries),
+        PkgConfig::Obj(mut config) => {
+            if let Some(queries) = config.remove(env) {
+                Ok(queries)
+            } else if throw_on_missing && env != "defaults" {
+                Err(Error::MissingEnv(env.to_string()))
+            } else {
+                Ok(config.remove("defaults").unwrap_or_default())
+            }
+        }
     }
 }
 
@@ -399,6 +411,43 @@ last 1 version
         env::set_current_dir(&tmp).unwrap();
         assert_eq!(load(&Opts::new()).as_deref().unwrap(), ["not dead"]);
         env::set_current_dir(original_cwd).unwrap();
+
+        // throw if env is missing
+        assert_eq!(
+            load(
+                Opts::new()
+                    .env("production")
+                    .path(tmp.to_str().unwrap())
+                    .throw_on_missing(true)
+            )
+            .unwrap_err(),
+            Error::MissingEnv("production".into())
+        );
+
+        // don't throw if existed
+        fs::write(tmp.join(".browserslistrc"), "[production]\nnot dead").unwrap();
+        assert_eq!(
+            load(
+                Opts::new()
+                    .env("production")
+                    .path(tmp.to_str().unwrap())
+                    .throw_on_missing(true)
+            )
+            .as_deref()
+            .unwrap(),
+            ["not dead"]
+        );
+
+        // don't throw if env is `defaults`
+        assert!(load(
+            Opts::new()
+                .env("defaults")
+                .path(tmp.to_str().unwrap())
+                .throw_on_missing(true)
+        )
+        .as_deref()
+        .unwrap()
+        .is_empty());
 
         fs::remove_file(tmp.join(".browserslistrc")).unwrap();
     }

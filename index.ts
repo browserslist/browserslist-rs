@@ -8,6 +8,7 @@ interface Opts {
   config?: string
   env?: string
   path?: string
+  throwOnMissing?: boolean
 }
 
 interface Execute {
