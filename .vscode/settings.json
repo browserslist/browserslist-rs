@@ -1,4 +1,10 @@
 {
   "editor.formatOnSave": true,
-  "rust-analyzer.cargo.allFeatures": true
+  "rust-analyzer.cargo.allFeatures": true,
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
+    "vendor/**": true
+  }
 }
