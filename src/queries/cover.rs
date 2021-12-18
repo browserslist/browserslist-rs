@@ -5,12 +5,12 @@ use std::ops::ControlFlow;
 pub(super) fn cover(coverage: f32) -> QueryResult {
     let result = CANIUSE_GLOBAL_USAGE.iter().try_fold(
         (vec![], 0.0),
-        |(mut versions, total), (name, version, usage)| {
+        |(mut distribs, total), (name, version, usage)| {
             if total >= coverage || *usage == 0.0 {
-                ControlFlow::Break((versions, total))
+                ControlFlow::Break((distribs, total))
             } else {
-                versions.push(Distrib::new(name, version));
-                ControlFlow::Continue((versions, total + usage))
+                distribs.push(Distrib::new(name, version));
+                ControlFlow::Continue((distribs, total + usage))
             }
         },
     );
