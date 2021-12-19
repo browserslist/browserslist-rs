@@ -1,6 +1,6 @@
 [package]
 name = "browserslist-rs"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Pig Fang <g-plane@hotmail.com>"]
 edition = "2021"
 description = "Rust-ported Browserslist."
