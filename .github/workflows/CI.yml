@@ -67,3 +67,12 @@ jobs:
           run_install: true
       - run: pnpm build:napi:dev
       - run: pnpm test:napi
+
+  wasm:
+    name: wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: cargo build --target=wasm32-unknown-unknown
