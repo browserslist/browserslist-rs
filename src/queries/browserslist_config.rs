@@ -4,7 +4,7 @@ use crate::opts::Opts;
 pub(super) fn browserslist_config(opts: &Opts) -> QueryResult {
     #[cfg(target_arch = "wasm32")]
     {
-        super::resolve(["defaults"], opts)
+        crate::resolve(["defaults"], opts)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
