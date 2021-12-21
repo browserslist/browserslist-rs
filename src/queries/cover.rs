@@ -14,11 +14,10 @@ pub(super) fn cover(coverage: f32) -> QueryResult {
             }
         },
     );
-    let distribs = match result {
-        ControlFlow::Break((versions, _)) => versions,
+    match result {
+        ControlFlow::Break((distribs, _)) => Ok(distribs),
         _ => unreachable!(),
-    };
-    Ok(distribs)
+    }
 }
 
 #[cfg(test)]
