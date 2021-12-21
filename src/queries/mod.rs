@@ -12,6 +12,7 @@ mod browser_bounded_range;
 mod browser_unbounded_range;
 mod browserslist_config;
 mod cover;
+mod cover_by_region;
 mod current_node;
 mod dead;
 mod defaults;
@@ -156,7 +157,14 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
             popularity,
             stats: Stats::Region(region),
         } => percentage_by_region::percentage_by_region(comparator, popularity, region),
-        QueryAtom::Cover { coverage, .. } => cover::cover(coverage),
+        QueryAtom::Cover {
+            coverage,
+            stats: Stats::Global,
+        } => cover::cover(coverage),
+        QueryAtom::Cover {
+            coverage,
+            stats: Stats::Region(region),
+        } => cover_by_region::cover_by_region(coverage, region),
         QueryAtom::Supports(name) => supports::supports(name),
         QueryAtom::Electron(VersionRange::Bounded(from, to)) => {
             electron_bounded_range::electron_bounded_range(from, to)
