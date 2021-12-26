@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
     env, fs, io,
+    path::Path,
 };
 
 #[derive(Deserialize)]
@@ -35,11 +36,26 @@ fn main() -> Result<()> {
         napi_build::setup();
     }
 
+    generate_browser_names_cache()?;
     build_electron_to_chromium()?;
     build_node_versions()?;
     build_node_release_schedule()?;
     build_caniuse_global()?;
     build_caniuse_region()?;
+
+    Ok(())
+}
+
+fn generate_browser_names_cache() -> Result<()> {
+    string_cache_codegen::AtomType::new(
+        "data::browser_name::BrowserNameAtom",
+        "browser_name_atom!",
+    )
+    .atoms(&[
+        "edge", "firefox", "chrome", "safari", "opera", "ios_saf", "op_mini", "android", "bb",
+        "op_mob", "and_chr", "and_ff", "ie_mob", "and_uc", "samsung", "and_qq", "baidu", "kaios",
+    ])
+    .write_to_file(&Path::new(&env::var("OUT_DIR")?).join("browser_name_atom.rs"))?;
 
     Ok(())
 }
@@ -205,7 +221,7 @@ fn build_caniuse_global() -> Result<()> {
         .map(|name| {
             format!(
                 r#"    "{0}" => {{
-        static STAT: Lazy<Vec<(Ustr, &'static str)>> = Lazy::new(|| {{
+        static STAT: Lazy<Vec<(BrowserNameAtom, &'static str)>> = Lazy::new(|| {{
             from_str(include_str!(concat!(env!("OUT_DIR"), "/features/{0}.json"))).unwrap()
         }});
         Some(&*STAT)
@@ -218,7 +234,7 @@ fn build_caniuse_global() -> Result<()> {
         "{{
 use once_cell::sync::Lazy;
 use serde_json::from_str;
-use ustr::Ustr;
+use crate::data::browser_name::BrowserNameAtom;
 
 match name {{
 {}
@@ -304,7 +320,7 @@ fn build_caniuse_region() -> Result<()> {
         .map(|file| {
             format!(
                 r#"    "{0}" => {{
-        static USAGE: Lazy<Vec<(Ustr, &'static str, f32)>> = Lazy::new(|| {{
+        static USAGE: Lazy<Vec<(BrowserNameAtom, &'static str, f32)>> = Lazy::new(|| {{
             from_str(include_str!(concat!(env!("OUT_DIR"), "/region/{0}.json"))).unwrap()
         }});
         Some(&*USAGE)
@@ -317,7 +333,7 @@ fn build_caniuse_region() -> Result<()> {
         "{{
 use once_cell::sync::Lazy;
 use serde_json::from_str;
-use ustr::Ustr;
+use crate::data::browser_name::BrowserNameAtom;
 
 match region {{
 {}

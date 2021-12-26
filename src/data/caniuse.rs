@@ -1,8 +1,8 @@
+use super::browser_name::BrowserNameAtom;
 use ahash::AHashMap;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::borrow::Cow;
-use ustr::{Ustr, UstrMap};
 
 pub(crate) mod features;
 pub(crate) mod region;
@@ -11,7 +11,7 @@ pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct BrowserStat {
-    name: Ustr,
+    name: BrowserNameAtom,
     pub version_list: Vec<VersionDetail>,
 }
 
@@ -22,7 +22,7 @@ pub struct VersionDetail {
     pub release_date: Option<i64>,
 }
 
-pub type CaniuseData = UstrMap<BrowserStat>;
+pub type CaniuseData = AHashMap<BrowserNameAtom, BrowserStat>;
 
 pub static CANIUSE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
     serde_json::from_str(include_str!(concat!(
@@ -32,7 +32,7 @@ pub static CANIUSE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(Ustr, String, f32)>> = Lazy::new(|| {
+pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(BrowserNameAtom, String, f32)>> = Lazy::new(|| {
     serde_json::from_str(include_str!(concat!(
         env!("OUT_DIR"),
         "/caniuse-global-usage.json"
@@ -40,42 +40,43 @@ pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(Ustr, String, f32)>> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static BROWSER_VERSION_ALIASES: Lazy<UstrMap<AHashMap<&'static str, &'static str>>> =
-    Lazy::new(|| {
-        let mut aliases = CANIUSE_BROWSERS
-            .iter()
-            .filter_map(|(name, stat)| {
-                let aliases = stat
-                    .version_list
-                    .iter()
-                    .filter_map(|version| {
-                        version
-                            .version
-                            .split_once('-')
-                            .map(|(bottom, top)| (bottom, top, version.version.as_str()))
-                    })
-                    .fold(
-                        AHashMap::<&str, &str>::new(),
-                        move |mut aliases, (bottom, top, version)| {
-                            let _ = aliases.insert(bottom, version);
-                            let _ = aliases.insert(top, version);
-                            aliases
-                        },
-                    );
-                if aliases.is_empty() {
-                    None
-                } else {
-                    Some((*name, aliases))
-                }
-            })
-            .collect::<UstrMap<_>>();
-        let _ = aliases.insert("op_mob".into(), {
-            let mut aliases = AHashMap::new();
-            let _ = aliases.insert("59", "58");
-            aliases
-        });
+pub static BROWSER_VERSION_ALIASES: Lazy<
+    AHashMap<BrowserNameAtom, AHashMap<&'static str, &'static str>>,
+> = Lazy::new(|| {
+    let mut aliases = CANIUSE_BROWSERS
+        .iter()
+        .filter_map(|(name, stat)| {
+            let aliases = stat
+                .version_list
+                .iter()
+                .filter_map(|version| {
+                    version
+                        .version
+                        .split_once('-')
+                        .map(|(bottom, top)| (bottom, top, version.version.as_str()))
+                })
+                .fold(
+                    AHashMap::<&str, &str>::new(),
+                    move |mut aliases, (bottom, top, version)| {
+                        let _ = aliases.insert(bottom, version);
+                        let _ = aliases.insert(top, version);
+                        aliases
+                    },
+                );
+            if aliases.is_empty() {
+                None
+            } else {
+                Some((name.clone(), aliases))
+            }
+        })
+        .collect::<AHashMap<BrowserNameAtom, _>>();
+    let _ = aliases.insert("op_mob".into(), {
+        let mut aliases = AHashMap::new();
+        let _ = aliases.insert("59", "58");
         aliases
     });
+    aliases
+});
 
 static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     let chrome = CANIUSE_BROWSERS.get(&"chrome".into()).unwrap();
