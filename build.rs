@@ -1,4 +1,5 @@
 use anyhow::Result;
+use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -146,8 +147,6 @@ fn build_node_release_schedule() -> Result<()> {
 }
 
 fn build_caniuse_global() -> Result<()> {
-    use itertools::Itertools;
-
     #[derive(Serialize)]
     struct BrowserStat {
         name: String,
@@ -215,37 +214,25 @@ fn build_caniuse_global() -> Result<()> {
             )?,
         )?;
     }
-    let arms = data
-        .data
-        .keys()
-        .map(|name| {
-            format!(
-                r#"    "{0}" => {{
-        static STAT: Lazy<Vec<(BrowserNameAtom, &'static str)>> = Lazy::new(|| {{
-            from_str(include_str!(concat!(env!("OUT_DIR"), "/features/{0}.json"))).unwrap()
-        }});
-        Some(&*STAT)
-    }},"#,
-                name
-            )
-        })
-        .join("\n");
-    let caniuse_features_matching = format!(
-        "{{
-use once_cell::sync::Lazy;
-use serde_json::from_str;
-use crate::data::browser_name::BrowserNameAtom;
+    let features = data.data.keys().collect::<Vec<_>>();
+    let tokens = quote! {{
+        use once_cell::sync::Lazy;
+        use serde_json::from_str;
+        use crate::data::browser_name::BrowserNameAtom;
 
-match name {{
-{}
-    _ => None,
-}}
-}}",
-        &arms
-    );
+        match name {
+            #( #features => {
+                static STAT: Lazy<Vec<(BrowserNameAtom, &'static str)>> = Lazy::new(|| {
+                    from_str(include_str!(concat!(env!("OUT_DIR"), "/features/", #features, ".json"))).unwrap()
+                });
+                Some(&*STAT)
+            }, )*
+            _ => None,
+        }
+    }};
     fs::write(
         format!("{}/caniuse-feature-matching.rs", &out_dir),
-        caniuse_features_matching,
+        tokens.to_string(),
     )?;
 
     Ok(())
@@ -261,8 +248,6 @@ fn parse_caniuse_global() -> Result<Caniuse> {
 }
 
 fn build_caniuse_region() -> Result<()> {
-    use itertools::Itertools;
-
     #[derive(Deserialize)]
     struct RegionData {
         data: HashMap<String, HashMap<String, Option<f32>>>,
@@ -315,36 +300,36 @@ fn build_caniuse_region() -> Result<()> {
             serde_json::to_string(&usage)?,
         )?;
     }
-    let arms = files
+    let regions = files
         .iter()
-        .map(|file| {
-            format!(
-                r#"    "{0}" => {{
-        static USAGE: Lazy<Vec<(BrowserNameAtom, &'static str, f32)>> = Lazy::new(|| {{
-            from_str(include_str!(concat!(env!("OUT_DIR"), "/region/{0}.json"))).unwrap()
-        }});
-        Some(&*USAGE)
-    }},"#,
-                file.path().file_stem().unwrap().to_str().unwrap()
-            )
+        .map(|entry| {
+            entry
+                .path()
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .map(|s| s.to_owned())
+                .unwrap()
         })
-        .join("\n");
-    let caniuse_region_matching = format!(
-        "{{
-use once_cell::sync::Lazy;
-use serde_json::from_str;
-use crate::data::browser_name::BrowserNameAtom;
+        .collect::<Vec<_>>();
+    let tokens = quote! {{
+        use once_cell::sync::Lazy;
+        use serde_json::from_str;
+        use crate::data::browser_name::BrowserNameAtom;
 
-match region {{
-{}
-    _ => None,
-}}
-}}",
-        &arms
-    );
+        match region {
+            #( #regions => {
+                static USAGE: Lazy<Vec<(BrowserNameAtom, &'static str, f32)>> = Lazy::new(|| {
+                    from_str(include_str!(concat!(env!("OUT_DIR"), "/region/", #regions, ".json"))).unwrap()
+                });
+                Some(&*USAGE)
+            }, )*
+            _ => None,
+        }
+    }};
     fs::write(
         format!("{}/caniuse-region-matching.rs", &out_dir),
-        caniuse_region_matching,
+        tokens.to_string(),
     )?;
 
     Ok(())
