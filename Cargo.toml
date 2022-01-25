@@ -51,13 +51,13 @@ string_cache_codegen = "0.5"
 [features]
 node = ["napi", "napi-derive", "napi-build"]
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
+[target.'cfg(target = "wasm32-unknown-unknown")'.dependencies]
 chrono = { version = "0.4", features = ["wasmbind"] }
 js-sys = "0.3"
 serde-wasm-bindgen = "0.3"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+[target.'cfg(not(target = "wasm32-unknown-unknown"))'.dependencies]
 chrono = "0.4"
 
 [patch.crates-io]

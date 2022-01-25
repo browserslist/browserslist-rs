@@ -68,11 +68,11 @@
 
 use parser::parse_browserslist_query;
 use std::cmp::Ordering;
-#[cfg(target_arch = "wasm32")]
+#[cfg(target = "wasm32-unknown-unknown")]
 pub use wasm::browserslist;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target = "wasm32-unknown-unknown"))]
 mod config;
 mod data;
 mod error;
@@ -84,7 +84,7 @@ mod queries;
 mod semver;
 #[cfg(test)]
 mod test;
-#[cfg(target_arch = "wasm32")]
+#[cfg(target = "wasm32-unknown-unknown")]
 mod wasm;
 
 /// Resolve browserslist queries.
@@ -168,7 +168,7 @@ where
 /// // when no config found, it use `defaults` query
 /// assert!(!execute(&Opts::new()).unwrap().is_empty());
 /// ```
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target = "wasm32-unknown-unknown"))]
 pub fn execute(opts: &Opts) -> Result<Vec<Distrib>, Error> {
     resolve(config::load(opts)?, opts)
 }

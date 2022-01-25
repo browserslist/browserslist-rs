@@ -2,12 +2,12 @@ use super::QueryResult;
 use crate::opts::Opts;
 
 pub(super) fn browserslist_config(opts: &Opts) -> QueryResult {
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target = "wasm32-unknown-unknown")]
     {
         crate::resolve(["defaults"], opts)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target = "wasm32-unknown-unknown"))]
     {
         crate::execute(opts)
     }

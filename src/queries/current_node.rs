@@ -2,7 +2,7 @@ use super::{Distrib, QueryResult};
 use crate::error::Error;
 
 pub(super) fn current_node() -> QueryResult {
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target = "wasm32-unknown-unknown")]
     {
         use js_sys::{global, Reflect};
 
@@ -17,7 +17,7 @@ pub(super) fn current_node() -> QueryResult {
         Ok(vec![Distrib::new("node", version)])
     }
 
-    #[cfg(all(not(target_arch = "wasm32"), feature = "node"))]
+    #[cfg(all(not(target = "wasm32-unknown-unknown"), feature = "node"))]
     {
         use crate::node::CURRENT_NODE;
 
@@ -28,7 +28,7 @@ pub(super) fn current_node() -> QueryResult {
         )])
     }
 
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "node")))]
+    #[cfg(all(not(target = "wasm32-unknown-unknown"), not(feature = "node")))]
     {
         use std::process::Command;
 
