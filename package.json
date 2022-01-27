@@ -1,6 +1,6 @@
 {
   "name": "browserslist-rs",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "author": "Pig Fang <g-plane@hotmail.com>",
   "license": "MIT",
   "repository": "https://github.com/g-plane/browserslist-rs",
