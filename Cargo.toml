@@ -60,10 +60,6 @@ wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 [target.'cfg(not(target = "wasm32-unknown-unknown"))'.dependencies]
 chrono = "0.4"
 
-[patch.crates-io]
-parking_lot = { git = "https://github.com/Amanieu/parking_lot" }
-parking_lot_core = { git = "https://github.com/Amanieu/parking_lot", package = "parking_lot_core" }
-
 [[bench]]
 name = "resolve"
 harness = false
