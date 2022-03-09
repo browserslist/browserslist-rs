@@ -24,6 +24,8 @@ mod last_n_browsers;
 mod last_n_electron;
 mod last_n_electron_major;
 mod last_n_major_browsers;
+mod last_n_node;
+mod last_n_node_major;
 mod last_n_x_browsers;
 mod last_n_x_major_browsers;
 mod maintained_node;
@@ -112,6 +114,18 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
                 last_n_electron_major::last_n_electron_major(count)
             } else {
                 last_n_electron::last_n_electron(count)
+            }
+        }
+        QueryAtom::Last {
+            count,
+            major,
+            name: Some(name),
+        } if name.eq_ignore_ascii_case("node") => {
+            let count = count as usize;
+            if major {
+                last_n_node_major::last_n_node_major(count)
+            } else {
+                last_n_node::last_n_node(count)
             }
         }
         QueryAtom::Last {

@@ -3,6 +3,13 @@ use std::{cmp::Ordering, num::ParseIntError, str::FromStr};
 #[derive(PartialEq, Eq, PartialOrd, Ord, Default, Debug, Clone)]
 pub(crate) struct Version(u32, u32, u32);
 
+impl Version {
+    #[inline]
+    pub(crate) fn major(&self) -> u32 {
+        self.0
+    }
+}
+
 impl FromStr for Version {
     type Err = ParseIntError;
 
