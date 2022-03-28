@@ -32,7 +32,7 @@ nom = "7.1"
 once_cell = "1.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-string_cache = "0.8"
+string_cache = "0.8.4"
 thiserror = "1.0"
 
 [dev-dependencies]
@@ -46,7 +46,7 @@ napi-build = { version = "1.1", optional = true }
 quote = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-string_cache_codegen = "0.5"
+string_cache_codegen = "0.5.2"
 
 [features]
 node = ["napi", "napi-derive", "napi-build"]
