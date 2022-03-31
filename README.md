@@ -38,7 +38,7 @@ so only the main exported API is available.
 
 ### Using as a Rust crate
 
-Please refer to [crate documentation](docs.rs/browserslist-rs/).
+Please refer to [crate documentation](https://docs.rs/browserslist-rs/).
 
 ## Try as Rust crate example
 
