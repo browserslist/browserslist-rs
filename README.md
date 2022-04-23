@@ -12,7 +12,7 @@ you can use it.
 We have supported most widely or most frequently used queries,
 and there are over 100 tests to make sure it works correctly.
 
-For more detail about development status, please see [Project #1](https://github.com/g-plane/browserslist-rs/projects/1).
+For more detail about development status, please see [Project #1](https://github.com/browserslist/browserslist-rs/projects/1).
 
 ## Usage
 
@@ -64,9 +64,9 @@ cargo run --example inspect -- -h
 
 The features below aren't supported currently:
 
-- Custom usage like `> 0.5% in my stats`.
-- Custom usage like `cover 99.5% in my stats`.
-- Extending custom config like `extends browserslist-config-mycompany`.
+-   Custom usage like `> 0.5% in my stats`.
+-   Custom usage like `cover 99.5% in my stats`.
+-   Extending custom config like `extends browserslist-config-mycompany`.
 
 ## Credits
 
