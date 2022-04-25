@@ -4,6 +4,7 @@ use crate::{opts::Opts, resolve};
 pub(super) fn dead(opts: &Opts) -> QueryResult {
     resolve(
         [
+            "Baidu >= 0",
             "ie <= 10",
             "ie_mob <= 11",
             "bb <= 10",
