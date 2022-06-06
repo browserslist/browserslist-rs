@@ -2,7 +2,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case, take_while1, take_while_m_n},
     character::complete::{anychar, char, i32, one_of, space0, space1, u16, u32},
-    combinator::{all_consuming, consumed, map, opt, recognize, value},
+    combinator::{all_consuming, consumed, map, opt, recognize, value, verify},
     multi::{many0, many_till},
     number::complete::{double, float},
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
@@ -65,7 +65,14 @@ fn parse_last(input: &str) -> PResult<QueryAtom> {
             terminated(tag_no_case("last"), space1),
             terminated(u16, space1),
             opt(terminated(
-                take_while1(|c: char| c.is_ascii_alphabetic() || c == '_'),
+                verify(
+                    take_while1(|c: char| c.is_ascii_alphabetic() || c == '_'),
+                    |s: &str| {
+                        !s.eq_ignore_ascii_case("version")
+                            && !s.eq_ignore_ascii_case("versions")
+                            && !s.eq_ignore_ascii_case("major")
+                    },
+                ),
                 space1,
             )),
             opt(terminated(tag_no_case("major"), space1)),
@@ -444,6 +451,7 @@ mod tests {
     #[test_case("last 1 Baidu version and not <2%"; "with not and one-version browsers as and query")]
     #[test_case("ie >= 6 or ie <= 7"; "or")]
     #[test_case("ie < 11 or not ie 7"; "or with not")]
+    #[test_case("last 2 versions and > 1%"; "swc issue 4871")]
     fn valid(query: &str) {
         run_compare(query, &Opts::new());
     }
