@@ -7,6 +7,31 @@ use std::{
     path::Path,
 };
 
+fn encode_browser_name(name: &str) -> u8 {
+    match name {
+        "ie" => 1,
+        "edge" => 2,
+        "firefox" => 3,
+        "chrome" => 4,
+        "safari" => 5,
+        "opera" => 6,
+        "ios_saf" => 7,
+        "op_mini" => 8,
+        "android" => 9,
+        "bb" => 10,
+        "op_mob" => 11,
+        "and_chr" => 12,
+        "and_ff" => 13,
+        "ie_mob" => 14,
+        "and_uc" => 15,
+        "samsung" => 16,
+        "and_qq" => 17,
+        "baidu" => 18,
+        "kaios" => 19,
+        _ => unreachable!("unknown browser name"),
+    }
+}
+
 #[derive(Deserialize)]
 struct Caniuse {
     agents: HashMap<String, Agent>,
@@ -182,7 +207,7 @@ fn build_caniuse_global() -> Result<()> {
             agent
                 .usage_global
                 .iter()
-                .map(|(version, usage)| (name.clone(), version.clone(), usage))
+                .map(|(version, usage)| (encode_browser_name(name), version.clone(), usage))
         })
         .flatten()
         .collect::<Vec<_>>();
@@ -207,7 +232,7 @@ fn build_caniuse_global() -> Result<()> {
                         versions
                             .iter()
                             .filter(|(_, stat)| stat.starts_with('y') || stat.starts_with('a'))
-                            .map(|(version, _)| (name.clone(), version.clone()))
+                            .map(|(version, _)| (encode_browser_name(name), version.clone()))
                     })
                     .flatten()
                     .collect::<Vec<_>>(),
@@ -223,7 +248,11 @@ fn build_caniuse_global() -> Result<()> {
         match name {
             #( #features => {
                 static STAT: Lazy<Vec<(BrowserNameAtom, &'static str)>> = Lazy::new(|| {
-                    from_str(include_str!(concat!(env!("OUT_DIR"), "/features/", #features, ".json"))).unwrap()
+                    from_str::<Vec<(u8, &'static str)>>(include_str!(concat!(env!("OUT_DIR"), "/features/", #features, ".json")))
+                        .unwrap()
+                        .into_iter()
+                        .map(|(browser, version)| (super::decode_browser_name(browser).into(), version))
+                        .collect()
                 });
                 Some(&*STAT)
             }, )*
@@ -289,7 +318,7 @@ fn build_caniuse_region() -> Result<()> {
                     } else {
                         version
                     };
-                    usage.map(|usage| (name.clone(), version, usage))
+                    usage.map(|usage| (encode_browser_name(&name), version, usage))
                 })
             })
             .flatten()
@@ -320,7 +349,11 @@ fn build_caniuse_region() -> Result<()> {
         match region {
             #( #regions => {
                 static USAGE: Lazy<Vec<(BrowserNameAtom, &'static str, f32)>> = Lazy::new(|| {
-                    from_str(include_str!(concat!(env!("OUT_DIR"), "/region/", #regions, ".json"))).unwrap()
+                    from_str::<Vec<(u8, &'static str, f32)>>(include_str!(concat!(env!("OUT_DIR"), "/region/", #regions, ".json")))
+                        .unwrap()
+                        .into_iter()
+                        .map(|(browser, version, usage)| (super::decode_browser_name(browser).into(), version, usage))
+                        .collect()
                 });
                 Some(&*USAGE)
             }, )*
