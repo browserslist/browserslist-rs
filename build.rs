@@ -78,8 +78,9 @@ fn generate_browser_names_cache() -> Result<()> {
         "browser_name_atom!",
     )
     .atoms(&[
-        "edge", "firefox", "chrome", "safari", "opera", "ios_saf", "op_mini", "android", "bb",
-        "op_mob", "and_chr", "and_ff", "ie_mob", "and_uc", "samsung", "and_qq", "baidu", "kaios",
+        "ie", "edge", "firefox", "chrome", "safari", "opera", "ios_saf", "op_mini", "android",
+        "bb", "op_mob", "and_chr", "and_ff", "ie_mob", "and_uc", "samsung", "and_qq", "baidu",
+        "kaios",
     ])
     .write_to_file(&Path::new(&env::var("OUT_DIR")?).join("browser_name_atom.rs"))?;
 
@@ -251,7 +252,7 @@ fn build_caniuse_global() -> Result<()> {
                     from_str::<Vec<(u8, &'static str)>>(include_str!(concat!(env!("OUT_DIR"), "/features/", #features, ".json")))
                         .unwrap()
                         .into_iter()
-                        .map(|(browser, version)| (super::decode_browser_name(browser).into(), version))
+                        .map(|(browser, version)| (crate::data::browser_name::decode_browser_name(browser), version))
                         .collect()
                 });
                 Some(&*STAT)
@@ -352,7 +353,7 @@ fn build_caniuse_region() -> Result<()> {
                     from_str::<Vec<(u8, &'static str, f32)>>(include_str!(concat!(env!("OUT_DIR"), "/region/", #regions, ".json")))
                         .unwrap()
                         .into_iter()
-                        .map(|(browser, version, usage)| (super::decode_browser_name(browser).into(), version, usage))
+                        .map(|(browser, version, usage)| (crate::data::browser_name::decode_browser_name(browser), version, usage))
                         .collect()
                 });
                 Some(&*USAGE)

@@ -39,7 +39,13 @@ pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(BrowserNameAtom, String, f32)>> = Laz
     )))
     .unwrap()
     .into_iter()
-    .map(|(browser, version, usage)| (decode_browser_name(browser).into(), version, usage))
+    .map(|(browser, version, usage)| {
+        (
+            super::browser_name::decode_browser_name(browser),
+            version,
+            usage,
+        )
+    })
     .collect()
 });
 
@@ -213,30 +219,5 @@ pub(crate) fn normalize_version<'a>(
         stat.version_list.first().map(|s| s.version.as_str())
     } else {
         None
-    }
-}
-
-fn decode_browser_name(id: u8) -> &'static str {
-    match id {
-        1 => "ie",
-        2 => "edge",
-        3 => "firefox",
-        4 => "chrome",
-        5 => "safari",
-        6 => "opera",
-        7 => "ios_saf",
-        8 => "op_mini",
-        9 => "android",
-        10 => "bb",
-        11 => "op_mob",
-        12 => "and_chr",
-        13 => "and_ff",
-        14 => "ie_mob",
-        15 => "and_uc",
-        16 => "samsung",
-        17 => "and_qq",
-        18 => "baidu",
-        19 => "kaios",
-        _ => unreachable!("cannot recognize browser id"),
     }
 }
