@@ -15,13 +15,12 @@ pub(super) fn since(year: i32, month: u32, day: u32, opts: &Opts) -> QueryResult
     let distribs = CANIUSE_BROWSERS
         .keys()
         .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-        .map(|(name, stat)| {
+        .flat_map(|(name, stat)| {
             stat.version_list
                 .iter()
                 .filter(|version| matches!(version.release_date, Some(date) if date >= time))
                 .map(|version| Distrib::new(name, &*version.version))
         })
-        .flatten()
         .collect();
     Ok(distribs)
 }

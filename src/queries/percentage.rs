@@ -4,7 +4,7 @@ use crate::{data::caniuse::CANIUSE_BROWSERS, parser::Comparator};
 pub(super) fn percentage(comparator: Comparator, popularity: f32) -> QueryResult {
     let distribs = CANIUSE_BROWSERS
         .iter()
-        .map(|(name, stat)| {
+        .flat_map(|(name, stat)| {
             stat.version_list
                 .iter()
                 .filter(|version| {
@@ -18,7 +18,6 @@ pub(super) fn percentage(comparator: Comparator, popularity: f32) -> QueryResult
                 })
                 .map(|version| Distrib::new(name, &*version.version))
         })
-        .flatten()
         .collect();
     Ok(distribs)
 }

@@ -8,13 +8,12 @@ pub(super) fn unreleased_browsers(opts: &Opts) -> QueryResult {
     let distribs = CANIUSE_BROWSERS
         .keys()
         .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-        .map(|(name, stat)| {
+        .flat_map(|(name, stat)| {
             stat.version_list
                 .iter()
                 .filter(|version| version.release_date.is_none())
                 .map(|version| Distrib::new(name, &*version.version))
         })
-        .flatten()
         .collect();
     Ok(distribs)
 }

@@ -204,13 +204,12 @@ fn build_caniuse_global() -> Result<()> {
     let mut global_usage = data
         .agents
         .iter()
-        .map(|(name, agent)| {
+        .flat_map(|(name, agent)| {
             agent
                 .usage_global
                 .iter()
                 .map(|(version, usage)| (encode_browser_name(name), version.clone(), usage))
         })
-        .flatten()
         .collect::<Vec<_>>();
     global_usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
     fs::write(
@@ -229,13 +228,12 @@ fn build_caniuse_global() -> Result<()> {
                 &feature
                     .stats
                     .iter()
-                    .map(|(name, versions)| {
+                    .flat_map(|(name, versions)| {
                         versions
                             .iter()
                             .filter(|(_, stat)| stat.starts_with('y') || stat.starts_with('a'))
                             .map(|(version, _)| (encode_browser_name(name), version.clone()))
                     })
-                    .flatten()
                     .collect::<Vec<_>>(),
             )?,
         )?;
@@ -310,8 +308,7 @@ fn build_caniuse_region() -> Result<()> {
         let RegionData { data } = serde_json::from_slice(&fs::read(file.path())?)?;
         let mut usage = data
             .into_iter()
-            .map(|(name, stat)| {
-                dbg!(&name);
+            .flat_map(|(name, stat)| {
                 let agent = agents.get(&name).unwrap();
                 stat.into_iter().filter_map(move |(version, usage)| {
                     let version = if version.as_str() == "0" {
@@ -322,7 +319,6 @@ fn build_caniuse_region() -> Result<()> {
                     usage.map(|usage| (encode_browser_name(&name), version, usage))
                 })
             })
-            .flatten()
             .collect::<Vec<_>>();
         usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
         fs::write(

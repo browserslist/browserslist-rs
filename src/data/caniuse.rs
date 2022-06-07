@@ -103,18 +103,22 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
                 || version == "4"
         })
         .chain(
-            chrome.version_list.iter().cloned().skip(
-                chrome.version_list.len()
-                    - (chrome
-                        .version_list
-                        .last()
-                        .unwrap()
-                        .version
-                        .parse::<usize>()
-                        .unwrap()
-                        - (ANDROID_EVERGREEN_FIRST as usize)
-                        + 1),
-            ),
+            chrome
+                .version_list
+                .iter()
+                .skip(
+                    chrome.version_list.len()
+                        - (chrome
+                            .version_list
+                            .last()
+                            .unwrap()
+                            .version
+                            .parse::<usize>()
+                            .unwrap()
+                            - (ANDROID_EVERGREEN_FIRST as usize)
+                            + 1),
+                )
+                .cloned(),
         )
         .collect();
 

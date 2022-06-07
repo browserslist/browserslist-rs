@@ -9,7 +9,7 @@ pub(super) fn last_n_major_browsers(count: usize, opts: &Opts) -> QueryResult {
     let distribs = CANIUSE_BROWSERS
         .keys()
         .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-        .map(|(name, stat)| {
+        .flat_map(|(name, stat)| {
             let count = if should_filter_android(name, opts.mobile_to_desktop) {
                 count_android_filter(count, opts.mobile_to_desktop)
             } else {
@@ -37,7 +37,6 @@ pub(super) fn last_n_major_browsers(count: usize, opts: &Opts) -> QueryResult {
                 .rev()
                 .map(move |version| Distrib::new(name, version))
         })
-        .flatten()
         .collect();
 
     Ok(distribs)
