@@ -24,9 +24,9 @@ mod tests {
     use crate::test::run_compare;
     use test_case::test_case;
 
-    #[test_case("unreleased versions" => ignore; "basic")]
-    #[test_case("Unreleased Versions" => ignore; "case insensitive")]
-    #[test_case("unreleased        versions" => ignore; "more spaces")]
+    #[test_case("unreleased versions"; "basic")]
+    #[test_case("Unreleased Versions"; "case insensitive")]
+    #[test_case("unreleased        versions"; "more spaces")]
     fn valid(query: &str) {
         run_compare(query, &Opts::new());
     }
