@@ -57,7 +57,7 @@ js-sys = "0.3"
 serde-wasm-bindgen = "0.4"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 
-[target.'cfg(not(target = "wasm32-unknown-unknown"))'.dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 chrono = "0.4"
 
 [[bench]]

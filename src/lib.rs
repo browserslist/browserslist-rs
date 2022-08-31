@@ -72,7 +72,7 @@ use std::cmp::Ordering;
 pub use wasm::browserslist;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
-#[cfg(not(target = "wasm32-unknown-unknown"))]
+#[cfg(not(target_arch = "wasm32"))]
 mod config;
 mod data;
 mod error;
@@ -168,7 +168,7 @@ where
 /// // when no config found, it use `defaults` query
 /// assert!(!execute(&Opts::new()).unwrap().is_empty());
 /// ```
-#[cfg(not(target = "wasm32-unknown-unknown"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn execute(opts: &Opts) -> Result<Vec<Distrib>, Error> {
     resolve(config::load(opts)?, opts)
 }
