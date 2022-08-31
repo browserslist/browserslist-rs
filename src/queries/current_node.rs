@@ -2,7 +2,7 @@ use super::{Distrib, QueryResult};
 use crate::error::Error;
 
 pub(super) fn current_node() -> QueryResult {
-    #[cfg(target = "wasm32-unknown-unknown")]
+    #[cfg(target_arch = "wasm32")]
     {
         use js_sys::{global, Reflect};
 

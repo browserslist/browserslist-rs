@@ -68,7 +68,7 @@
 
 use parser::parse_browserslist_query;
 use std::cmp::Ordering;
-#[cfg(target = "wasm32-unknown-unknown")]
+#[cfg(target_arch = "wasm32")]
 pub use wasm::browserslist;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
@@ -84,7 +84,7 @@ mod queries;
 mod semver;
 #[cfg(test)]
 mod test;
-#[cfg(target = "wasm32-unknown-unknown")]
+#[cfg(target_arch = "wasm32")]
 mod wasm;
 
 /// Resolve browserslist queries.
