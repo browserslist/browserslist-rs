@@ -26,10 +26,12 @@ pub static RELEASE_SCHEDULE: Lazy<AHashMap<String, (NaiveDateTime, NaiveDateTime
                 (
                     NaiveDate::parse_from_str(&start, date_format)
                         .unwrap()
-                        .and_hms(0, 0, 0),
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap(),
                     NaiveDate::parse_from_str(&end, date_format)
                         .unwrap()
-                        .and_hms(0, 0, 0),
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap(),
                 ),
             )
         })
