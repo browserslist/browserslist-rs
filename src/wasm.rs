@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 #[doc(hidden)]
 #[wasm_bindgen]
 pub fn browserslist(query: String, opts: JsValue) -> Result<JsValue, JsValue> {
-    let opts: Option<Opts> = opts.into_serde().unwrap_or_default();
+    let opts: Option<Opts> = serde_wasm_bindgen::from_value(opts)?;
 
     serde_wasm_bindgen::to_value(
         &resolve([query], &opts.unwrap_or_default())
