@@ -5,7 +5,7 @@ pub(super) fn supports(name: &str) -> QueryResult {
     if let Some(feature) = get_feature_stat(name) {
         let distribs = feature
             .iter()
-            .map(|(name, version)| Distrib::new(&*name, *version))
+            .map(|(name, version)| Distrib::new(name, *version))
             .collect();
         Ok(distribs)
     } else {
