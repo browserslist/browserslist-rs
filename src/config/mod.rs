@@ -356,19 +356,19 @@ last 1 version
         let tmp_dir = temp_dir();
         let tmp = tmp_dir.to_str().unwrap();
         assert_eq!(
-            load(Opts::new().path(&tmp)).unwrap_err(),
+            load(Opts::new().path(tmp)).unwrap_err(),
             Error::DuplicatedConfig(tmp.to_string(), ERR_DUP_PLAIN, ERR_DUP_PKG)
         );
 
         fs::write(tmp_dir.join(".browserslistrc"), "electron > 12.0").unwrap();
         assert_eq!(
-            load(Opts::new().path(&tmp)).unwrap_err(),
+            load(Opts::new().path(tmp)).unwrap_err(),
             Error::DuplicatedConfig(tmp.to_string(), ERR_DUP_PLAIN, ERR_DUP_RC)
         );
 
         fs::remove_file(tmp_dir.join("browserslist")).unwrap();
         assert_eq!(
-            load(Opts::new().path(&tmp)).unwrap_err(),
+            load(Opts::new().path(tmp)).unwrap_err(),
             Error::DuplicatedConfig(tmp.to_string(), ERR_DUP_RC, ERR_DUP_PKG)
         );
 
