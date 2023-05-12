@@ -249,7 +249,7 @@ mod tests {
         let tmp = temp_dir().join("package.json");
         fs::write(
             &tmp,
-            &serde_json::to_string(&PackageJson {
+            serde_json::to_string(&PackageJson {
                 browserslist: Some(PkgConfig::Str("node > 10".into())),
             })
             .unwrap(),
@@ -265,7 +265,7 @@ mod tests {
         // package.json with array format
         fs::write(
             &tmp,
-            &serde_json::to_string(&PackageJson {
+            serde_json::to_string(&PackageJson {
                 browserslist: Some(PkgConfig::Arr(vec!["node > 7.4".to_string()])),
             })
             .unwrap(),
@@ -286,7 +286,7 @@ mod tests {
         let _ = config_obj.insert("ssr".into(), vec!["node >= 12".into()]);
         fs::write(
             &tmp,
-            &serde_json::to_string(&PackageJson {
+            serde_json::to_string(&PackageJson {
                 browserslist: Some(PkgConfig::Obj(config_obj)),
             })
             .unwrap(),
