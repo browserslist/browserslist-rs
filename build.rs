@@ -98,7 +98,7 @@ fn build_electron_to_chromium() -> Result<()> {
     .collect::<Vec<_>>();
     data.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap());
 
-    fs::write(path, &serde_json::to_string(&data)?)?;
+    fs::write(path, serde_json::to_string(&data)?)?;
 
     Ok(())
 }
@@ -120,7 +120,7 @@ fn build_node_versions() -> Result<()> {
 
     fs::write(
         path,
-        &serde_json::to_string(
+        serde_json::to_string(
             &releases
                 .into_iter()
                 .map(|release| release.version)
@@ -151,7 +151,7 @@ fn build_node_release_schedule() -> Result<()> {
 
     fs::write(
         path,
-        &serde_json::to_string(
+        serde_json::to_string(
             &schedule
                 .into_iter()
                 .map(|(version, release)| {
