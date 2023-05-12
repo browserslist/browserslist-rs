@@ -47,6 +47,7 @@ string_cache_codegen = "0.5.2"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 chrono = { version = "0.4.23", features = ["wasmbind"] }
+getrandom = { version = "0.2", features = ["js"] }
 js-sys = "0.3"
 serde-wasm-bindgen = "0.4"
 wasm-bindgen = { version = "0.2" }
