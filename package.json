@@ -1,0 +1,9 @@
+{
+  "name": "browserslist-rs",
+  "author": "Pig Fang <g-plane@hotmail.com>",
+  "license": "MIT",
+  "repository": "https://github.com/browserslist/browserslist-rs",
+  "devDependencies": {
+    "browserslist": "^4.21.5"
+  }
+}
