@@ -16,28 +16,6 @@ For more detail about development status, please see [Project #1](https://github
 
 ## Usage
 
-### Using as an NPM package
-
-Install it:
-
-```
-npm i -D browserslist-rs
-```
-
-Since the **main** API is same as [JavaScript-based Browserslist](https://github.com/browserslist/browserslist),
-you can just do as before:
-
-```js
-const browserslist = require('browserslist-rs')
-
-browserslist('last 2 versions, not dead')
-```
-
-Note that we don't plan to provide full API compatibility,
-so only the main exported API is available.
-
-### Using as a Rust crate
-
 Please refer to [crate documentation](https://docs.rs/browserslist-rs/).
 
 ## Try as Rust crate example

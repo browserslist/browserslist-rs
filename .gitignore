@@ -1,10 +1,2 @@
-node_modules
 /target
-/pkg
 Cargo.lock
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-*.node
-/*.js
-/*.d.ts

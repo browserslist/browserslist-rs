@@ -17,18 +17,7 @@ pub(super) fn current_node() -> QueryResult {
         Ok(vec![Distrib::new("node", version)])
     }
 
-    #[cfg(all(not(target_arch = "wasm32"), feature = "node"))]
-    {
-        use crate::node::CURRENT_NODE;
-
-        let version = CURRENT_NODE.get().ok_or(Error::UnsupportedCurrentNode)?;
-        Ok(vec![Distrib::new(
-            "node",
-            format!("{}.{}.{}", version.major, version.minor, version.patch),
-        )])
-    }
-
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "node")))]
+    #[cfg(not(target_arch = "wasm32"))]
     {
         use std::process::Command;
 

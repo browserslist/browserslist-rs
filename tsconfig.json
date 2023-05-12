@@ -1,9 +1,0 @@
-{
-  "extends": "@gplane/tsconfig",
-  "compilerOptions": {
-    "module": "commonjs"
-  },
-  "ts-node": {
-    "transpileOnly": true
-  }
-}

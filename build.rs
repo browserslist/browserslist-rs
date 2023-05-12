@@ -57,11 +57,6 @@ struct Feature {
 }
 
 fn main() -> Result<()> {
-    #[cfg(feature = "node")]
-    {
-        napi_build::setup();
-    }
-
     generate_browser_names_cache()?;
     build_electron_to_chromium()?;
     build_node_versions()?;

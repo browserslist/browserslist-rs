@@ -57,14 +57,6 @@
 //! Please note that browser and Deno can run WebAssembly,
 //! but those environments aren't Node.js,
 //! so you will receive an error when querying `current node` in those environments.
-//!
-//! ## N-API
-//!
-//! If you're going to use this crate in a Node.js addon via N-API directly or indirectly,
-//! we've supported for it. You just need to enable the `node` feature.
-//!
-//! If you're targeting Node.js, we recommend you to use N-API over WebAssembly,
-//! because it's faster and less-limited than the WebAssembly-build.
 
 use parser::parse_browserslist_query;
 use std::cmp::Ordering;
@@ -76,8 +68,6 @@ pub use {error::Error, opts::Opts, queries::Distrib};
 mod config;
 mod data;
 mod error;
-#[cfg(feature = "node")]
-mod node;
 mod opts;
 mod parser;
 mod queries;

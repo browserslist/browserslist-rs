@@ -54,20 +54,6 @@ jobs:
       - run: cargo clippy --example inspect
       - run: cargo clippy --tests
 
-  napi:
-    name: napi
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: true
-      - uses: pnpm/action-setup@v2
-        with:
-          version: latest
-          run_install: true
-      - run: pnpm build:napi:dev
-      - run: pnpm test:napi
-
   wasm:
     name: wasm
     runs-on: ubuntu-latest
