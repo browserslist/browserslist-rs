@@ -60,8 +60,8 @@
 
 use parser::parse_browserslist_query;
 use std::cmp::Ordering;
-#[cfg(target_arch = "wasm32")]
-pub use wasm::browserslist;
+// #[cfg(target_arch = "wasm32")]
+// pub use wasm::browserslist;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
 #[cfg(not(target_arch = "wasm32"))]
