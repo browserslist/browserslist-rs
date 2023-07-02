@@ -74,8 +74,8 @@ mod queries;
 mod semver;
 #[cfg(test)]
 mod test;
-#[cfg(target_arch = "wasm32")]
-mod wasm;
+// #[cfg(target_arch = "wasm32")]
+// mod wasm;
 
 /// Resolve browserslist queries.
 ///
