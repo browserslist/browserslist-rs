@@ -22,8 +22,12 @@ include = [
 name = "browserslist"
 crate-type = ["cdylib", "rlib"]
 
+[features]
+wasm-bindgen = ["chrono/wasmbind", "getrandom/js"]
+
 [dependencies]
 ahash = { version = "0.8", features = ["serde"] }
+chrono = { version = "0.4.23", features = ["std", "clock", "oldtime"], default-features = false } # disable wasmbind by default
 either = "1.8"
 itertools = "0.10"
 nom = "7.1"
@@ -45,15 +49,13 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 string_cache_codegen = "0.5.2"
 
-# [target.'cfg(target_arch = "wasm32")'.dependencies]
-# chrono = { version = "0.4.23", features = ["wasmbind"] }
-# getrandom = { version = "0.2", features = ["js"] }
-# js-sys = "0.3"
-# serde-wasm-bindgen = "0.4"
-# wasm-bindgen = { version = "0.2" }
+[target.'cfg(all(feature = "wasm-bindgen", target_arch = "wasm32"))'.dependencies]
+getrandom = "0.2"
+js-sys = "0.3"
+serde-wasm-bindgen = "0.4"
+wasm-bindgen = { version = "0.2" }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-chrono = "0.4.23"
+[target.'cfg(any(not(feature = "wasm-bindgen"), not(target_arch = "wasm32")))'.dependencies]
 
 [[bench]]
 name = "resolve"
