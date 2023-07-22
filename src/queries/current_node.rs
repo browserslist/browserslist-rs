@@ -4,7 +4,7 @@ use crate::error::Error;
 pub(super) fn current_node() -> QueryResult {
     #[cfg(target_arch = "wasm32")]
     {
-        #[cfg(feature = "wasm-bindgen")]
+        #[cfg(feature = "wasm_bindgen")]
         {
             use js_sys::{global, Reflect};
 

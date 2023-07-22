@@ -62,4 +62,4 @@ jobs:
         with:
           submodules: true
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - run: wasm-pack build --dev --target=web
+      - run: wasm-pack build --dev --target=web -- --features wasm_bindgen
