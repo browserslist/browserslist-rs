@@ -1,6 +1,6 @@
 [package]
 name = "browserslist-rs"
-version = "0.12.4"
+version = "0.13.0"
 authors = ["Pig Fang <g-plane@hotmail.com>"]
 edition = "2021"
 description = "Rust-ported Browserslist."
@@ -23,11 +23,22 @@ name = "browserslist"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-wasm_bindgen = ["chrono/wasmbind", "getrandom", "getrandom/js", "js-sys", "serde-wasm-bindgen", "wasm-bindgen"]
+wasm_bindgen = [
+    "chrono/wasmbind",
+    "getrandom",
+    "getrandom/js",
+    "js-sys",
+    "serde-wasm-bindgen",
+    "wasm-bindgen",
+]
 
 [dependencies]
 ahash = { version = "0.8", features = ["serde"] }
-chrono = { version = "0.4.23", features = ["std", "clock", "oldtime"], default-features = false } # disable wasmbind by default
+chrono = { version = "0.4.23", features = [
+    "std",
+    "clock",
+    "oldtime",
+], default-features = false } # disable wasmbind by default
 either = "1.8"
 itertools = "0.10"
 nom = "7.1"
