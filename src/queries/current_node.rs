@@ -4,17 +4,22 @@ use crate::error::Error;
 pub(super) fn current_node() -> QueryResult {
     #[cfg(target_arch = "wasm32")]
     {
-        use js_sys::{global, Reflect};
+        #[cfg(feature = "wasm_bindgen")]
+        {
+            use js_sys::{global, Reflect};
 
-        let obj_process = Reflect::get(&global(), &"process".into())
-            .map_err(|_| Error::UnsupportedCurrentNode)?;
-        let obj_versions = Reflect::get(&obj_process, &"versions".into())
-            .map_err(|_| Error::UnsupportedCurrentNode)?;
-        let version = Reflect::get(&obj_versions, &"node".into())
-            .map_err(|_| Error::UnsupportedCurrentNode)?
-            .as_string()
-            .ok_or(Error::UnsupportedCurrentNode)?;
-        Ok(vec![Distrib::new("node", version)])
+            let obj_process = Reflect::get(&global(), &"process".into())
+                .map_err(|_| Error::UnsupportedCurrentNode)?;
+            let obj_versions = Reflect::get(&obj_process, &"versions".into())
+                .map_err(|_| Error::UnsupportedCurrentNode)?;
+            let version = Reflect::get(&obj_versions, &"node".into())
+                .map_err(|_| Error::UnsupportedCurrentNode)?
+                .as_string()
+                .ok_or(Error::UnsupportedCurrentNode)?;
+            return Ok(vec![Distrib::new("node", version)]);
+        }
+
+        Err(Error::UnsupportedCurrentNode)
     }
 
     #[cfg(not(target_arch = "wasm32"))]

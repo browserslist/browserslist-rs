@@ -60,7 +60,7 @@
 
 use parser::parse_browserslist_query;
 use std::cmp::Ordering;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(feature = "wasm_bindgen", target_arch = "wasm32"))]
 pub use wasm::browserslist;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
@@ -74,7 +74,7 @@ mod queries;
 mod semver;
 #[cfg(test)]
 mod test;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(feature = "wasm_bindgen", target_arch = "wasm32"))]
 mod wasm;
 
 /// Resolve browserslist queries.
