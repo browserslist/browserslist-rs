@@ -1,26 +1,25 @@
 use browserslist::{resolve, Opts};
-use clap::{App, Arg};
+use clap::Parser;
+
+#[derive(Parser)]
+struct Args {
+    #[arg(long)]
+    mobile_to_desktop: bool,
+
+    #[arg(long)]
+    ignore_unknown_versions: bool,
+
+    queries: Vec<String>,
+}
 
 fn main() {
-    let matches = App::new("Browserslist")
-        .arg(
-            Arg::with_name("mobile_to_desktop")
-                .long("mobile-to-desktop")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name("ignore_unknown_versions")
-                .long("ignore-unknown-versions")
-                .takes_value(false),
-        )
-        .arg(Arg::with_name("queries"))
-        .get_matches();
+    let args = Args::parse();
 
     match resolve(
-        &vec![matches.value_of("queries").unwrap_or_default()],
+        &args.queries,
         Opts::new()
-            .mobile_to_desktop(matches.is_present("mobile_to_desktop"))
-            .ignore_unknown_versions(matches.is_present("ignore_unknown_versions")),
+            .mobile_to_desktop(args.mobile_to_desktop)
+            .ignore_unknown_versions(args.ignore_unknown_versions),
     ) {
         Ok(versions) => {
             for version in versions {
