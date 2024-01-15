@@ -4,6 +4,6 @@
   "license": "MIT",
   "repository": "https://github.com/browserslist/browserslist-rs",
   "devDependencies": {
-    "browserslist": "^4.21.5"
+    "browserslist": "^4.22.2"
   }
 }
