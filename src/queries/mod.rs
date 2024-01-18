@@ -221,7 +221,7 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
 }
 
 pub fn count_filter_versions(name: &str, mobile_to_desktop: bool, count: usize) -> usize {
-    let mut diff = match name {
+    let jump = match name {
         "android" => {
             if mobile_to_desktop {
                 return count;
@@ -252,10 +252,9 @@ pub fn count_filter_versions(name: &str, mobile_to_desktop: bool, count: usize) 
         }
         _ => return count,
     };
-    diff -= count;
-    if diff > 0 {
+    if count <= jump {
         1
     } else {
-        1 - diff
+        count + 1 - jump
     }
 }
