@@ -3,6 +3,7 @@ use crate::{
     error::Error,
     opts::Opts,
     parser::{QueryAtom, Stats, VersionRange},
+    semver::Version,
 };
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, fmt::Display};
@@ -219,24 +220,39 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
     }
 }
 
-#[inline]
-pub fn should_filter_android(name: &str, mobile_to_desktop: bool) -> bool {
-    name == "android" && !mobile_to_desktop
-}
-
-pub fn count_android_filter(count: usize, mobile_to_desktop: bool) -> usize {
-    let last_released = &caniuse::get_browser_stat("android", mobile_to_desktop)
-        .unwrap()
-        .1
-        .version_list
-        .iter()
-        .filter(|version| version.release_date.is_some())
-        .map(|version| &*version.version)
-        .last()
-        .unwrap()
-        .parse::<f32>()
-        .unwrap();
-    let diff = (last_released - caniuse::ANDROID_EVERGREEN_FIRST - (count as f32)) as usize;
+pub fn count_filter_versions(name: &str, mobile_to_desktop: bool, count: usize) -> usize {
+    let mut diff = match name {
+        "android" => {
+            if mobile_to_desktop {
+                return count;
+            } else {
+                let last_released = &caniuse::get_browser_stat("android", mobile_to_desktop)
+                    .unwrap()
+                    .1
+                    .version_list
+                    .iter()
+                    .filter(|version| version.release_date.is_some())
+                    .map(|version| &*version.version)
+                    .last()
+                    .unwrap()
+                    .parse::<f32>()
+                    .unwrap();
+                (last_released - caniuse::ANDROID_EVERGREEN_FIRST) as usize
+            }
+        }
+        "op_mob" => {
+            let lastest = caniuse::get_browser_stat("android", mobile_to_desktop)
+                .unwrap()
+                .1
+                .version_list
+                .last()
+                .unwrap();
+            (lastest.version.parse::<Version>().unwrap().major() - caniuse::OP_MOB_BLINK_FIRST + 1)
+                as usize
+        }
+        _ => return count,
+    };
+    diff -= count;
     if diff > 0 {
         1
     } else {

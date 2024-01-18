@@ -1,4 +1,4 @@
-use super::{count_android_filter, should_filter_android, Distrib, QueryResult};
+use super::{count_filter_versions, Distrib, QueryResult};
 use crate::{
     data::caniuse::{get_browser_stat, CANIUSE_BROWSERS},
     opts::Opts,
@@ -10,11 +10,7 @@ pub(super) fn last_n_major_browsers(count: usize, opts: &Opts) -> QueryResult {
         .keys()
         .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
         .flat_map(|(name, stat)| {
-            let count = if should_filter_android(name, opts.mobile_to_desktop) {
-                count_android_filter(count, opts.mobile_to_desktop)
-            } else {
-                count
-            };
+            let count = count_filter_versions(name, opts.mobile_to_desktop, count);
 
             let minimum: u32 = stat
                 .version_list

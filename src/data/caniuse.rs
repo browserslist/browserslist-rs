@@ -8,6 +8,7 @@ pub(crate) mod features;
 pub(crate) mod region;
 
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
+pub const OP_MOB_BLINK_FIRST: u32 = 14;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct BrowserStat {
@@ -125,19 +126,8 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     android
 });
 
-static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
-    let mut op_mob = CANIUSE_BROWSERS.get(&"opera".into()).unwrap().clone();
-
-    if let Some(v) = op_mob
-        .version_list
-        .iter_mut()
-        .find(|version| version.version.as_str() == "10.0-10.1")
-    {
-        v.version = "10".to_string();
-    }
-
-    op_mob
-});
+static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> =
+    Lazy::new(|| CANIUSE_BROWSERS.get(&"opera".into()).unwrap().clone());
 
 pub fn get_browser_stat(
     name: &str,
@@ -193,7 +183,6 @@ fn to_desktop_name(name: &str) -> Option<&'static str> {
         "and_chr" | "android" => Some("chrome"),
         "and_ff" => Some("firefox"),
         "ie_mob" => Some("ie"),
-        "op_mob" => Some("opera"),
         _ => None,
     }
 }
