@@ -176,7 +176,7 @@ fn get_browser_alias(name: &str) -> &str {
     }
 }
 
-fn to_desktop_name(name: &str) -> Option<&'static str> {
+pub(crate) fn to_desktop_name(name: &str) -> Option<&'static str> {
     match name {
         "and_chr" | "android" => Some("chrome"),
         "and_ff" => Some("firefox"),

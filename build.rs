@@ -1,4 +1,5 @@
 use anyhow::Result;
+use indexmap::IndexMap;
 use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -53,7 +54,7 @@ struct VersionDetail {
 
 #[derive(Deserialize)]
 struct Feature {
-    stats: HashMap<String, HashMap<String, String>>,
+    stats: HashMap<String, IndexMap<String, String>>,
 }
 
 fn main() -> Result<()> {
@@ -223,29 +224,43 @@ fn build_caniuse_global() -> Result<()> {
                 &feature
                     .stats
                     .iter()
-                    .flat_map(|(name, versions)| {
-                        versions
-                            .iter()
-                            .filter(|(_, stat)| stat.starts_with('y') || stat.starts_with('a'))
-                            .map(|(version, _)| (encode_browser_name(name), version.clone()))
+                    .map(|(name, versions)| {
+                        (
+                            encode_browser_name(name),
+                            versions
+                                .into_iter()
+                                .map(|(version, flags)| {
+                                    let mut bit = 0;
+                                    if flags.contains('y') {
+                                        bit |= 1;
+                                    }
+                                    if flags.contains('a') {
+                                        bit |= 2;
+                                    }
+                                    (version, bit)
+                                })
+                                .collect::<IndexMap<_, u8>>(),
+                        )
                     })
-                    .collect::<Vec<_>>(),
+                    .collect::<HashMap<_, _>>(),
             )?,
         )?;
     }
     let features = data.data.keys().collect::<Vec<_>>();
     let tokens = quote! {{
+        use ahash::AHashMap;
+        use indexmap::IndexMap;
         use once_cell::sync::Lazy;
         use serde_json::from_str;
         use crate::data::browser_name::BrowserNameAtom;
 
         match name {
             #( #features => {
-                static STAT: Lazy<Vec<(BrowserNameAtom, &'static str)>> = Lazy::new(|| {
-                    from_str::<Vec<(u8, &'static str)>>(include_str!(concat!(env!("OUT_DIR"), "/features/", #features, ".json")))
+                static STAT: Lazy<AHashMap<BrowserNameAtom, IndexMap<&'static str, u8>>> = Lazy::new(|| {
+                    from_str::<AHashMap::<u8, IndexMap<&'static str, u8>>>(include_str!(concat!(env!("OUT_DIR"), "/features/", #features, ".json")))
                         .unwrap()
                         .into_iter()
-                        .map(|(browser, version)| (crate::data::browser_name::decode_browser_name(browser), version))
+                        .map(|(browser, versions)| (crate::data::browser_name::decode_browser_name(browser), versions))
                         .collect()
                 });
                 Some(&*STAT)
