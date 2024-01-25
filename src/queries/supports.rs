@@ -5,13 +5,16 @@ use crate::{
         caniuse::{features::get_feature_stat, get_browser_stat, to_desktop_name, VersionDetail},
     },
     error::Error,
+    parser::SupportKind,
     Opts,
 };
 
 const Y: u8 = 1;
 const A: u8 = 2;
 
-pub(super) fn supports(name: &str, opts: &Opts) -> QueryResult {
+pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> QueryResult {
+    let include_partial = matches!(kind, Some(SupportKind::Partially) | None);
+
     if let Some(feature) = get_feature_stat(name) {
         let distribs = feature
             .iter()
@@ -31,7 +34,7 @@ pub(super) fn supports(name: &str, opts: &Opts) -> QueryResult {
                         .filter(|version| version.release_date.is_some())
                         .last()
                         .and_then(|latest_version| versions.get(&*latest_version.version))
-                        .map(|flags| is_supported(*flags))
+                        .map(|flags| is_supported(*flags, include_partial))
                         .unwrap_or_default();
                 browser_stat
                     .version_list
@@ -45,7 +48,9 @@ pub(super) fn supports(name: &str, opts: &Opts) -> QueryResult {
                                     .and_then(|versions| versions.get(&**version)),
                                 _ => None,
                             })
-                            .and_then(|flags| is_supported(*flags).then_some(version))
+                            .and_then(|flags| {
+                                is_supported(*flags, include_partial).then_some(version)
+                            })
                     })
                     .map(move |version| Distrib::new(name, version))
             })
@@ -56,8 +61,8 @@ pub(super) fn supports(name: &str, opts: &Opts) -> QueryResult {
     }
 }
 
-fn is_supported(flags: u8) -> bool {
-    flags & Y != 0 || flags & A != 0
+fn is_supported(flags: u8, include_partial: bool) -> bool {
+    flags & Y != 0 || include_partial && flags & A != 0
 }
 
 #[cfg(test)]
@@ -72,6 +77,8 @@ mod tests {
     #[test_case("supports objectrtc"; "case 1")]
     #[test_case("supports    rtcpeerconnection"; "case 2")]
     #[test_case("supports        arrow-functions"; "case 3")]
+    #[test_case("partially supports rtcpeerconnection"; "partially")]
+    #[test_case("fully supports rtcpeerconnection"; "fully")]
     fn default_options(query: &str) {
         run_compare(query, &Opts::new());
     }

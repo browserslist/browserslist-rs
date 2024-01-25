@@ -180,7 +180,7 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
             coverage,
             stats: Stats::Region(region),
         } => cover_by_region::cover_by_region(coverage, region),
-        QueryAtom::Supports(name) => supports::supports(name, opts),
+        QueryAtom::Supports(name, kind) => supports::supports(name, kind, opts),
         QueryAtom::Electron(VersionRange::Bounded(from, to)) => {
             electron_bounded_range::electron_bounded_range(from, to)
         }

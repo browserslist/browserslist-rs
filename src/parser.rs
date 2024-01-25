@@ -34,7 +34,7 @@ pub enum QueryAtom<'a> {
         coverage: f32,
         stats: Stats<'a>,
     },
-    Supports(&'a str),
+    Supports(&'a str, Option<SupportKind>),
     Electron(VersionRange<'a>),
     Node(VersionRange<'a>),
     Browser(&'a str, VersionRange<'a>),
@@ -53,6 +53,12 @@ pub enum QueryAtom<'a> {
 pub enum Stats<'a> {
     Global,
     Region(&'a str),
+}
+
+#[derive(Debug, Clone)]
+pub enum SupportKind {
+    Fully,
+    Partially,
 }
 
 fn parse_version_keyword(input: &str) -> PResult<&str> {
@@ -206,11 +212,18 @@ fn parse_cover(input: &str) -> PResult<QueryAtom> {
 
 fn parse_supports(input: &str) -> PResult<QueryAtom> {
     map(
-        preceded(
+        separated_pair(
+            opt(terminated(
+                alt((
+                    value(SupportKind::Fully, tag_no_case("fully")),
+                    value(SupportKind::Partially, tag_no_case("partially")),
+                )),
+                space1,
+            )),
             terminated(tag_no_case("supports"), space1),
             take_while1(|c: char| c.is_alphanumeric() || c == '-'),
         ),
-        QueryAtom::Supports,
+        |(kind, name)| QueryAtom::Supports(name, kind),
     )(input)
 }
 
