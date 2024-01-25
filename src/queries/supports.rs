@@ -45,7 +45,7 @@ pub(super) fn supports(name: &str, opts: &Opts) -> QueryResult {
                                     .and_then(|versions| versions.get(&**version)),
                                 _ => None,
                             })
-                            .and_then(|flags| is_supported(*flags).then_some(&*version))
+                            .and_then(|flags| is_supported(*flags).then_some(version))
                     })
                     .map(move |version| Distrib::new(name, version))
             })

@@ -194,7 +194,7 @@ fn build_caniuse_global() -> Result<()> {
         .collect::<HashMap<_, _>>();
     fs::write(
         format!("{}/caniuse-browsers.json", &out_dir),
-        &serde_json::to_string(&browsers)?,
+        serde_json::to_string(&browsers)?,
     )?;
 
     let mut global_usage = data
@@ -210,7 +210,7 @@ fn build_caniuse_global() -> Result<()> {
     global_usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
     fs::write(
         format!("{}/caniuse-global-usage.json", &out_dir),
-        &serde_json::to_string(&global_usage)?,
+        serde_json::to_string(&global_usage)?,
     )?;
 
     let features_dir = format!("{}/features", &out_dir);
