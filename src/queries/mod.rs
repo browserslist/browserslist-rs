@@ -232,7 +232,7 @@ pub fn count_filter_versions(name: &str, mobile_to_desktop: bool, count: usize) 
                     .version_list
                     .iter()
                     .filter(|version| version.release_date.is_some())
-                    .map(|version| &*version.version)
+                    .map(|version| version.version)
                     .last()
                     .unwrap()
                     .parse::<f32>()

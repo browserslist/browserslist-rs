@@ -26,7 +26,7 @@ pub(super) fn browser_unbounded_range(
         .version_list
         .iter()
         .filter(|version| version.release_date.is_some())
-        .map(|version| &*version.version)
+        .map(|version| version.version)
         .filter(|v| {
             let v: Version = v.parse().unwrap_or_default();
             match comparator {

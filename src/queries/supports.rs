@@ -33,7 +33,7 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                         .iter()
                         .filter(|version| version.release_date.is_some())
                         .last()
-                        .and_then(|latest_version| versions.get(&*latest_version.version))
+                        .and_then(|latest_version| versions.get(latest_version.version))
                         .map(|flags| is_supported(*flags, include_partial))
                         .unwrap_or_default();
                 browser_stat

@@ -15,11 +15,11 @@ pub static RELEASE_SCHEDULE: Lazy<AHashMap<&'static str, (NaiveDateTime, NaiveDa
                 (
                     version,
                     (
-                        NaiveDate::parse_from_str(&start, date_format)
+                        NaiveDate::parse_from_str(start, date_format)
                             .unwrap()
                             .and_hms_opt(0, 0, 0)
                             .unwrap(),
-                        NaiveDate::parse_from_str(&end, date_format)
+                        NaiveDate::parse_from_str(end, date_format)
                             .unwrap()
                             .and_hms_opt(0, 0, 0)
                             .unwrap(),

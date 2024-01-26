@@ -12,7 +12,7 @@ pub(super) fn last_n_x_browsers(count: usize, name: &str, opts: &Opts) -> QueryR
         .filter(|version| version.release_date.is_some())
         .rev()
         .take(count)
-        .map(|version| Distrib::new(name, &*version.version))
+        .map(|version| Distrib::new(name, version.version))
         .collect();
     Ok(distribs)
 }

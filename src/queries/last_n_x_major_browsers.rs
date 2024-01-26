@@ -10,7 +10,7 @@ pub(super) fn last_n_x_major_browsers(count: usize, name: &str, opts: &Opts) -> 
         .version_list
         .iter()
         .filter(|version| version.release_date.is_some())
-        .map(|version| &*version.version)
+        .map(|version| version.version)
         .rev()
         .map(|version| version.split('.').next().unwrap())
         .dedup()
@@ -22,7 +22,7 @@ pub(super) fn last_n_x_major_browsers(count: usize, name: &str, opts: &Opts) -> 
         .version_list
         .iter()
         .filter(|version| version.release_date.is_some())
-        .map(|version| &*version.version)
+        .map(|version| version.version)
         .filter(move |version| version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum)
         .rev()
         .map(move |version| Distrib::new(name, version))
