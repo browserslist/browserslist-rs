@@ -15,7 +15,7 @@ pub(super) fn last_n_electron_major(count: usize) -> QueryResult {
         .iter()
         .filter(|(electron_version, _)| electron_version >= minimum)
         .rev()
-        .map(|(_, chromium_version)| Distrib::new("chrome", chromium_version))
+        .map(|(_, chromium_version)| Distrib::new("chrome", *chromium_version))
         .collect();
 
     Ok(distribs)

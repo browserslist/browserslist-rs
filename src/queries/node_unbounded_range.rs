@@ -14,7 +14,7 @@ pub(super) fn node_unbounded_range(comparator: Comparator, version: &str) -> Que
                 Comparator::LessOrEqual => matches!(ord, Ordering::Less | Ordering::Equal),
             }
         })
-        .map(|version| Distrib::new("node", version))
+        .map(|version| Distrib::new("node", *version))
         .collect();
     Ok(distribs)
 }

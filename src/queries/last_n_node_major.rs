@@ -25,7 +25,7 @@ pub(super) fn last_n_node_major(count: usize) -> QueryResult {
                 .unwrap_or_default()
         })
         .rev()
-        .map(|version| Distrib::new("node", version))
+        .map(|version| Distrib::new("node", *version))
         .collect();
 
     Ok(distribs)

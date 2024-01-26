@@ -6,7 +6,7 @@ pub(super) fn node_accurate(version: &str, opts: &Opts) -> QueryResult {
         .iter()
         .rev()
         .find(|v| v.split('.').zip(version.split('.')).all(|(a, b)| a == b))
-        .map(|version| vec![Distrib::new("node", version)]);
+        .map(|version| vec![Distrib::new("node", *version)]);
     if opts.ignore_unknown_versions {
         Ok(distribs.unwrap_or_default())
     } else {

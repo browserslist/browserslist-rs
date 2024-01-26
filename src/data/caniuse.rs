@@ -1,7 +1,6 @@
 use super::browser_name::BrowserNameAtom;
 use ahash::AHashMap;
 use once_cell::sync::Lazy;
-use serde::Deserialize;
 use std::borrow::Cow;
 
 pub(crate) mod features;
@@ -10,45 +9,26 @@ pub(crate) mod region;
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 pub const OP_MOB_BLINK_FIRST: u32 = 14;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct BrowserStat {
     name: BrowserNameAtom,
     pub version_list: Vec<VersionDetail>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct VersionDetail {
-    pub version: String,
+    pub version: &'static str,
     pub global_usage: f32,
     pub release_date: Option<i64>,
 }
 
 pub type CaniuseData = AHashMap<BrowserNameAtom, BrowserStat>;
 
-pub static CANIUSE_BROWSERS: Lazy<CaniuseData> = Lazy::new(|| {
-    serde_json::from_str(include_str!(concat!(
-        env!("OUT_DIR"),
-        "/caniuse-browsers.json"
-    )))
-    .unwrap()
-});
+pub static CANIUSE_BROWSERS: Lazy<CaniuseData> =
+    Lazy::new(|| include!(concat!(env!("OUT_DIR"), "/caniuse-browsers.rs")));
 
-pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(BrowserNameAtom, String, f32)>> = Lazy::new(|| {
-    serde_json::from_str::<Vec<(u8, String, f32)>>(include_str!(concat!(
-        env!("OUT_DIR"),
-        "/caniuse-global-usage.json"
-    )))
-    .unwrap()
-    .into_iter()
-    .map(|(browser, version, usage)| {
-        (
-            super::browser_name::decode_browser_name(browser),
-            version,
-            usage,
-        )
-    })
-    .collect()
-});
+pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(BrowserNameAtom, &'static str, f32)>> =
+    Lazy::new(|| include!(concat!(env!("OUT_DIR"), "/caniuse-global-usage.rs")));
 
 pub static BROWSER_VERSION_ALIASES: Lazy<
     AHashMap<BrowserNameAtom, AHashMap<&'static str, &'static str>>,
@@ -63,7 +43,7 @@ pub static BROWSER_VERSION_ALIASES: Lazy<
                     version
                         .version
                         .split_once('-')
-                        .map(|(bottom, top)| (bottom, top, version.version.as_str()))
+                        .map(|(bottom, top)| (bottom, top, version.version))
                 })
                 .fold(
                     AHashMap::<&str, &str>::new(),
@@ -96,7 +76,7 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
         .version_list
         .into_iter()
         .filter(|version| {
-            let version = &version.version;
+            let version = version.version;
             version.starts_with("2.")
                 || version.starts_with("3.")
                 || version.starts_with("4.")
@@ -207,7 +187,7 @@ pub(crate) fn normalize_version<'a>(
     {
         Some(version)
     } else if stat.version_list.len() == 1 {
-        stat.version_list.first().map(|s| s.version.as_str())
+        stat.version_list.first().map(|s| s.version)
     } else {
         None
     }

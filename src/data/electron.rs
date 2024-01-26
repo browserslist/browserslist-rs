@@ -7,13 +7,8 @@ use nom::{
 };
 use once_cell::sync::Lazy;
 
-pub static ELECTRON_VERSIONS: Lazy<Vec<(f32, String)>> = Lazy::new(|| {
-    serde_json::from_str(include_str!(concat!(
-        env!("OUT_DIR"),
-        "/electron-to-chromium.json"
-    )))
-    .unwrap()
-});
+pub static ELECTRON_VERSIONS: Lazy<Vec<(f32, &'static str)>> =
+    Lazy::new(|| include!(concat!(env!("OUT_DIR"), "/electron-to-chromium.rs")));
 
 pub(crate) fn parse_version(version: &str) -> Result<f32, Error> {
     all_consuming(terminated(float, opt(pair(char('.'), u16))))(version)

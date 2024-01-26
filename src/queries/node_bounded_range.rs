@@ -11,7 +11,7 @@ pub(super) fn node_bounded_range(from: &str, to: &str) -> QueryResult {
                 Ordering::Greater | Ordering::Equal
             ) && matches!(loose_compare(version, to), Ordering::Less | Ordering::Equal)
         })
-        .map(|version| Distrib::new("node", version))
+        .map(|version| Distrib::new("node", *version))
         .collect();
     Ok(distribs)
 }

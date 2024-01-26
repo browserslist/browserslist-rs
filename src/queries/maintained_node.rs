@@ -12,9 +12,9 @@ pub(super) fn maintained_node() -> QueryResult {
             NODE_VERSIONS
                 .iter()
                 .rev()
-                .find(|v| v.split('.').next().unwrap() == version)
+                .find(|v| v.split('.').next().unwrap() == *version)
         })
-        .map(|version| Distrib::new("node", version))
+        .map(|version| Distrib::new("node", *version))
         .collect();
     Ok(versions)
 }

@@ -86,7 +86,7 @@ fn generate_browser_names_cache() -> Result<()> {
 fn build_electron_to_chromium() -> Result<()> {
     println!("cargo:rerun-if-changed=vendor/electron-to-chromium/versions.json");
 
-    let path = format!("{}/electron-to-chromium.json", env::var("OUT_DIR")?);
+    let path = format!("{}/electron-to-chromium.rs", env::var("OUT_DIR")?);
 
     let mut data = serde_json::from_slice::<BTreeMap<String, String>>(&fs::read(format!(
         "{}/vendor/electron-to-chromium/versions.json",
@@ -98,8 +98,21 @@ fn build_electron_to_chromium() -> Result<()> {
     })
     .collect::<Vec<_>>();
     data.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap());
+    let data = data
+        .into_iter()
+        .map(|(electron_version, chromium_version)| {
+            quote! {
+                (#electron_version, #chromium_version)
+            }
+        });
 
-    fs::write(path, serde_json::to_string(&data)?)?;
+    fs::write(
+        path,
+        quote! {{
+            vec![#(#data),*]
+        }}
+        .to_string(),
+    )?;
 
     Ok(())
 }
@@ -112,21 +125,20 @@ fn build_node_versions() -> Result<()> {
 
     println!("cargo:rerun-if-changed=vendor/node-releases/data/processed/envs.json");
 
-    let path = format!("{}/node-versions.json", env::var("OUT_DIR")?);
+    let path = format!("{}/node-versions.rs", env::var("OUT_DIR")?);
 
     let releases: Vec<NodeRelease> = serde_json::from_slice(&fs::read(format!(
         "{}/vendor/node-releases/data/processed/envs.json",
         env::var("CARGO_MANIFEST_DIR")?
     ))?)?;
 
+    let versions = releases.into_iter().map(|release| release.version);
     fs::write(
         path,
-        serde_json::to_string(
-            &releases
-                .into_iter()
-                .map(|release| release.version)
-                .collect::<Vec<_>>(),
-        )?,
+        quote! {{
+            vec![#(#versions),*]
+        }}
+        .to_string(),
     )?;
 
     Ok(())
@@ -143,26 +155,30 @@ fn build_node_release_schedule() -> Result<()> {
         end: String,
     }
 
-    let path = format!("{}/node-release-schedule.json", env::var("OUT_DIR")?);
+    let path = format!("{}/node-release-schedule.rs", env::var("OUT_DIR")?);
 
     let schedule: HashMap<String, NodeRelease> = serde_json::from_slice(&fs::read(format!(
         "{}/vendor/node-releases/data/release-schedule/release-schedule.json",
         env::var("CARGO_MANIFEST_DIR")?
     ))?)?;
+    let cap = schedule.len();
+    let versions = schedule
+        .into_iter()
+        .map(|(version, NodeRelease { start, end })| {
+            let version = version.trim_start_matches('v');
+            quote! {
+                map.insert(#version, (#start, #end));
+            }
+        });
 
     fs::write(
         path,
-        serde_json::to_string(
-            &schedule
-                .into_iter()
-                .map(|(version, release)| {
-                    (
-                        version.trim_start_matches('v').to_owned(),
-                        (release.start, release.end),
-                    )
-                })
-                .collect::<HashMap<_, _>>(),
-        )?,
+        quote! {{
+            let mut map = ahash::AHashMap::with_capacity(#cap);
+            #(#versions)*
+            map
+        }}
+        .to_string(),
     )?;
 
     Ok(())
@@ -179,38 +195,66 @@ fn build_caniuse_global() -> Result<()> {
 
     let data = parse_caniuse_global()?;
 
-    let browsers = data
-        .agents
-        .iter()
-        .map(|(name, agent)| {
-            (
-                name,
-                BrowserStat {
-                    name: name.to_string(),
-                    version_list: agent.version_list.clone(),
-                },
-            )
-        })
-        .collect::<HashMap<_, _>>();
     fs::write(
-        format!("{}/caniuse-browsers.json", &out_dir),
-        serde_json::to_string(&browsers)?,
+        format!("{}/caniuse-browsers.rs", &out_dir),
+        {
+            let map_cap = data.agents.len();
+            let browser_stat = data.agents.iter().map(|(name, agent)| {
+                let detail = agent.version_list.iter().map(|version| {
+                    let ver = &version.version;
+                    let global_usage = version.global_usage;
+                    let release_date = if let Some(release_date) = version.release_date {
+                        quote! { Some(#release_date) }
+                    } else {
+                        quote! { None }
+                    };
+                    quote! {
+                        VersionDetail {
+                            version: #ver,
+                            global_usage: #global_usage,
+                            release_date: #release_date,
+                        }
+                    }
+                });
+                quote! {
+                    map.insert(BrowserNameAtom::from(#name), BrowserStat {
+                        name: BrowserNameAtom::from(#name),
+                        version_list: vec![#(#detail),*],
+                    });
+                }
+            });
+            quote! {{
+                use ahash::AHashMap;
+                let mut map = AHashMap::with_capacity(#map_cap);
+                #(#browser_stat)*
+                map
+            }}
+        }
+        .to_string(),
     )?;
 
     let mut global_usage = data
         .agents
         .iter()
         .flat_map(|(name, agent)| {
-            agent
-                .usage_global
-                .iter()
-                .map(|(version, usage)| (encode_browser_name(name), version.clone(), usage))
+            agent.usage_global.iter().map(move |(version, usage)| {
+                (
+                    usage,
+                    quote! {
+                        (BrowserNameAtom::from(#name), #version, #usage)
+                    },
+                )
+            })
         })
         .collect::<Vec<_>>();
-    global_usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
+    global_usage.sort_unstable_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
+    let push_usage = global_usage.into_iter().map(|(_, tokens)| tokens);
     fs::write(
-        format!("{}/caniuse-global-usage.json", &out_dir),
-        serde_json::to_string(&global_usage)?,
+        format!("{}/caniuse-global-usage.rs", &out_dir),
+        quote! {
+            vec![#(#push_usage),*]
+        }
+        .to_string(),
     )?;
 
     let features_dir = format!("{}/features", &out_dir);

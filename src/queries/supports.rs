@@ -52,7 +52,7 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                                 is_supported(*flags, include_partial).then_some(version)
                             })
                     })
-                    .map(move |version| Distrib::new(name, version))
+                    .map(move |version| Distrib::new(name, *version))
             })
             .collect();
         Ok(distribs)
