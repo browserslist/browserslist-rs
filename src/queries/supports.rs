@@ -78,7 +78,7 @@ mod tests {
     #[test_case("supports    rtcpeerconnection"; "case 2")]
     #[test_case("supports        arrow-functions"; "case 3")]
     #[test_case("partially supports rtcpeerconnection"; "partially")]
-    #[test_case("fully supports rtcpeerconnection"; "fully")]
+    #[test_case("fully     supports rtcpeerconnection"; "fully")]
     fn default_options(query: &str) {
         run_compare(query, &Opts::new());
     }
