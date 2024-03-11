@@ -2,25 +2,14 @@ use serde::{Deserialize, Serialize};
 
 /// Options for controlling the behavior of browserslist.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
 pub struct Opts {
-    #[serde(default)]
-    pub(crate) mobile_to_desktop: bool,
-
-    #[serde(default)]
-    pub(crate) ignore_unknown_versions: bool,
-
-    #[serde(default)]
-    pub(crate) config: Option<String>,
-
-    #[serde(default)]
-    pub(crate) env: Option<String>,
-
-    #[serde(default)]
-    pub(crate) path: Option<String>,
-
-    #[serde(default)]
-    pub(crate) throw_on_missing: bool,
+    pub mobile_to_desktop: bool,
+    pub ignore_unknown_versions: bool,
+    pub config: Option<String>,
+    pub env: Option<String>,
+    pub path: Option<String>,
+    pub throw_on_missing: bool,
 }
 
 impl Opts {
