@@ -67,19 +67,33 @@ mod tests {
     #[test_case("chromeandroid 53"; "missing mobile versions 1")]
     #[test_case("and_ff 60"; "missing mobile versions 2")]
     fn default_options(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 
     #[test_case("chromeandroid 53"; "chrome 1")]
     #[test_case("and_ff 60"; "firefox")]
     #[test_case("ie_mob 9"; "ie mobile")]
     fn mobile_to_desktop(query: &str) {
-        run_compare(query, Opts::new().mobile_to_desktop(true), None);
+        run_compare(
+            query,
+            &Opts {
+                mobile_to_desktop: true,
+                ..Default::default()
+            },
+            None,
+        );
     }
 
     #[test]
     fn ignore_unknown_versions() {
-        run_compare("IE 1, IE 9", Opts::new().ignore_unknown_versions(true), None);
+        run_compare(
+            "IE 1, IE 9",
+            &Opts {
+                ignore_unknown_versions: true,
+                ..Default::default()
+            },
+            None,
+        );
     }
 
     #[test_case(
@@ -104,6 +118,6 @@ mod tests {
         "missing mobile versions 2"
     )]
     fn invalid(query: &str, error: Error) {
-        assert_eq!(should_failed(query, &Opts::new()), error);
+        assert_eq!(should_failed(query, &Opts::default()), error);
     }
 }

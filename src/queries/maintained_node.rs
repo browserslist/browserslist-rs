@@ -28,6 +28,6 @@ mod tests {
     #[test_case("Maintained Node Versions"; "case insensitive")]
     #[test_case("maintained   node     versions"; "more spaces")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 }

@@ -54,7 +54,7 @@ mod years;
 /// ```
 /// use browserslist::{Opts, resolve};
 ///
-/// let distrib = &resolve(["firefox 93"], &Opts::new()).unwrap()[0];
+/// let distrib = &resolve(["firefox 93"], &Opts::default()).unwrap()[0];
 ///
 /// assert_eq!(distrib.name(), "firefox");
 /// assert_eq!(distrib.version(), "93");
@@ -73,7 +73,7 @@ impl Distrib {
     /// ```
     /// use browserslist::{Opts, resolve};
     ///
-    /// let distrib = &resolve(["firefox 93"], &Opts::new()).unwrap()[0];
+    /// let distrib = &resolve(["firefox 93"], &Opts::default()).unwrap()[0];
     ///
     /// assert_eq!(distrib.name(), "firefox");
     /// ```
@@ -87,7 +87,7 @@ impl Distrib {
     /// ```
     /// use browserslist::{Opts, resolve};
     ///
-    /// let distrib = &resolve(["firefox 93"], &Opts::new()).unwrap()[0];
+    /// let distrib = &resolve(["firefox 93"], &Opts::default()).unwrap()[0];
     ///
     /// assert_eq!(distrib.version(), "93");
     /// ```

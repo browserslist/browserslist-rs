@@ -14,6 +14,6 @@ mod tests {
     #[test_case("unreleased electron version"; "support pluralization")]
     #[test_case("unreleased   electron      versions"; "more spaces")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 }

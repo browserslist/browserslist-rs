@@ -22,6 +22,6 @@ mod tests {
     #[test_case("browserslist config"; "basic")]
     #[test_case("Browserslist Config"; "case insensitive")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 }

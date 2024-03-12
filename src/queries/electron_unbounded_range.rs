@@ -33,7 +33,7 @@ mod tests {
     #[test_case("Electron < 0.21"; "case insensitive")]
     #[test_case("Electron < 0.21.5"; "with semver patch version")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 
     #[test_case(
@@ -45,6 +45,6 @@ mod tests {
         "malformed version 2"
     )]
     fn invalid(query: &str, error: Error) {
-        assert_eq!(should_failed(query, &Opts::new()), error);
+        assert_eq!(should_failed(query, &Opts::default()), error);
     }
 }

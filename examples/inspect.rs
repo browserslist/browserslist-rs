@@ -17,9 +17,11 @@ fn main() {
 
     match resolve(
         &args.queries,
-        Opts::new()
-            .mobile_to_desktop(args.mobile_to_desktop)
-            .ignore_unknown_versions(args.ignore_unknown_versions),
+        &Opts {
+            mobile_to_desktop: args.mobile_to_desktop,
+            ignore_unknown_versions: args.ignore_unknown_versions,
+            ..Default::default()
+        },
     ) {
         Ok(versions) => {
             for version in versions {

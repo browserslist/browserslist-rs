@@ -29,7 +29,7 @@ mod tests {
     #[test_case("electron 4.0.4"; "with semver patch version")]
     #[test_case("Electron 1.1"; "case insensitive")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 
     #[test_case(
@@ -53,6 +53,6 @@ mod tests {
         "malformed version 4"
     )]
     fn invalid(query: &str, error: Error) {
-        assert_eq!(should_failed(query, &Opts::new()), error);
+        assert_eq!(should_failed(query, &Opts::default()), error);
     }
 }

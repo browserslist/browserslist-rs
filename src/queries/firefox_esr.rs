@@ -16,6 +16,6 @@ mod tests {
     #[test_case("fx esr"; "fx")]
     #[test_case("Fx ESR"; "fx case insensitive")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 }

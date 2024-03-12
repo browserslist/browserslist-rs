@@ -44,11 +44,18 @@ mod tests {
     #[test_case("last 2 bb major versions"; "non-sequential version numbers")]
     #[test_case("last 3 bb major versions"; "more versions than have been released")]
     fn default_options(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 
     #[test]
     fn mobile_to_desktop() {
-        run_compare("last 2 android major versions", Opts::new().mobile_to_desktop(true), None);
+        run_compare(
+            "last 2 android major versions",
+            &Opts {
+                mobile_to_desktop: true,
+                ..Default::default()
+            },
+            None,
+        );
     }
 }

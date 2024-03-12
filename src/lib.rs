@@ -23,14 +23,14 @@
 //! ```
 //! use browserslist::{Distrib, Opts, resolve, Error};
 //!
-//! let distribs = resolve(["ie <= 6"], &Opts::new()).unwrap();
+//! let distribs = resolve(["ie <= 6"], &Opts::default()).unwrap();
 //! assert_eq!(distribs[0].name(), "ie");
 //! assert_eq!(distribs[0].version(), "6");
 //! assert_eq!(distribs[1].name(), "ie");
 //! assert_eq!(distribs[1].version(), "5.5");
 //!
 //! assert_eq!(
-//!     resolve(["yuru 1.0"], &Opts::new()),
+//!     resolve(["yuru 1.0"], &Opts::default()),
 //!     Err(Error::BrowserNotFound(String::from("yuru")))
 //! );
 //! ```
@@ -43,7 +43,7 @@
 //! ```
 //! use browserslist::{Distrib, Opts, resolve, Error};
 //!
-//! let distribs = resolve(["ie <= 6"], &Opts::new()).unwrap();
+//! let distribs = resolve(["ie <= 6"], &Opts::default()).unwrap();
 //! assert_eq!(
 //!     distribs.into_iter().map(|d| d.to_string()).collect::<Vec<_>>(),
 //!     vec![String::from("ie 6"), String::from("ie 5.5")]
@@ -87,7 +87,7 @@ mod wasm;
 /// ```
 /// use browserslist::{Distrib, Opts, resolve};
 ///
-/// let distribs = resolve(["ie <= 6"], &Opts::new()).unwrap();
+/// let distribs = resolve(["ie <= 6"], &Opts::default()).unwrap();
 /// assert_eq!(distribs[0].name(), "ie");
 /// assert_eq!(distribs[0].version(), "6");
 /// assert_eq!(distribs[1].name(), "ie");
@@ -157,7 +157,7 @@ where
 /// use browserslist::{Opts, execute};
 ///
 /// // when no config found, it use `defaults` query
-/// assert!(!execute(&Opts::new()).unwrap().is_empty());
+/// assert!(!execute(&Opts::default()).unwrap().is_empty());
 /// ```
 pub fn execute(opts: &Opts) -> Result<Vec<Distrib>, Error> {
     resolve(config::load(opts)?, opts)

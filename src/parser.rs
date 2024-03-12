@@ -487,6 +487,6 @@ mod tests {
     #[test_case("ie < 11 or not ie 7"; "or with not")]
     #[test_case("last 2 versions and > 1%"; "swc issue 4871")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 }

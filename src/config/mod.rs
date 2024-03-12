@@ -218,11 +218,11 @@ mod tests {
 
     #[test]
     fn load_config() {
-        assert_eq!(&*load(&Opts::new()).unwrap(), ["defaults"]);
+        assert_eq!(&*load(&Opts::default()).unwrap(), ["defaults"]);
 
         // read queries from env
         set_var("BROWSERSLIST", "last 2 versions");
-        assert_eq!(&*load(&Opts::new()).unwrap(), ["last 2 versions"]);
+        assert_eq!(&*load(&Opts::default()).unwrap(), ["last 2 versions"]);
         remove_var("BROWSERSLIST");
 
         // specify config file by env
@@ -230,21 +230,24 @@ mod tests {
         set_var("BROWSERSLIST_CONFIG", &tmp);
 
         assert_eq!(
-            load(&Opts::new()).unwrap_err(),
+            load(&Opts::default()).unwrap_err(),
             Error::FailedToReadConfig(format!("{}", tmp.display()))
         );
 
         fs::write(&tmp, "chrome > 90").unwrap();
-        assert_eq!(load(&Opts::new()).as_deref().unwrap(), ["chrome > 90"]);
+        assert_eq!(load(&Opts::default()).as_deref().unwrap(), ["chrome > 90"]);
         // options `config` should have higher priority than environment variable
         set_var("BROWSERSLIST_CONFIG", "./browserslist");
 
         // specify config file by options
         fs::write(&tmp, "firefox > 90").unwrap();
         assert_eq!(
-            load(Opts::new().config(tmp.to_str().unwrap()))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                config: Some(tmp.to_str().unwrap().into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["firefox > 90"]
         );
         fs::remove_file(&tmp).unwrap();
@@ -260,9 +263,12 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            load(Opts::new().config(tmp.to_str().unwrap()))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                config: Some(tmp.to_str().unwrap().into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["node > 10"]
         );
 
@@ -276,9 +282,12 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            load(Opts::new().config(tmp.to_str().unwrap()))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                config: Some(tmp.to_str().unwrap().into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["node > 7.4"]
         );
 
@@ -297,9 +306,12 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            load(Opts::new().config(tmp.to_str().unwrap()))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                config: Some(tmp.to_str().unwrap().into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["> 1%", "not dead"]
         );
 
@@ -307,22 +319,32 @@ mod tests {
         set_var("BROWSERSLIST_ENV", "modern");
         set_var("NODE_ENV", "ssr");
         assert_eq!(
-            load(Opts::new().config(tmp.to_str().unwrap()).env("xp"))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                config: Some(tmp.to_str().unwrap().into()),
+                env: Some("xp".into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["chrome >= 49"]
         );
         assert_eq!(
-            load(Opts::new().config(tmp.to_str().unwrap()))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                config: Some(tmp.to_str().unwrap().into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["last 1 version"]
         );
         remove_var("BROWSERSLIST_ENV");
         assert_eq!(
-            load(Opts::new().config(tmp.to_str().unwrap()))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                config: Some(tmp.to_str().unwrap().into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["node >= 12"]
         );
         remove_var("NODE_ENV");
@@ -340,17 +362,25 @@ last 1 version
         )
         .unwrap();
         assert_eq!(
-            load(Opts::new().config(tmp.to_str().unwrap()).env("development"))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                config: Some(tmp.to_str().unwrap().into()),
+                env: Some("development".into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["last 1 version"]
         );
 
         fs::write(&tmp, "> 1%, not dead").unwrap();
         assert_eq!(
-            load(Opts::new().config(tmp.to_str().unwrap()).env("development"))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                config: Some(tmp.to_str().unwrap().into()),
+                env: Some("development".into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["> 1%, not dead"]
         );
 
@@ -360,19 +390,31 @@ last 1 version
         let tmp_dir = temp_dir();
         let tmp = tmp_dir.to_str().unwrap();
         assert_eq!(
-            load(Opts::new().path(tmp)).unwrap_err(),
+            load(&Opts {
+                path: Some(tmp.into()),
+                ..Default::default()
+            })
+            .unwrap_err(),
             Error::DuplicatedConfig(tmp.to_string(), ERR_DUP_PLAIN, ERR_DUP_PKG)
         );
 
         fs::write(tmp_dir.join(".browserslistrc"), "electron > 12.0").unwrap();
         assert_eq!(
-            load(Opts::new().path(tmp)).unwrap_err(),
+            load(&Opts {
+                path: Some(tmp.into()),
+                ..Default::default()
+            })
+            .unwrap_err(),
             Error::DuplicatedConfig(tmp.to_string(), ERR_DUP_PLAIN, ERR_DUP_RC)
         );
 
         fs::remove_file(tmp_dir.join("browserslist")).unwrap();
         assert_eq!(
-            load(Opts::new().path(tmp)).unwrap_err(),
+            load(&Opts {
+                path: Some(tmp.into()),
+                ..Default::default()
+            })
+            .unwrap_err(),
             Error::DuplicatedConfig(tmp.to_string(), ERR_DUP_RC, ERR_DUP_PKG)
         );
 
@@ -381,17 +423,23 @@ last 1 version
 
         fs::write(temp_dir().join("browserslist/1/browserslist"), "node >= 16").unwrap();
         assert_eq!(
-            load(Opts::new().path(tmp_dir.to_str().unwrap()))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                path: Some(tmp_dir.to_str().unwrap().into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["node >= 16"]
         );
 
         fs::write(temp_dir().join("browserslist/1/2/package.json"), "{}").unwrap();
         assert_eq!(
-            load(Opts::new().path(tmp_dir.to_str().unwrap()))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                path: Some(tmp_dir.to_str().unwrap().into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["node >= 16"]
         );
 
@@ -400,30 +448,33 @@ last 1 version
         fs::remove_file(tmp.join("browserslist/1/2/package.json")).unwrap();
         fs::remove_file(tmp.join("browserslist/1/browserslist")).unwrap();
         assert_eq!(
-            load(Opts::new().path(tmp_dir.to_str().unwrap()))
-                .as_deref()
-                .unwrap(),
+            load(&Opts {
+                path: Some(tmp_dir.to_str().unwrap().into()),
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap(),
             ["electron > 12.0"]
         );
 
         fs::remove_dir_all(tmp.join("browserslist")).unwrap();
 
         // load config from current directory if no options set
-        assert_eq!(&*load(&Opts::new()).unwrap(), ["defaults"]);
+        assert_eq!(&*load(&Opts::default()).unwrap(), ["defaults"]);
         let original_cwd = env::current_dir().unwrap();
         fs::write(tmp.join(".browserslistrc"), "not dead").unwrap();
         env::set_current_dir(&tmp).unwrap();
-        assert_eq!(load(&Opts::new()).as_deref().unwrap(), ["not dead"]);
+        assert_eq!(load(&Opts::default()).as_deref().unwrap(), ["not dead"]);
         env::set_current_dir(original_cwd).unwrap();
 
         // throw if env is missing
         assert_eq!(
-            load(
-                Opts::new()
-                    .env("production")
-                    .path(tmp.to_str().unwrap())
-                    .throw_on_missing(true)
-            )
+            load(&Opts {
+                env: Some("production".into()),
+                path: Some(tmp.to_str().unwrap().into()),
+                throw_on_missing: true,
+                ..Default::default()
+            })
             .unwrap_err(),
             Error::MissingEnv("production".into())
         );
@@ -431,24 +482,24 @@ last 1 version
         // don't throw if existed
         fs::write(tmp.join(".browserslistrc"), "[production]\nnot dead").unwrap();
         assert_eq!(
-            load(
-                Opts::new()
-                    .env("production")
-                    .path(tmp.to_str().unwrap())
-                    .throw_on_missing(true)
-            )
+            load(&Opts {
+                env: Some("production".into()),
+                path: Some(tmp.to_str().unwrap().into()),
+                throw_on_missing: true,
+                ..Default::default()
+            })
             .as_deref()
             .unwrap(),
             ["not dead"]
         );
 
         // don't throw if env is `defaults`
-        assert!(load(
-            Opts::new()
-                .env("defaults")
-                .path(tmp.to_str().unwrap())
-                .throw_on_missing(true)
-        )
+        assert!(load(&Opts {
+            env: Some("defaults".into()),
+            path: Some(tmp.to_str().unwrap().into()),
+            throw_on_missing: true,
+            ..Default::default()
+        })
         .as_deref()
         .unwrap()
         .is_empty());

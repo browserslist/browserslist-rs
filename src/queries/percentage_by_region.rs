@@ -50,13 +50,13 @@ mod tests {
     #[test_case(">10% in US"; "no space")]
     #[test_case("> 1% in CN"; "normalize incorrect caniuse versions for and-prefixed")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 
     #[test]
     fn invalid() {
         assert_eq!(
-            should_failed("> 1% in XX", &Opts::new()),
+            should_failed("> 1% in XX", &Opts::default()),
             Error::UnknownRegion(String::from("XX"))
         );
     }

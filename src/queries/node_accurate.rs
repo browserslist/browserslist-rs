@@ -25,7 +25,7 @@ mod tests {
     #[test_case("node 5.1"; "without semver patch")]
     #[test_case("node 5"; "semver major only")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 
     #[test_case(
@@ -45,11 +45,18 @@ mod tests {
         "malformed version 3"
     )]
     fn invalid(query: &str, error: Error) {
-        assert_eq!(should_failed(query, &Opts::new()), error);
+        assert_eq!(should_failed(query, &Opts::default()), error);
     }
 
     #[test]
     fn ignore_unknown_versions() {
-        run_compare("node 3", Opts::new().ignore_unknown_versions(true), None);
+        run_compare(
+            "node 3",
+            &Opts {
+                ignore_unknown_versions: true,
+                ..Default::default()
+            },
+            None,
+        );
     }
 }

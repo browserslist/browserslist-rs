@@ -20,6 +20,6 @@ mod tests {
     #[test_case("last 2 Electron versions"; "case insensitive")]
     #[test_case("last 2 electron version"; "support pluralization")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 }

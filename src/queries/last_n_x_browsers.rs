@@ -34,6 +34,6 @@ mod tests {
     #[test_case("last 4 op_mob versions"; "op_mob 1")]
     #[test_case("last 5 op_mob versions"; "op_mob 2")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 }

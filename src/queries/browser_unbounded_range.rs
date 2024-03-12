@@ -57,12 +57,19 @@ mod tests {
     #[test_case("ie<=9"; "no spaces")]
     #[test_case("and_qq > 0"; "browser with one version")]
     fn default_options(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 
     #[test_case("chromeandroid >= 52 and chromeandroid < 54"; "chrome")]
     fn mobile_to_desktop(query: &str) {
-        run_compare(query, Opts::new().mobile_to_desktop(true), None);
+        run_compare(
+            query,
+            &Opts {
+                mobile_to_desktop: true,
+                ..Default::default()
+            },
+            None,
+        );
     }
 
     #[test_case(
@@ -70,6 +77,6 @@ mod tests {
         "unknown browser"
     )]
     fn invalid(query: &str, error: Error) {
-        assert_eq!(should_failed(query, &Opts::new()), error);
+        assert_eq!(should_failed(query, &Opts::default()), error);
     }
 }

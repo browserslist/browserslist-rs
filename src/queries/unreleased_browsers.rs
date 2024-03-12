@@ -28,6 +28,6 @@ mod tests {
     #[test_case("Unreleased Versions"; "case insensitive")]
     #[test_case("unreleased        versions"; "more spaces")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 }

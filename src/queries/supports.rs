@@ -80,19 +80,26 @@ mod tests {
     #[test_case("partially supports rtcpeerconnection"; "partially")]
     #[test_case("fully     supports rtcpeerconnection"; "fully")]
     fn default_options(query: &str) {
-        run_compare(query, &Opts::new(), None);
+        run_compare(query, &Opts::default(), None);
     }
 
     #[test_case("supports filesystem"; "case 1")]
     #[test_case("supports  font-smooth"; "case 2")]
     fn mobile_to_desktop(query: &str) {
-        run_compare(query, Opts::new().mobile_to_desktop(true), None);
+        run_compare(
+            query,
+            &Opts {
+                mobile_to_desktop: true,
+                ..Default::default()
+            },
+            None,
+        );
     }
 
     #[test]
     fn invalid() {
         assert_eq!(
-            should_failed("supports xxxyyyzzz", &Opts::new()),
+            should_failed("supports xxxyyyzzz", &Opts::default()),
             Error::UnknownBrowserFeature(String::from("xxxyyyzzz"))
         );
     }
