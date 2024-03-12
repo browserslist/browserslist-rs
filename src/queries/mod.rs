@@ -45,6 +45,7 @@ mod unreleased_electron;
 mod unreleased_x_browsers;
 mod years;
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 /// Representation of browser name (or `node`) and its version.
 ///
 /// When converting it to string, it will be formatted as the output of
@@ -58,7 +59,6 @@ mod years;
 /// assert_eq!(distrib.name(), "firefox");
 /// assert_eq!(distrib.version(), "93");
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Distrib(&'static str, Cow<'static, str>);
 
 impl Distrib {
@@ -67,6 +67,7 @@ impl Distrib {
         Self(name, version.into())
     }
 
+    #[inline]
     /// Return browser name, or `node`.
     ///
     /// ```
@@ -76,11 +77,11 @@ impl Distrib {
     ///
     /// assert_eq!(distrib.name(), "firefox");
     /// ```
-    #[inline]
     pub fn name(&self) -> &str {
         self.0
     }
 
+    #[inline]
     /// Return version string.
     ///
     /// ```
@@ -90,7 +91,6 @@ impl Distrib {
     ///
     /// assert_eq!(distrib.version(), "93");
     /// ```
-    #[inline]
     pub fn version(&self) -> &str {
         &self.1
     }

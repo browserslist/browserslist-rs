@@ -146,6 +146,7 @@ where
     Ok(distribs)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Load queries from configuration with environment information,
 /// then resolve those queries.
 ///
@@ -158,7 +159,6 @@ where
 /// // when no config found, it use `defaults` query
 /// assert!(!execute(&Opts::new()).unwrap().is_empty());
 /// ```
-#[cfg(not(target_arch = "wasm32"))]
 pub fn execute(opts: &Opts) -> Result<Vec<Distrib>, Error> {
     resolve(config::load(opts)?, opts)
 }
