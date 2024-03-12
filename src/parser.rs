@@ -429,6 +429,12 @@ fn parse_single_query(input: &str) -> PResult<SingleQuery> {
 }
 
 pub(crate) fn parse_browserslist_query(input: &str) -> PResult<Vec<SingleQuery>> {
+    let input = input.trim();
+    // `many0` doesn't allow empty input, so we detect it here
+    if input.is_empty() {
+        return Ok(("", vec![]));
+    }
+
     map(
         all_consuming(tuple((
             consumed(pair(
@@ -450,7 +456,7 @@ pub(crate) fn parse_browserslist_query(input: &str) -> PResult<Vec<SingleQuery>>
             );
             queries
         },
-    )(input.trim())
+    )(input)
 }
 
 #[cfg(test)]
@@ -458,6 +464,7 @@ mod tests {
     use crate::{opts::Opts, test::run_compare};
     use test_case::test_case;
 
+    #[test_case(""; "empty")]
     #[test_case("ie >= 6, ie <= 7"; "comma")]
     #[test_case("ie >= 6 and ie <= 7"; "and")]
     #[test_case("ie < 11 and not ie 7"; "and with not")]
