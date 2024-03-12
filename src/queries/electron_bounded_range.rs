@@ -41,7 +41,7 @@ mod tests {
     #[test_case("Electron 0.37-1.0"; "case insensitive")]
     #[test_case("electron 0.37.5-1.0.3"; "with semver patch version")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 
     #[test_case(

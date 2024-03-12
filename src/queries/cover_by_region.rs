@@ -40,6 +40,6 @@ mod tests {
     #[test_case("cover 0.1% in alt-eu"; "country alt")]
     #[test_case("Cover 0.1% in Alt-EU"; "country alt case insensitive")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 }

@@ -24,6 +24,6 @@ mod tests {
     #[test_case("unreleased firefox version"; "support pluralization")]
     #[test_case("unreleased    safari     versions"; "more spaces")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 }

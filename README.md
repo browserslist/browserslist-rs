@@ -44,7 +44,6 @@ The features below aren't supported currently:
 
 -   Custom usage like `> 0.5% in my stats`.
 -   Custom usage like `cover 99.5% in my stats`.
--   Extending custom config like `extends browserslist-config-mycompany`.
 
 ## Credits
 

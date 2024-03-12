@@ -67,19 +67,19 @@ mod tests {
     #[test_case("chromeandroid 53"; "missing mobile versions 1")]
     #[test_case("and_ff 60"; "missing mobile versions 2")]
     fn default_options(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 
     #[test_case("chromeandroid 53"; "chrome 1")]
     #[test_case("and_ff 60"; "firefox")]
     #[test_case("ie_mob 9"; "ie mobile")]
     fn mobile_to_desktop(query: &str) {
-        run_compare(query, Opts::new().mobile_to_desktop(true));
+        run_compare(query, Opts::new().mobile_to_desktop(true), None);
     }
 
     #[test]
     fn ignore_unknown_versions() {
-        run_compare("IE 1, IE 9", Opts::new().ignore_unknown_versions(true));
+        run_compare("IE 1, IE 9", Opts::new().ignore_unknown_versions(true), None);
     }
 
     #[test_case(

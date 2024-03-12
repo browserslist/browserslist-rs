@@ -10,6 +10,9 @@ pub struct Opts {
     pub env: Option<String>,
     pub path: Option<String>,
     pub throw_on_missing: bool,
+
+    /// Disable security checks for `extends` query.
+    pub dangerous_extend: bool,
 }
 
 impl Opts {

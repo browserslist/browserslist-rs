@@ -80,13 +80,13 @@ mod tests {
     #[test_case("partially supports rtcpeerconnection"; "partially")]
     #[test_case("fully     supports rtcpeerconnection"; "fully")]
     fn default_options(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 
     #[test_case("supports filesystem"; "case 1")]
     #[test_case("supports  font-smooth"; "case 2")]
     fn mobile_to_desktop(query: &str) {
-        run_compare(query, Opts::new().mobile_to_desktop(true));
+        run_compare(query, Opts::new().mobile_to_desktop(true), None);
     }
 
     #[test]

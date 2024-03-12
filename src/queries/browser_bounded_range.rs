@@ -43,13 +43,13 @@ mod tests {
     #[test_case("ie 1-12"; "out of range")]
     #[test_case("android 4.3-37"; "android")]
     fn default_options(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 
     #[test_case("and_chr 52-53"; "chrome")]
     #[test_case("android 4.4-38"; "android")]
     fn mobile_to_desktop(query: &str) {
-        run_compare(query, Opts::new().mobile_to_desktop(true));
+        run_compare(query, Opts::new().mobile_to_desktop(true), None);
     }
 
     #[test_case(

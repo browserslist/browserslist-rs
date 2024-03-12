@@ -37,7 +37,7 @@ mod tests {
     #[test_case("node > 10.12.1"; "with semver patch")]
     #[test_case("node >= 8.8.8.8"; "malformed version")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 
     #[test_case(

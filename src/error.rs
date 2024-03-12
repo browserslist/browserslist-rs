@@ -37,6 +37,10 @@ pub enum Error {
     #[error("current environment for querying `current node` is not supported")]
     UnsupportedCurrentNode,
 
+    #[error("current environment for querying `extends ...` is not supported")]
+    /// Current environment doesn't support querying `extends`.
+    UnsupportedExtends,
+
     /// Unknown browser feature.
     #[error("unknown browser feature: '{0}'")]
     UnknownBrowserFeature(String),
@@ -72,6 +76,14 @@ pub enum Error {
     /// Missing config corresponding to specific environment.
     #[error("missing config for Browserslist environment '{0}'")]
     MissingEnv(String),
+
+    #[error("invalid extend name: {0}")]
+    /// invalid extend name
+    InvalidExtendName(&'static str),
+
+    #[error("failed to resolve '{0}' package in `extends` query")]
+    /// Failed to resolve package in `extends` query.
+    FailedToResolveExtend(String),
 }
 
 impl<'a> From<nom::Err<nom::error::Error<&'a str>>> for Error {

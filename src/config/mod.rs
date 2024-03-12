@@ -27,7 +27,7 @@ pub(crate) struct PartialConfig {
 #[derive(Debug, Deserialize)]
 #[cfg_attr(test, derive(Serialize))]
 #[serde(untagged)]
-enum PkgConfig {
+pub(crate) enum PkgConfig {
     Str(String),
     Arr(Vec<String>),
     Obj(Config),
@@ -96,6 +96,10 @@ pub fn load(opts: &Opts) -> Result<Vec<String>, Error> {
             }
         }
     }
+}
+
+pub fn load_with_config(config: PkgConfig, opts: &Opts) -> Result<Vec<String>, Error> {
+    pick_queries_by_env(config, &get_env(opts), opts.throw_on_missing)
 }
 
 fn find_config<P: AsRef<Path>>(path: P) -> Result<Either<String, PkgConfig>, Error> {

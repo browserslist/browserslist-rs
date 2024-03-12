@@ -34,7 +34,7 @@ mod tests {
     #[test_case("node 6.6.4    -    7.7.5"; "more spaces 3")]
     #[test_case("node 8.8.8.8-9.9.9.9"; "malformed version")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 
     #[test_case(

@@ -46,6 +46,7 @@ pub enum QueryAtom<'a> {
     BrowserslistConfig,
     Defaults,
     Dead,
+    Extends(&'a str),
     Unknown(&'a str), // unnecessary, but for better error report
 }
 
@@ -356,6 +357,18 @@ fn parse_dead(input: &str) -> PResult<QueryAtom> {
     value(QueryAtom::Dead, tag_no_case("dead"))(input)
 }
 
+fn parse_extends(input: &str) -> PResult<QueryAtom> {
+    map(
+        preceded(
+            terminated(tag_no_case("extends"), space1),
+            take_while1(|c: char| {
+                c.is_alphanumeric() || c == '-' || c == '_' || c == '@' || c == '/' || c == '.'
+            }),
+        ),
+        QueryAtom::Extends,
+    )(input)
+}
+
 fn parse_unknown(input: &str) -> PResult<QueryAtom> {
     map(
         recognize(many_till(anychar, parse_composition_operator)),
@@ -383,6 +396,7 @@ fn parse_query_atom(input: &str) -> PResult<QueryAtom> {
         parse_browserslist_config,
         parse_defaults,
         parse_dead,
+        parse_extends,
         parse_unknown,
     ))(input)
 }
@@ -473,6 +487,6 @@ mod tests {
     #[test_case("ie < 11 or not ie 7"; "or with not")]
     #[test_case("last 2 versions and > 1%"; "swc issue 4871")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 }

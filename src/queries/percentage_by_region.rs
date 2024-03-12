@@ -50,7 +50,7 @@ mod tests {
     #[test_case(">10% in US"; "no space")]
     #[test_case("> 1% in CN"; "normalize incorrect caniuse versions for and-prefixed")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 
     #[test]

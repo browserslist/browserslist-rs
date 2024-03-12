@@ -36,6 +36,6 @@ mod tests {
     #[test_case("Last 5 Years"; "case insensitive")]
     #[test_case("last    2     years"; "more spaces")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 }

@@ -29,7 +29,7 @@ mod tests {
     #[test_case("electron 4.0.4"; "with semver patch version")]
     #[test_case("Electron 1.1"; "case insensitive")]
     fn valid(query: &str) {
-        run_compare(query, &Opts::new());
+        run_compare(query, &Opts::new(), None);
     }
 
     #[test_case(

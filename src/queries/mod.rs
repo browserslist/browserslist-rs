@@ -20,6 +20,7 @@ mod defaults;
 mod electron_accurate;
 mod electron_bounded_range;
 mod electron_unbounded_range;
+mod extends;
 mod firefox_esr;
 mod last_n_browsers;
 mod last_n_electron;
@@ -216,6 +217,7 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
         QueryAtom::BrowserslistConfig => browserslist_config::browserslist_config(opts),
         QueryAtom::Defaults => defaults::defaults(opts),
         QueryAtom::Dead => dead::dead(opts),
+        QueryAtom::Extends(pkg) => extends::extends(pkg, opts),
         QueryAtom::Unknown(query) => Err(Error::UnknownQuery(query.into())),
     }
 }
