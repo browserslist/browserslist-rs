@@ -84,6 +84,10 @@ pub enum Error {
     #[error("failed to resolve '{0}' package in `extends` query")]
     /// Failed to resolve package in `extends` query.
     FailedToResolveExtend(String),
+
+    #[error("year overflow")]
+    /// Year overflow.
+    YearOverflow,
 }
 
 impl<'a> From<nom::Err<nom::error::Error<&'a str>>> for Error {

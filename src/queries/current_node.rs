@@ -19,6 +19,7 @@ pub(super) fn current_node() -> QueryResult {
             return Ok(vec![Distrib::new("node", version)]);
         }
 
+        #[cfg(not(feature = "wasm_bindgen"))]
         Err(Error::UnsupportedCurrentNode)
     }
 

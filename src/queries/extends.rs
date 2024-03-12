@@ -10,7 +10,7 @@ pub(super) fn extends(pkg: &str, opts: &Opts) -> QueryResult {
     if opts.dangerous_extend {
         Err(Error::UnsupportedExtends)
     } else {
-        check_extend_name(pkg)
+        check_extend_name(pkg).map(|_| Default::default())
     }
 }
 
