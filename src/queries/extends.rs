@@ -45,8 +45,7 @@ fn check_extend_name(pkg: &str) -> Result<(), Error> {
         .and_then(|s| s.find('/').and_then(|i| s.get(i + 1..)))
         .unwrap_or(pkg);
     if !unscoped.starts_with("browserslist-config-")
-        && pkg.starts_with('@')
-        && unscoped != "browserslist-config"
+        && !(pkg.starts_with('@') && unscoped == "browserslist-config")
     {
         return Err(Error::InvalidExtendName(
             "Browserslist config needs `browserslist-config-` prefix.",
@@ -153,10 +152,13 @@ mod tests {
         clean("pkg");
     }
 
-    #[test_case("browserslist-config-wrong", json!("some string"), "extends browserslist-config-wrong"; "empty export")]
+    #[test_case("browserslist-config-wrong", json!(null), "extends browserslist-config-wrong"; "empty export")]
     fn invalid(pkg: &str, value: serde_json::Value, query: &str) {
         mock(pkg, value);
-        should_failed(query, &Default::default());
+        assert!(matches!(
+            should_failed(query, &Default::default()),
+            Error::FailedToResolveExtend(..)
+        ));
         clean(pkg);
     }
 
@@ -164,6 +166,9 @@ mod tests {
     #[test_case("extends browserslist-config-package/../something"; "has dot")]
     #[test_case("extends browserslist-config-test/node_modules/a"; "has node_modules")]
     fn invalid_name(query: &str) {
-        should_failed(query, &Default::default());
+        assert!(matches!(
+            should_failed(query, &Default::default()),
+            Error::InvalidExtendName(..)
+        ));
     }
 }
