@@ -25,10 +25,10 @@ pub struct VersionDetail {
 pub type CaniuseData = AHashMap<BrowserNameAtom, BrowserStat>;
 
 pub static CANIUSE_BROWSERS: Lazy<CaniuseData> =
-    Lazy::new(|| include!(concat!(env!("OUT_DIR"), "/caniuse-browsers.rs")));
+    Lazy::new(|| include!("../generated/caniuse-browsers.rs"));
 
 pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(BrowserNameAtom, &'static str, f32)>> =
-    Lazy::new(|| include!(concat!(env!("OUT_DIR"), "/caniuse-global-usage.rs")));
+    Lazy::new(|| include!("../generated/caniuse-global-usage.rs"));
 
 pub static BROWSER_VERSION_ALIASES: Lazy<
     AHashMap<BrowserNameAtom, AHashMap<&'static str, &'static str>>,

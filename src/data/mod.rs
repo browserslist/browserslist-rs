@@ -5,7 +5,7 @@ pub(crate) mod node;
 #[doc(hidden)]
 #[allow(unused)]
 pub(crate) mod browser_name {
-    include!(concat!(env!("OUT_DIR"), "/browser_name_atom.rs"));
+    include!("../generated/browser_name_atom.rs");
 
     pub fn decode_browser_name(id: u8) -> BrowserNameAtom {
         match id {

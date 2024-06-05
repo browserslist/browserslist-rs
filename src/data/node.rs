@@ -3,13 +3,13 @@ use chrono::{NaiveDate, NaiveDateTime};
 use once_cell::sync::Lazy;
 
 pub static NODE_VERSIONS: Lazy<Vec<&'static str>> =
-    Lazy::new(|| include!(concat!(env!("OUT_DIR"), "/node-versions.rs")));
+    Lazy::new(|| include!("../generated/node-versions.rs"));
 
 pub static RELEASE_SCHEDULE: Lazy<AHashMap<&'static str, (NaiveDateTime, NaiveDateTime)>> =
     Lazy::new(|| {
         let date_format = "%Y-%m-%d";
 
-        include!(concat!(env!("OUT_DIR"), "/node-release-schedule.rs"))
+        include!("../generated/node-release-schedule.rs")
             .into_iter()
             .map(|(version, (start, end))| {
                 (

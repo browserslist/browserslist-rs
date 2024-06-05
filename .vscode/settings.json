@@ -5,5 +5,8 @@
     "**/bower_components": true,
     "**/*.code-search": true,
     "vendor/**": true
-  }
+  },
+  "rust-analyzer.files.excludeDirs": [
+    "src/generated"
+  ]
 }
