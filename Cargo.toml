@@ -51,7 +51,6 @@ thiserror = "1.0"
 
 [dev-dependencies]
 clap = { version = "4.4", features = ["derive"] }
-criterion = "0.5"
 test-case = "3.3"
 
 [build-dependencies]
@@ -67,7 +66,3 @@ getrandom = { version = "0.2", optional = true }
 js-sys = { version = "0.3", optional = true }
 serde-wasm-bindgen = { version = "0.4", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
-
-[[bench]]
-name = "resolve"
-harness = false

@@ -185,12 +185,6 @@ fn build_node_release_schedule() -> Result<()> {
 }
 
 fn build_caniuse_global() -> Result<()> {
-    #[derive(Serialize)]
-    struct BrowserStat {
-        name: String,
-        version_list: Vec<VersionDetail>,
-    }
-
     let out_dir = env::var("OUT_DIR")?;
 
     let data = parse_caniuse_global()?;
