@@ -1,4 +1,3 @@
-use super::browser_name::BrowserNameAtom;
 use ahash::AHashMap;
 use once_cell::sync::Lazy;
 use std::borrow::Cow;
@@ -11,7 +10,7 @@ pub const OP_MOB_BLINK_FIRST: u32 = 14;
 
 #[derive(Clone, Debug)]
 pub struct BrowserStat {
-    name: BrowserNameAtom,
+    name: &'static str,
     pub version_list: Vec<VersionDetail>,
 }
 
@@ -22,16 +21,16 @@ pub struct VersionDetail {
     pub release_date: Option<i64>,
 }
 
-pub type CaniuseData = AHashMap<BrowserNameAtom, BrowserStat>;
+pub type CaniuseData = AHashMap<&'static str, BrowserStat>;
 
 pub static CANIUSE_BROWSERS: Lazy<CaniuseData> =
     Lazy::new(|| include!("../generated/caniuse-browsers.rs"));
 
-pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(BrowserNameAtom, &'static str, f32)>> =
+pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(&'static str, &'static str, f32)>> =
     Lazy::new(|| include!("../generated/caniuse-global-usage.rs"));
 
 pub static BROWSER_VERSION_ALIASES: Lazy<
-    AHashMap<BrowserNameAtom, AHashMap<&'static str, &'static str>>,
+    AHashMap<&'static str, AHashMap<&'static str, &'static str>>,
 > = Lazy::new(|| {
     let mut aliases = CANIUSE_BROWSERS
         .iter()
@@ -56,11 +55,11 @@ pub static BROWSER_VERSION_ALIASES: Lazy<
             if aliases.is_empty() {
                 None
             } else {
-                Some((name.clone(), aliases))
+                Some((*name, aliases))
             }
         })
-        .collect::<AHashMap<BrowserNameAtom, _>>();
-    let _ = aliases.insert("op_mob".into(), {
+        .collect::<AHashMap<&'static str, _>>();
+    let _ = aliases.insert("op_mob", {
         let mut aliases = AHashMap::new();
         let _ = aliases.insert("59", "58");
         aliases
@@ -69,8 +68,8 @@ pub static BROWSER_VERSION_ALIASES: Lazy<
 });
 
 static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
-    let chrome = CANIUSE_BROWSERS.get(&"chrome".into()).unwrap();
-    let mut android = CANIUSE_BROWSERS.get(&"android".into()).unwrap().clone();
+    let chrome = CANIUSE_BROWSERS.get("chrome").unwrap();
+    let mut android = CANIUSE_BROWSERS.get("android").unwrap().clone();
 
     android.version_list = android
         .version_list
@@ -105,7 +104,7 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
 });
 
 static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> =
-    Lazy::new(|| CANIUSE_BROWSERS.get(&"opera".into()).unwrap().clone());
+    Lazy::new(|| CANIUSE_BROWSERS.get("opera").unwrap().clone());
 
 pub fn get_browser_stat(
     name: &str,
@@ -124,18 +123,14 @@ pub fn get_browser_stat(
                 "android" => Some(("android", &ANDROID_TO_DESKTOP)),
                 "op_mob" => Some(("op_mob", &OPERA_MOBILE_TO_DESKTOP)),
                 _ => CANIUSE_BROWSERS
-                    .get(&desktop_name.into())
+                    .get(desktop_name)
                     .map(|stat| (get_mobile_by_desktop_name(desktop_name), stat)),
             }
         } else {
-            CANIUSE_BROWSERS
-                .get(&name.into())
-                .map(|stat| (&*stat.name, stat))
+            CANIUSE_BROWSERS.get(name).map(|stat| (stat.name, stat))
         }
     } else {
-        CANIUSE_BROWSERS
-            .get(&name.into())
-            .map(|stat| (&*stat.name, stat))
+        CANIUSE_BROWSERS.get(name).map(|stat| (stat.name, stat))
     }
 }
 

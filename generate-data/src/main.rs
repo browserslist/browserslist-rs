@@ -60,27 +60,11 @@ struct Feature {
 }
 
 fn main() -> Result<()> {
-    generate_browser_names_cache()?;
     build_electron_to_chromium()?;
     build_node_versions()?;
     build_node_release_schedule()?;
     build_caniuse_global()?;
     build_caniuse_region()?;
-
-    Ok(())
-}
-
-fn generate_browser_names_cache() -> Result<()> {
-    string_cache_codegen::AtomType::new(
-        "data::browser_name::BrowserNameAtom",
-        "browser_name_atom!",
-    )
-    .atoms(&[
-        "ie", "edge", "firefox", "chrome", "safari", "opera", "ios_saf", "op_mini", "android",
-        "bb", "op_mob", "and_chr", "and_ff", "ie_mob", "and_uc", "samsung", "and_qq", "baidu",
-        "kaios",
-    ])
-    .write_to_file(&Path::new(OUT_DIR).join("browser_name_atom.rs"))?;
 
     Ok(())
 }
@@ -199,8 +183,8 @@ fn build_caniuse_global() -> Result<()> {
                     }
                 });
                 quote! {
-                    map.insert(BrowserNameAtom::from(#name), BrowserStat {
-                        name: BrowserNameAtom::from(#name),
+                    map.insert(#name, BrowserStat {
+                        name: #name,
                         version_list: vec![#(#detail),*],
                     });
                 }
@@ -222,7 +206,7 @@ fn build_caniuse_global() -> Result<()> {
                 (
                     usage,
                     quote! {
-                        (BrowserNameAtom::from(#name), #version, #usage)
+                        (#name, #version, #usage)
                     },
                 )
             })
@@ -277,9 +261,9 @@ fn build_caniuse_global() -> Result<()> {
         use indexmap::IndexMap;
         use once_cell::sync::Lazy;
         use serde_json::from_str;
-        use crate::data::browser_name::{BrowserNameAtom, decode_browser_name};
+        use crate::data::decode_browser_name;
 
-        type Stat = Lazy<AHashMap<BrowserNameAtom, IndexMap<&'static str, u8>>>;
+        type Stat = Lazy<AHashMap<&'static str, IndexMap<&'static str, u8>>>;
         type Json = AHashMap::<u8, IndexMap<&'static str, u8>>;
 
         match name {
@@ -364,9 +348,9 @@ fn build_caniuse_region() -> Result<()> {
     let tokens = quote! {{
         use once_cell::sync::Lazy;
         use serde_json::from_str;
-        use crate::data::browser_name::{BrowserNameAtom, decode_browser_name};
+        use crate::data::decode_browser_name;
 
-        type Usage = Lazy<Vec<(BrowserNameAtom, &'static str, f32)>>;
+        type Usage = Lazy<Vec<(&'static str, &'static str, f32)>>;
         type Json = Vec<(u8, &'static str, f32)>;
 
         match region {
