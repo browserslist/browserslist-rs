@@ -1,9 +1,6 @@
 use super::{Distrib, QueryResult};
 use crate::{
-    data::{
-        browser_name::BrowserNameAtom,
-        caniuse::{features::get_feature_stat, get_browser_stat, to_desktop_name, VersionDetail},
-    },
+    data::caniuse::{features::get_feature_stat, get_browser_stat, to_desktop_name, VersionDetail},
     error::Error,
     parser::SupportKind,
     Opts,
@@ -41,11 +38,11 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                     .iter()
                     .filter_map(move |VersionDetail { version, .. }| {
                         versions
-                            .get(&**version)
+                            .get(version)
                             .or_else(|| match desktop_name {
                                 Some(desktop_name) if check_desktop => feature
-                                    .get(&BrowserNameAtom::from(desktop_name))
-                                    .and_then(|versions| versions.get(&**version)),
+                                    .get(desktop_name)
+                                    .and_then(|versions| versions.get(version)),
                                 _ => None,
                             })
                             .and_then(|flags| {

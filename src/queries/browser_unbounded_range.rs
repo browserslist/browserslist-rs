@@ -16,7 +16,7 @@ pub(super) fn browser_unbounded_range(
     let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
         .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
     let version: Version = BROWSER_VERSION_ALIASES
-        .get(&name.into())
+        .get(name)
         .and_then(|alias| alias.get(version).copied())
         .unwrap_or(version)
         .parse()

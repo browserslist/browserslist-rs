@@ -32,24 +32,8 @@ jobs:
           version: latest
           run_install: true
       - run: pnpm why caniuse-lite electron-to-chromium node-releases
+      - run: cargo run -p generate-data
       - run: cargo test
-
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
       - run: cargo clippy --all-features
       - run: cargo clippy --example inspect
       - run: cargo clippy --tests
@@ -62,4 +46,5 @@ jobs:
         with:
           submodules: true
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run: cargo run -p generate-data
       - run: wasm-pack build --dev --target=web -- --features wasm_bindgen
