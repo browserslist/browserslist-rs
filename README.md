@@ -46,6 +46,23 @@ The features below aren't supported currently:
 -   Custom usage like `cover 99.5% in my stats`.
 -   Extending custom config like `extends browserslist-config-mycompany`.
 
+## Local development setup
+
+1. Clone the repository and enter the project directory
+   ```sh
+   git clone https://github.com/browserslist/browserslist-rs.git
+   cd browserslist-rs
+   ```
+2. Initialise git submodules
+    ```sh
+    git submodule update --init --recursive
+    ```
+3. Generate data
+   ```sh
+   cargo run --manifest-path generate-data/Cargo.toml
+   ```
+4. Run the main project (see the `Usage` section above)
+
 ## Credits
 
 Thanks [Andrey Sitnik](https://github.com/ai) for creating the [JavaScript-based Browserslist](https://github.com/browserslist/browserslist) which is under MIT License.
