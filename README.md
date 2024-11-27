@@ -48,19 +48,25 @@ The features below aren't supported currently:
 ## Local development setup
 
 1. Clone the repository and enter the project directory
+
    ```sh
    git clone https://github.com/browserslist/browserslist-rs.git
    cd browserslist-rs
    ```
-2. Initialise git submodules
+
+2. Initialize Git submodules
+
     ```sh
     git submodule update --init --recursive
     ```
+
 3. Generate data
+
    ```sh
    cargo run --manifest-path generate-data/Cargo.toml
    ```
-4. Run the main project (see the `Usage` section above)
+
+4. Run the main project (see the [Usage](#usage) section above)
 
 ## Credits
 
