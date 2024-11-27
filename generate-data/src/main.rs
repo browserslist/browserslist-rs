@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
     fs, io,
-    path::Path,
 };
 
 const OUT_DIR: &str = "src/generated";
