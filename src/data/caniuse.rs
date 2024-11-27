@@ -1,6 +1,5 @@
 use ahash::AHashMap;
-use once_cell::sync::Lazy;
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::LazyLock};
 
 pub(crate) mod features;
 pub(crate) mod region;
@@ -23,15 +22,15 @@ pub struct VersionDetail {
 
 pub type CaniuseData = AHashMap<&'static str, BrowserStat>;
 
-pub static CANIUSE_BROWSERS: Lazy<CaniuseData> =
-    Lazy::new(|| include!("../generated/caniuse-browsers.rs"));
+pub static CANIUSE_BROWSERS: LazyLock<CaniuseData> =
+    LazyLock::new(|| include!("../generated/caniuse-browsers.rs"));
 
-pub static CANIUSE_GLOBAL_USAGE: Lazy<Vec<(&'static str, &'static str, f32)>> =
-    Lazy::new(|| include!("../generated/caniuse-global-usage.rs"));
+pub static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(&'static str, &'static str, f32)>> =
+    LazyLock::new(|| include!("../generated/caniuse-global-usage.rs"));
 
-pub static BROWSER_VERSION_ALIASES: Lazy<
+pub static BROWSER_VERSION_ALIASES: LazyLock<
     AHashMap<&'static str, AHashMap<&'static str, &'static str>>,
-> = Lazy::new(|| {
+> = LazyLock::new(|| {
     let mut aliases = CANIUSE_BROWSERS
         .iter()
         .filter_map(|(name, stat)| {
@@ -67,7 +66,7 @@ pub static BROWSER_VERSION_ALIASES: Lazy<
     aliases
 });
 
-static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
+static ANDROID_TO_DESKTOP: LazyLock<BrowserStat> = LazyLock::new(|| {
     let chrome = CANIUSE_BROWSERS.get("chrome").unwrap();
     let mut android = CANIUSE_BROWSERS.get("android").unwrap().clone();
 
@@ -103,8 +102,8 @@ static ANDROID_TO_DESKTOP: Lazy<BrowserStat> = Lazy::new(|| {
     android
 });
 
-static OPERA_MOBILE_TO_DESKTOP: Lazy<BrowserStat> =
-    Lazy::new(|| CANIUSE_BROWSERS.get("opera").unwrap().clone());
+static OPERA_MOBILE_TO_DESKTOP: LazyLock<BrowserStat> =
+    LazyLock::new(|| CANIUSE_BROWSERS.get("opera").unwrap().clone());
 
 pub fn get_browser_stat(
     name: &str,

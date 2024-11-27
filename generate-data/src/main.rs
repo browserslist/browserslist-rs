@@ -258,16 +258,16 @@ fn build_caniuse_global() -> Result<()> {
     let tokens = quote! {{
         use ahash::AHashMap;
         use indexmap::IndexMap;
-        use once_cell::sync::Lazy;
         use serde_json::from_str;
+        use std::sync::LazyLock;
         use crate::data::decode_browser_name;
 
-        type Stat = Lazy<AHashMap<&'static str, IndexMap<&'static str, u8>>>;
+        type Stat = LazyLock<AHashMap<&'static str, IndexMap<&'static str, u8>>>;
         type Json = AHashMap::<u8, IndexMap<&'static str, u8>>;
 
         match name {
             #( #features => {
-                static STAT: Stat = Lazy::new(|| {
+                static STAT: Stat = LazyLock::new(|| {
                     from_str::<Json>(include_str!(concat!("features/", #features, ".json")))
                         .unwrap()
                         .into_iter()
@@ -345,16 +345,16 @@ fn build_caniuse_region() -> Result<()> {
         })
         .collect::<Vec<_>>();
     let tokens = quote! {{
-        use once_cell::sync::Lazy;
         use serde_json::from_str;
+        use std::sync::LazyLock;
         use crate::data::decode_browser_name;
 
-        type Usage = Lazy<Vec<(&'static str, &'static str, f32)>>;
+        type Usage = LazyLock<Vec<(&'static str, &'static str, f32)>>;
         type Json = Vec<(u8, &'static str, f32)>;
 
         match region {
             #( #regions => {
-                static USAGE: Usage = Lazy::new(|| {
+                static USAGE: Usage = LazyLock::new(|| {
                     from_str::<Json>(include_str!(concat!("region/", #regions, ".json")))
                         .unwrap()
                         .into_iter()

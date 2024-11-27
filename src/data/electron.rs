@@ -5,10 +5,10 @@ use nom::{
     number::complete::float,
     sequence::{pair, terminated},
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
-pub static ELECTRON_VERSIONS: Lazy<Vec<(f32, &'static str)>> =
-    Lazy::new(|| include!("../generated/electron-to-chromium.rs"));
+pub static ELECTRON_VERSIONS: LazyLock<Vec<(f32, &'static str)>> =
+    LazyLock::new(|| include!("../generated/electron-to-chromium.rs"));
 
 pub(crate) fn parse_version(version: &str) -> Result<f32, Error> {
     all_consuming(terminated(float, opt(pair(char('.'), u16))))(version)

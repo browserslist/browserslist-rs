@@ -1,12 +1,12 @@
 use ahash::AHashMap;
 use chrono::{NaiveDate, NaiveDateTime};
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
-pub static NODE_VERSIONS: Lazy<Vec<&'static str>> =
-    Lazy::new(|| include!("../generated/node-versions.rs"));
+pub static NODE_VERSIONS: LazyLock<Vec<&'static str>> =
+    LazyLock::new(|| include!("../generated/node-versions.rs"));
 
-pub static RELEASE_SCHEDULE: Lazy<AHashMap<&'static str, (NaiveDateTime, NaiveDateTime)>> =
-    Lazy::new(|| {
+pub static RELEASE_SCHEDULE: LazyLock<AHashMap<&'static str, (NaiveDateTime, NaiveDateTime)>> =
+    LazyLock::new(|| {
         let date_format = "%Y-%m-%d";
 
         include!("../generated/node-release-schedule.rs")

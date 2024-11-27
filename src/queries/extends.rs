@@ -1,9 +1,11 @@
 use super::QueryResult;
 use crate::{error::Error, opts::Opts};
+#[cfg(test)]
+use std::sync::LazyLock;
 
 #[cfg(test)]
-static BASE_TEST_DIR: once_cell::sync::Lazy<std::path::PathBuf> =
-    once_cell::sync::Lazy::new(|| std::env::temp_dir().join("browserslist-test-pkgs"));
+static BASE_TEST_DIR: LazyLock<std::path::PathBuf> =
+    LazyLock::new(|| std::env::temp_dir().join("browserslist-test-pkgs"));
 
 #[cfg(target_arch = "wasm32")]
 pub(super) fn extends(pkg: &str, opts: &Opts) -> QueryResult {
