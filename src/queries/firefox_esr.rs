@@ -1,10 +1,7 @@
 use super::{Distrib, QueryResult};
 
 pub(super) fn firefox_esr() -> QueryResult {
-    Ok(vec![
-        Distrib::new("firefox", "115"),
-        Distrib::new("firefox", "128"),
-    ])
+    Ok(vec![Distrib::new("firefox", "128")])
 }
 
 #[cfg(test)]
