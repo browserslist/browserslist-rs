@@ -163,7 +163,6 @@ fn build_caniuse_global() -> Result<()> {
     fs::write(
         format!("{OUT_DIR}/caniuse-browsers.rs"),
         {
-            let map_cap = data.agents.len();
             let browser_stat = data.agents.iter().map(|(name, agent)| {
                 let detail = agent.version_list.iter().map(|version| {
                     let ver = &version.version;
@@ -182,16 +181,14 @@ fn build_caniuse_global() -> Result<()> {
                     }
                 });
                 quote! {
-                    map.insert(#name, BrowserStat {
+                    (#name, BrowserStat {
                         name: #name,
                         version_list: vec![#(#detail),*],
-                    });
+                    })
                 }
             });
             quote! {{
-                let mut map = AHashMap::with_capacity(#map_cap);
-                #(#browser_stat)*
-                map
+                AHashMap::from([ #( #browser_stat ),* ])
             }}
         }
         .to_string(),
@@ -216,7 +213,7 @@ fn build_caniuse_global() -> Result<()> {
     fs::write(
         format!("{OUT_DIR}/caniuse-global-usage.rs"),
         quote! {
-            vec![#(#push_usage),*]
+            &[#(#push_usage),*]
         }
         .to_string(),
     )?;
@@ -254,7 +251,9 @@ fn build_caniuse_global() -> Result<()> {
             )?,
         )?;
     }
-    let features = data.data.keys().collect::<Vec<_>>();
+    let mut features = data.data.keys().collect::<Vec<_>>();
+    features.sort();
+    let features_len = features.len();
     let tokens = quote! {{
         use ahash::AHashMap;
         use indexmap::IndexMap;
@@ -265,19 +264,24 @@ fn build_caniuse_global() -> Result<()> {
         type Stat = LazyLock<AHashMap<&'static str, IndexMap<&'static str, u8>>>;
         type Json = AHashMap::<u8, IndexMap<&'static str, u8>>;
 
-        match name {
-            #( #features => {
-                static STAT: Stat = LazyLock::new(|| {
-                    from_str::<Json>(include_str!(concat!("features/", #features, ".json")))
-                        .unwrap()
-                        .into_iter()
-                        .map(|(browser, versions)| (decode_browser_name(browser), versions))
-                        .collect()
-                });
-                Some(&*STAT)
-            }, )*
-            _ => None,
+        #[inline(never)]
+        fn stat(data: &'static str) -> AHashMap<&'static str, IndexMap<&'static str, u8>> {
+            from_str::<Json>(data)
+                .unwrap()
+                .into_iter()
+                .map(|(browser, versions)| (decode_browser_name(browser), versions))
+                .collect()
         }
+
+        static FEATURES: &[&str] = &[
+            #( #features ),*
+        ];
+        static STATS: [Stat; #features_len] = [
+            #( LazyLock::new(|| stat(include_str!(concat!("features/", #features, ".json")))) ),*
+        ];
+
+        let idx = FEATURES.binary_search(&name).ok()?;
+        STATS.get(idx).map(|v| &**v)
     }};
     fs::write(
         format!("{OUT_DIR}/caniuse-feature-matching.rs"),
@@ -332,7 +336,7 @@ fn build_caniuse_region() -> Result<()> {
             serde_json::to_string(&usage)?,
         )?;
     }
-    let regions = files
+    let mut regions = files
         .iter()
         .map(|entry| {
             entry
@@ -344,6 +348,8 @@ fn build_caniuse_region() -> Result<()> {
                 .unwrap()
         })
         .collect::<Vec<_>>();
+    regions.sort();
+    let regions_len = regions.len();
     let tokens = quote! {{
         use serde_json::from_str;
         use std::sync::LazyLock;
@@ -352,19 +358,24 @@ fn build_caniuse_region() -> Result<()> {
         type Usage = LazyLock<Vec<(&'static str, &'static str, f32)>>;
         type Json = Vec<(u8, &'static str, f32)>;
 
-        match region {
-            #( #regions => {
-                static USAGE: Usage = LazyLock::new(|| {
-                    from_str::<Json>(include_str!(concat!("region/", #regions, ".json")))
-                        .unwrap()
-                        .into_iter()
-                        .map(|(browser, version, usage)| (decode_browser_name(browser), version, usage))
-                        .collect()
-                });
-                Some(&*USAGE)
-            }, )*
-            _ => None,
+        #[inline(never)]
+        fn usage(data: &'static str) -> Vec<(&'static str, &'static str, f32)> {
+            from_str::<Json>(data)
+                .unwrap()
+                .into_iter()
+                .map(|(browser, version, usage)| (decode_browser_name(browser), version, usage))
+                .collect()
         }
+
+        static REGIONS: &[&str] = &[
+            #( #regions ),*
+        ];
+        static USAGES: [Usage; #regions_len] = [
+            #( LazyLock::new(|| usage(include_str!(concat!("region/", #regions, ".json")))) ),*
+        ];
+
+        let idx = REGIONS.binary_search(&region).ok()?;
+        USAGES.get(idx).map(|v| &**v)
     }};
     fs::write(
         format!("{OUT_DIR}/caniuse-region-matching.rs"),
