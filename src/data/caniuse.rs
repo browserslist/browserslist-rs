@@ -25,8 +25,8 @@ pub type CaniuseData = AHashMap<&'static str, BrowserStat>;
 pub static CANIUSE_BROWSERS: LazyLock<CaniuseData> =
     LazyLock::new(|| include!("../generated/caniuse-browsers.rs"));
 
-pub static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(&'static str, &'static str, f32)>> =
-    LazyLock::new(|| include!("../generated/caniuse-global-usage.rs"));
+pub static CANIUSE_GLOBAL_USAGE: &[(&'static str, &'static str, f32)] =
+    include!("../generated/caniuse-global-usage.rs");
 
 pub static BROWSER_VERSION_ALIASES: LazyLock<
     AHashMap<&'static str, AHashMap<&'static str, &'static str>>,
