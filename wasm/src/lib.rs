@@ -1,7 +1,6 @@
-use crate::{opts::Opts, resolve};
+use browserslist::{Opts, resolve};
 use wasm_bindgen::prelude::*;
 
-#[doc(hidden)]
 #[wasm_bindgen]
 pub fn browserslist(query: String, opts: JsValue) -> Result<JsValue, JsValue> {
     let opts: Option<Opts> = serde_wasm_bindgen::from_value(opts)?;
