@@ -8,14 +8,13 @@ repository = "https://github.com/browserslist/browserslist-rs"
 license = "MIT"
 keywords = ["web", "javascript"]
 categories = ["web-programming", "config"]
-include = ["**/*.rs", "Cargo.toml", "src/generated/**/*.json"]
 
 [lib]
 name = "browserslist"
 crate-type = ["cdylib"]
 
 [dependencies]
-browserslist-rs = { path = "..", features = [ "wasm_bindgen" ] }
+browserslist-rs = { path = "..", features = ["wasm_bindgen"] }
+getrandom = { version = "0.3.3", features = ["wasm_js"] }
 serde-wasm-bindgen = { version = "0.4" }
 wasm-bindgen = { version = "0.2" }
-getrandom = { version = "0.3.3", features = [ "wasm_js" ] }
