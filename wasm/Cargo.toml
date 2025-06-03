@@ -1,0 +1,21 @@
+[package]
+name = "browserslist-wasm"
+version = "0.18.1"
+authors = ["Pig Fang <g-plane@hotmail.com>"]
+edition = "2021"
+description = "Rust-ported Browserslist."
+repository = "https://github.com/browserslist/browserslist-rs"
+license = "MIT"
+keywords = ["web", "javascript"]
+categories = ["web-programming", "config"]
+include = ["**/*.rs", "Cargo.toml", "src/generated/**/*.json"]
+
+[lib]
+name = "browserslist"
+crate-type = ["cdylib"]
+
+[dependencies]
+browserslist-rs = { path = "..", features = [ "wasm_bindgen" ] }
+serde-wasm-bindgen = { version = "0.4" }
+wasm-bindgen = { version = "0.2" }
+getrandom = { version = "0.3.3", features = [ "wasm_js" ] }
