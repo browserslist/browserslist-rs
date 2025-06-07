@@ -1,6 +1,6 @@
 [package]
 name = "browserslist-rs"
-version = "0.18.1"
+version = "0.18.2"
 authors = ["Pig Fang <g-plane@hotmail.com>"]
 edition = "2021"
 description = "Rust-ported Browserslist."
@@ -15,10 +15,7 @@ name = "browserslist"
 crate-type = ["rlib"]
 
 [features]
-wasm_bindgen = [
-    "chrono/wasmbind",
-    "js-sys",
-]
+wasm_bindgen = ["chrono/wasmbind", "js-sys"]
 
 [dependencies]
 ahash = { version = "0.8.12", features = ["serde"] }
