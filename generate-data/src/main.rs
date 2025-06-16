@@ -79,22 +79,15 @@ fn build_electron_to_chromium() -> Result<()> {
         (electron_version.parse::<f32>().unwrap(), chromium_version)
     })
     .collect::<Vec<_>>();
-    data.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap());
-    let data = data
-        .into_iter()
-        .map(|(electron_version, chromium_version)| {
-            quote! {
-                (#electron_version, #chromium_version)
-            }
-        });
+    data.sort_by(|(a, _), (b, _)| a.total_cmp(b));
+    let (electron_versions, chromium_versions): (Vec<_>, Vec<_>) = data.into_iter().unzip();
 
-    fs::write(
-        path,
-        quote! {{
-            vec![#(#data),*]
-        }}
-        .to_string(),
-    )?;
+    let code = quote! {
+        static ELECTRON_VERSIONS: &'static [f32] = &[ #(#electron_versions),* ];
+        static CHROMIUM_VERSIONS: &'static [&'static str] = &[ #(#chromium_versions),* ];
+    };
+
+    fs::write(path, code.to_string())?;
 
     Ok(())
 }
@@ -113,9 +106,9 @@ fn build_node_versions() -> Result<()> {
     let versions = releases.into_iter().map(|release| release.version);
     fs::write(
         path,
-        quote! {{
-            vec![#(#versions),*]
-        }}
+        quote! {
+            static NODE_VERSIONS: &'static [&'static str] = &[#(#versions),*];
+        }
         .to_string(),
     )?;
 
@@ -123,6 +116,8 @@ fn build_node_versions() -> Result<()> {
 }
 
 fn build_node_release_schedule() -> Result<()> {
+    use chrono::{Datelike, NaiveDate};
+
     #[derive(Deserialize)]
     struct NodeRelease {
         start: String,
@@ -134,23 +129,54 @@ fn build_node_release_schedule() -> Result<()> {
     let schedule: HashMap<String, NodeRelease> = serde_json::from_slice(&fs::read(
         "vendor/node-releases/data/release-schedule/release-schedule.json",
     )?)?;
-    let cap = schedule.len();
-    let versions = schedule
+    let mut versions = schedule
         .into_iter()
         .map(|(version, NodeRelease { start, end })| {
+            let date_format = "%Y-%m-%d";
+            let start = NaiveDate::parse_from_str(&start, date_format)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap();
+            let end = NaiveDate::parse_from_str(&end, date_format)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap();
+
+            (version, (start, end))
+        })
+        .collect::<Vec<_>>();
+    // filter by end date to quickly reduce scope
+    versions.sort_by_key(|(_, (_, end))| *end);
+
+    let (versions, dates): (Vec<_>, Vec<_>) = versions
+        .into_iter()
+        .map(|(version, (start, end))| {
             let version = version.trim_start_matches('v');
-            quote! {
-                map.insert(#version, (#start, #end));
-            }
-        });
+
+            let start_year = start.year();
+            let start_month = start.month();
+            let start_day = start.day();
+            let end_year = end.year();
+            let end_month = end.month();
+            let end_day = end.day();
+
+            let date = quote! {
+                (
+                    chrono::NaiveDate::from_ymd_opt(#start_year, #start_month, #start_day).unwrap(),
+                    chrono::NaiveDate::from_ymd_opt(#end_year, #end_month, #end_day).unwrap(),
+                )
+            };
+
+            (version.to_owned(), date)
+        })
+        .unzip();
 
     fs::write(
         path,
-        quote! {{
-            let mut map = ahash::AHashMap::with_capacity(#cap);
-            #(#versions)*
-            map
-        }}
+        quote! {
+            static NODE_RELEASE_VERSIONS: &'static [&'static str] = &[#(#versions),*];
+            static NODE_RELEASE_SCHEDULE: &'static [(chrono::NaiveDate, chrono::NaiveDate)] = &[#(#dates),*];
+        }
         .to_string(),
     )?;
 

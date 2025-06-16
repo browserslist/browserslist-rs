@@ -1,8 +1,8 @@
 use super::{Distrib, QueryResult};
-use crate::{data::node::NODE_VERSIONS, error::Error, opts::Opts};
+use crate::{data::node, error::Error, opts::Opts};
 
 pub(super) fn node_accurate(version: &str, opts: &Opts) -> QueryResult {
-    let distribs = NODE_VERSIONS
+    let distribs = node::versions()
         .iter()
         .rev()
         .find(|v| v.split('.').zip(version.split('.')).all(|(a, b)| a == b))

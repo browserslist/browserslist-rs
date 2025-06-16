@@ -1,30 +1,18 @@
-use ahash::AHashMap;
-use chrono::{NaiveDate, NaiveDateTime};
-use std::sync::LazyLock;
+use chrono::NaiveDate;
 
-pub static NODE_VERSIONS: LazyLock<Vec<&'static str>> =
-    LazyLock::new(|| include!("../generated/node-versions.rs"));
+include!("../generated/node-versions.rs");
+include!("../generated/node-release-schedule.rs");
 
-pub static RELEASE_SCHEDULE: LazyLock<AHashMap<&'static str, (NaiveDateTime, NaiveDateTime)>> =
-    LazyLock::new(|| {
-        let date_format = "%Y-%m-%d";
+pub fn versions() -> &'static [&'static str] {
+    NODE_VERSIONS
+}
 
-        include!("../generated/node-release-schedule.rs")
-            .into_iter()
-            .map(|(version, (start, end))| {
-                (
-                    version,
-                    (
-                        NaiveDate::parse_from_str(start, date_format)
-                            .unwrap()
-                            .and_hms_opt(0, 0, 0)
-                            .unwrap(),
-                        NaiveDate::parse_from_str(end, date_format)
-                            .unwrap()
-                            .and_hms_opt(0, 0, 0)
-                            .unwrap(),
-                    ),
-                )
-            })
-            .collect()
-    });
+pub fn release_schedule(now: NaiveDate) -> impl Iterator<Item = &'static str> {
+    let end = NODE_RELEASE_SCHEDULE.partition_point(|(_, end)| end <= &now);
+    NODE_RELEASE_SCHEDULE
+        .iter()
+        .enumerate()
+        .skip(end)
+        .filter(move |(_, (start, _))| start < &now)
+        .map(|(idx, _)| NODE_RELEASE_VERSIONS[idx])
+}
