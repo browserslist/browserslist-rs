@@ -1,9 +1,5 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::caniuse::{get_browser_stat, CANIUSE_BROWSERS},
-    error::Error,
-    opts::Opts,
-};
+use crate::{data::caniuse, error::Error, opts::Opts};
 use chrono::{LocalResult, TimeZone, Utc};
 
 pub(super) fn since(year: i32, month: u32, day: u32, opts: &Opts) -> QueryResult {
@@ -12,14 +8,12 @@ pub(super) fn since(year: i32, month: u32, day: u32, opts: &Opts) -> QueryResult
         _ => return Err(Error::InvalidDate(format!("{}-{}-{}", year, month, day))),
     };
 
-    let distribs = CANIUSE_BROWSERS
-        .keys()
-        .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-        .flat_map(|(name, stat)| {
-            stat.version_list
+    let distribs = caniuse::iter_browser_stat(opts.mobile_to_desktop)
+        .flat_map(|(name, version_list)| {
+            version_list
                 .iter()
-                .filter(|version| matches!(version.release_date, Some(date) if date >= time))
-                .map(|version| Distrib::new(name, version.version))
+                .filter(|version| version.released && version.release_date >= time)
+                .map(move |version| Distrib::new(name, version.version.as_str()))
         })
         .collect();
     Ok(distribs)

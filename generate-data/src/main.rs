@@ -186,63 +186,104 @@ fn build_node_release_schedule() -> Result<()> {
 fn build_caniuse_global() -> Result<()> {
     let data = parse_caniuse_global()?;
 
-    fs::write(
-        format!("{OUT_DIR}/caniuse-browsers.rs"),
-        {
-            let browser_stat = data.agents.iter().map(|(name, agent)| {
-                let detail = agent.version_list.iter().map(|version| {
-                    let ver = &version.version;
-                    let global_usage = version.global_usage;
-                    let release_date = if let Some(release_date) = version.release_date {
-                        quote! { Some(#release_date) }
-                    } else {
-                        quote! { None }
-                    };
-                    quote! {
-                        VersionDetail {
-                            version: #ver,
-                            global_usage: #global_usage,
-                            release_date: #release_date,
-                        }
+    let mut strpool = String::new();
+    let mut strmap: HashMap<String, _> = HashMap::new();
+    let mut alloc_str = |strpool: &mut String, s: &str| {
+        *strmap.entry(s.into()).or_insert_with(|| {
+            let start: u32 = strpool.len().try_into().unwrap();
+            strpool.push_str(s);
+            let end: u32 = strpool.len().try_into().unwrap();
+            (start, end)
+        })
+    };
+
+    // caniuse browsers
+    {
+        let mut versions = Vec::new();
+        let mut stats = Vec::new();
+
+        for (name, agent) in &data.agents {
+            let name = alloc_str(&mut strpool, name);
+
+            let start: u32 = versions.len().try_into().unwrap();
+
+            for version in &agent.version_list {
+                let (str_start, str_end) = alloc_str(&mut strpool, &version.version);
+                let usage = version.global_usage;
+                let date = version.release_date.unwrap_or_default();
+                let released = version.release_date.is_some();
+
+                versions.push(quote! {
+                    VersionDetail {
+                        version: PooledStr(#str_start, #str_end),
+                        release_date: #date,
+                        released: #released,
+                        global_usage: #usage,
                     }
                 });
+            }
+
+            let end: u32 = versions.len().try_into().unwrap();
+            stats.push((name, start, end));
+        }
+
+        stats.sort_by_key(|(name, ..)| &strpool[(name.0 as usize)..(name.1 as usize)]);
+        let stats = stats
+            .into_iter()
+            .map(|((name_start, name_end), start, end)| {
                 quote! {
-                    (#name, BrowserStat {
-                        name: #name,
-                        version_list: vec![#(#detail),*],
-                    })
+                    (
+                        PooledStr(#name_start, #name_end),
+                        BrowserStat(#start, #end)
+                    )
                 }
             });
-            quote! {{
-                AHashMap::from([ #( #browser_stat ),* ])
-            }}
-        }
-        .to_string(),
-    )?;
 
-    let mut global_usage = data
-        .agents
-        .iter()
-        .flat_map(|(name, agent)| {
-            agent.usage_global.iter().map(move |(version, usage)| {
-                (
-                    usage,
-                    quote! {
-                        (#name, #version, #usage)
-                    },
-                )
-            })
-        })
-        .collect::<Vec<_>>();
-    global_usage.sort_unstable_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
-    let push_usage = global_usage.into_iter().map(|(_, tokens)| tokens);
-    fs::write(
-        format!("{OUT_DIR}/caniuse-global-usage.rs"),
-        quote! {
-            &[#(#push_usage),*]
+        fs::write(
+            format!("{OUT_DIR}/caniuse-browsers.rs"),
+            quote! {
+                static CANIUSE_STRPOOL: &'static str = #strpool;
+                static VERSION_LIST: &'static [VersionDetail] = &[#(#versions),*];
+                static BROWSERS_STATS: &'static [(PooledStr, BrowserStat)] = &[#(#stats),*];
+            }
+            .to_string(),
+        )?;
+    }
+
+    // caniuse usage
+    {
+        let mut global_usage = Vec::new();
+
+        for (name, agent) in &data.agents {
+            let name = alloc_str(&mut strpool, name);
+
+            for (version, usage) in &agent.usage_global {
+                let ver = alloc_str(&mut strpool, version);
+
+                global_usage.push((name, ver, usage));
+            }
         }
-        .to_string(),
-    )?;
+
+        global_usage.sort_unstable_by(|(.., a), (.., b)| b.total_cmp(a));
+        let push_usage = global_usage.into_iter().map(
+            |((name_start, name_end), (ver_start, ver_end), usage)| {
+                quote! {
+                    (
+                        PooledStr(#name_start, #name_end),
+                        PooledStr(#ver_start, #ver_end),
+                        #usage
+                    )
+                }
+            },
+        );
+        fs::write(
+            format!("{OUT_DIR}/caniuse-global-usage.rs"),
+            quote! {
+                &[#(#push_usage),*]
+            }
+            .to_string(),
+        )?;
+    }
 
     let features_dir = format!("{OUT_DIR}/features");
     if matches!(fs::File::open(&features_dir), Err(e) if e.kind() == io::ErrorKind::NotFound) {
