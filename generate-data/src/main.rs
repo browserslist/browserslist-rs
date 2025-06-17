@@ -4,7 +4,7 @@ use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
-    fs, io,
+    fs, io::{self, Write},
 };
 
 const OUT_DIR: &str = "src/generated";
@@ -242,7 +242,6 @@ fn build_caniuse_global() -> Result<()> {
         fs::write(
             format!("{OUT_DIR}/caniuse-browsers.rs"),
             quote! {
-                static CANIUSE_STRPOOL: &'static str = #strpool;
                 static VERSION_LIST: &'static [VersionDetail] = &[#(#versions),*];
                 static BROWSERS_STATS: &'static [(PooledStr, BrowserStat)] = &[#(#stats),*];
             }
@@ -253,13 +252,10 @@ fn build_caniuse_global() -> Result<()> {
     // caniuse usage
     {
         let mut global_usage = Vec::new();
-
         for (name, agent) in &data.agents {
             let name = alloc_str(&mut strpool, name);
-
             for (version, usage) in &agent.usage_global {
                 let ver = alloc_str(&mut strpool, version);
-
                 global_usage.push((name, ver, usage));
             }
         }
@@ -285,74 +281,112 @@ fn build_caniuse_global() -> Result<()> {
         )?;
     }
 
-    let features_dir = format!("{OUT_DIR}/features");
-    if matches!(fs::File::open(&features_dir), Err(e) if e.kind() == io::ErrorKind::NotFound) {
-        fs::create_dir(&features_dir)?;
-    }
-    for (name, feature) in &data.data {
-        fs::write(
-            format!("{features_dir}/{name}.json"),
-            serde_json::to_string(
-                &feature
-                    .stats
-                    .iter()
-                    .map(|(name, versions)| {
-                        (
-                            encode_browser_name(name),
-                            versions
-                                .into_iter()
-                                .map(|(version, flags)| {
-                                    let mut bit = 0;
-                                    if flags.contains('y') {
-                                        bit |= 1;
-                                    }
-                                    if flags.contains('a') {
-                                        bit |= 2;
-                                    }
-                                    (version, bit)
-                                })
-                                .collect::<IndexMap<_, u8>>(),
-                        )
+    // caniuse features
+    {
+        let mut features = Vec::new();
+        let mut stats = Vec::new();
+        let mut versions = Vec::new();
+        let mut flags = Vec::new();
+
+        for (name, feature) in &data.data {
+            let start = stats.len();
+            for (browser, ver) in &feature.stats {
+                let mut list = ver.iter()
+                    .map(|(version, flags)| {
+                        let version = alloc_str(&mut strpool, version);
+
+                        let mut bit: u8 = 0;
+                        if flags.contains('y') {
+                            bit |= 1;
+                        }
+                        if flags.contains('a') {
+                            bit |= 2;
+                        }
+                        (version, bit)
                     })
-                    .collect::<HashMap<_, _>>(),
-            )?,
-        )?;
-    }
-    let mut features = data.data.keys().collect::<Vec<_>>();
-    features.sort();
-    let features_len = features.len();
-    let tokens = quote! {{
-        use ahash::AHashMap;
-        use indexmap::IndexMap;
-        use serde_json::from_str;
-        use std::sync::LazyLock;
-        use crate::data::decode_browser_name;
+                    .collect::<Vec<_>>();
 
-        type Stat = LazyLock<AHashMap<&'static str, IndexMap<&'static str, u8>>>;
-        type Json = AHashMap::<u8, IndexMap<&'static str, u8>>;
+                // we only use `.get()`, so the original order does not need to be preserved here
+                list.sort_by_key(|(x, _)| &strpool[(x.0 as usize)..(x.1 as usize)]);
 
-        #[inline(never)]
-        fn stat(data: &'static str) -> AHashMap<&'static str, IndexMap<&'static str, u8>> {
-            from_str::<Json>(data)
-                .unwrap()
-                .into_iter()
-                .map(|(browser, versions)| (decode_browser_name(browser), versions))
-                .collect()
+                let start = versions.len();
+                versions.extend(list.iter().map(|(x, _)| *x));
+                flags.extend(list.iter().map(|(_, y)| *y));
+                let end = versions.len();
+
+                stats.push((browser.as_str(), start, end));
+            }
+            let end = stats.len();
+
+            stats[start..end].sort_by_key(|(browser, ..)| *browser);
+
+            let name = alloc_str(&mut strpool, name);
+            features.push((name, start, end));
         }
 
-        static FEATURES: &[&str] = &[
-            #( #features ),*
-        ];
-        static STATS: [Stat; #features_len] = [
-            #( LazyLock::new(|| stat(include_str!(concat!("features/", #features, ".json")))) ),*
-        ];
+        features.sort_by_key(|(name, ..)| &strpool[(name.0 as usize)..(name.1 as usize)]);
 
-        let idx = FEATURES.binary_search(&name).ok()?;
-        STATS.get(idx).map(|v| &**v)
-    }};
+        let (stats_name, stats_list): (Vec<_>, Vec<_>) = stats.iter()
+            .map(|(browser, start, end)| {
+                let browser = encode_browser_name(browser);
+                let start: u32 = (*start).try_into().unwrap();
+                let end: u32 = (*end).try_into().unwrap();
+                (browser, [start, end])
+            })
+            .unzip();
+        let features = features.iter().flat_map(|(name, start, end)| {
+            let name_start = name.0;
+            let name_end = name.1;
+            let start: u32 = (*start).try_into().unwrap();
+            let end: u32 = (*end).try_into().unwrap();
+            quote! {
+                (
+                    PooledStr(#name_start, #name_end),
+                    Feature(#start, #end)
+                )
+            }
+        });
+
+        let version_store_len = write_u32(
+            format!("{OUT_DIR}/caniuse-feature-versionstore.u32seq"),
+            versions.iter().flat_map(|&(start, end)| [start, end])
+        )?;
+        let version_index_len = write_u32(
+            format!("{OUT_DIR}/caniuse-feature-versionindex.u32seq"),
+            stats_list.iter().flatten().copied()
+        )?;
+
+        fs::write(
+            format!("{OUT_DIR}/caniuse-feature-flags.bin"),
+            flags.as_slice()
+        )?;
+        fs::write(
+            format!("{OUT_DIR}/caniuse-feature-browsers.bin"),
+            stats_name.as_slice()
+        )?;
+
+        fs::write(
+            format!("{OUT_DIR}/caniuse-feature-matching.rs"),
+            quote! {
+                static FEATURES: &[(PooledStr, Feature)] = &[#(#features),*];
+
+                // # Safety
+                //
+                // We do the transmute at const context,
+                // and the size and alignment are already checked and guaranteed by compiler.
+                static FEATURES_STAT_VERSION_STORE: &[PairU32; #version_store_len / core::mem::size_of::<PairU32>()] = unsafe {
+                    &core::mem::transmute(*include_bytes!("caniuse-feature-versionstore.u32seq"))
+                };
+                static FEATURES_STAT_VERSION_INDEX: &[PairU32; #version_index_len / core::mem::size_of::<PairU32>()] = unsafe {
+                    &core::mem::transmute(*include_bytes!("caniuse-feature-versionindex.u32seq"))
+                };
+            }.to_string()
+        )?;
+    }
+
     fs::write(
-        format!("{OUT_DIR}/caniuse-feature-matching.rs"),
-        tokens.to_string(),
+        format!("{OUT_DIR}/caniuse-strpool.bin"),
+        strpool.as_bytes()
     )?;
 
     Ok(())
@@ -450,4 +484,18 @@ fn build_caniuse_region() -> Result<()> {
     )?;
 
     Ok(())
+}
+
+fn write_u32(path: String, iter: impl Iterator<Item = u32>) -> io::Result<usize> {
+    let fd = fs::File::create(path)?;
+    let mut fd = io::BufWriter::new(fd);
+    let mut n = 0;
+
+    for b in iter {
+        fd.write_all(&b.to_le_bytes())?;
+        n += 4;
+    }
+
+    fd.flush()?;
+    Ok(n)
 }

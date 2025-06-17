@@ -30,7 +30,7 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                         .filter(|version| version.released)
                         .filter_map(|latest_version| versions.get(latest_version.version.as_str()))
                         .last()
-                        .is_some_and(|flags| is_supported(*flags, include_partial));
+                        .is_some_and(|flags| is_supported(flags, include_partial));
                 browser_stat
                     .iter()
                     .filter_map(move |VersionDetail { version, .. }| {
@@ -43,7 +43,7 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                                 _ => None,
                             })
                             .and_then(|flags| {
-                                is_supported(*flags, include_partial).then_some(version)
+                                is_supported(flags, include_partial).then_some(version)
                             })
                     })
                     .map(move |version| Distrib::new(name, version.as_str()))

@@ -6,7 +6,7 @@ use std::{borrow::Cow, sync::LazyLock};
 pub(crate) mod features;
 pub(crate) mod region;
 
-use crate::data::BinaryMap;
+use crate::data::utils::BinMap;
 
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 pub const OP_MOB_BLINK_FIRST: u32 = 14;
@@ -28,7 +28,7 @@ pub struct VersionDetail {
 
 include!("../generated/caniuse-browsers.rs");
 
-pub static CANIUSE_BROWSERS: BinaryMap<PooledStr, BrowserStat> = BinaryMap(BROWSERS_STATS);
+pub static CANIUSE_BROWSERS: BinMap<PooledStr, BrowserStat> = BinMap(BROWSERS_STATS);
 
 pub static CANIUSE_GLOBAL_USAGE: &[(PooledStr, PooledStr, f32)] =
     include!("../generated/caniuse-global-usage.rs");
@@ -227,8 +227,10 @@ impl BrowserStat {
 
 impl PooledStr {
     pub fn as_str(&self) -> &'static str {
+        static STRPOOL: &'static str = include_str!("../generated/caniuse-strpool.bin");
+
         let range = (self.0 as usize)..(self.1 as usize);
-        &CANIUSE_STRPOOL[range]
+        &STRPOOL[range]
     }
 }
 

@@ -1,5 +1,4 @@
-use std::borrow::Borrow;
-
+mod utils;
 pub(crate) mod caniuse;
 pub(crate) mod electron;
 pub(crate) mod node;
@@ -27,31 +26,5 @@ pub fn decode_browser_name(id: u8) -> &'static str {
         18 => "baidu",
         19 => "kaios",
         _ => unreachable!("cannot recognize browser id"),
-    }
-}
-
-pub struct BinaryMap<'a, K, V>(&'a [(K, V)]);
-
-impl<K, V> BinaryMap<'_, K, V> {
-    pub fn get<Q>(&self, q: &Q) -> Option<&V>
-    where
-        K: Borrow<Q>,
-        Q: Ord + ?Sized,
-    {
-        self.get_key_value(q).map(|(_, v)| v)
-    }
-
-    pub fn get_key_value<Q>(&self, q: &Q) -> Option<(&K, &V)>
-    where
-        K: Borrow<Q>,
-        Q: Ord + ?Sized,
-    {
-        let idx = self.0.binary_search_by(|(k, _)| k.borrow().cmp(&q)).ok()?;
-        let item = &self.0[idx];
-        Some((&item.0, &item.1))
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &(K, V)> {
-        self.0.iter()
     }
 }
