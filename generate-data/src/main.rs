@@ -38,13 +38,13 @@ fn encode_browser_name(name: &str) -> u8 {
 
 #[derive(Deserialize)]
 struct Caniuse {
-    agents: HashMap<String, Agent>,
+    agents: BTreeMap<String, Agent>,
     data: BTreeMap<String, Feature>,
 }
 
 #[derive(Deserialize)]
 struct Agent {
-    usage_global: HashMap<String, f32>,
+    usage_global: BTreeMap<String, f32>,
     version_list: Vec<VersionDetail>,
 }
 
@@ -57,7 +57,7 @@ struct VersionDetail {
 
 #[derive(Deserialize)]
 struct Feature {
-    stats: HashMap<String, IndexMap<String, String>>,
+    stats: BTreeMap<String, IndexMap<String, String>>,
 }
 
 fn main() -> Result<()> {
@@ -127,7 +127,7 @@ fn build_node_release_schedule() -> Result<()> {
 
     let path = format!("{OUT_DIR}/node-release-schedule.rs");
 
-    let schedule: HashMap<String, NodeRelease> = serde_json::from_slice(&fs::read(
+    let schedule: BTreeMap<String, NodeRelease> = serde_json::from_slice(&fs::read(
         "vendor/node-releases/data/release-schedule/release-schedule.json",
     )?)?;
     let mut versions = schedule
@@ -386,7 +386,7 @@ fn build_caniuse() -> Result<()> {
     {
         #[derive(Deserialize)]
         struct RegionData {
-            data: HashMap<String, HashMap<String, Option<f32>>>,
+            data: BTreeMap<String, BTreeMap<String, Option<f32>>>,
         }
 
         let files = fs::read_dir("vendor/caniuse/region-usage-json")?
