@@ -1,6 +1,6 @@
 use super::{ BinMap, PooledStr };
 use crate::data::decode_browser_name;
-use crate::data::utils::PairU32;
+use crate::data::utils::{ PairU32, U32 };
 
 #[derive(Clone, Copy)]
 pub struct Feature(u32, u32);
@@ -42,7 +42,7 @@ impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
         let range = (self.0.0.get() as usize)..(self.0.1.get() as usize);
         let index = FEATURES_STAT_VERSION_STORE[range.clone()]
-            .binary_search_by_key(&version, |s| PooledStr(s.0.get(), s.1.get()).as_str())
+            .binary_search_by_key(&version, |s| PooledStr(s.get()).as_str())
             .ok()?;
         Some(FEATURES_STAT_FLAGS[range][index])
     }

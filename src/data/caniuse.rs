@@ -15,7 +15,7 @@ pub const OP_MOB_BLINK_FIRST: u32 = 14;
 pub struct BrowserStat(u32, u32);
 
 #[derive(Clone, Copy)]
-pub struct PooledStr(u32, u32);
+pub struct PooledStr(u32);
 
 #[derive(Clone, Debug)]
 pub struct VersionDetail {
@@ -229,8 +229,11 @@ impl PooledStr {
     pub fn as_str(&self) -> &'static str {
         static STRPOOL: &'static str = include_str!("../generated/caniuse-strpool.bin");
 
-        let range = (self.0 as usize)..(self.1 as usize);
-        &STRPOOL[range]
+        // 24bit offset and 8bit len
+        let offset = self.0 & ((1 << 24) - 1);
+        let len = self.0 >> 24;
+
+        &STRPOOL[(offset as usize)..][..(len as usize)]
     }
 }
 

@@ -186,16 +186,7 @@ fn build_node_release_schedule() -> Result<()> {
 fn build_caniuse_global() -> Result<()> {
     let data = parse_caniuse_global()?;
 
-    let mut strpool = String::new();
-    let mut strmap: HashMap<String, _> = HashMap::new();
-    let mut alloc_str = |strpool: &mut String, s: &str| {
-        *strmap.entry(s.into()).or_insert_with(|| {
-            let start: u32 = strpool.len().try_into().unwrap();
-            strpool.push_str(s);
-            let end: u32 = strpool.len().try_into().unwrap();
-            (start, end)
-        })
-    };
+    let mut strpool = StrPool::default();
 
     // caniuse browsers
     {
@@ -203,19 +194,18 @@ fn build_caniuse_global() -> Result<()> {
         let mut stats = Vec::new();
 
         for (name, agent) in &data.agents {
-            let name = alloc_str(&mut strpool, name);
-
+            let name_str_id = strpool.insert(name);
             let start: u32 = versions.len().try_into().unwrap();
 
             for version in &agent.version_list {
-                let (str_start, str_end) = alloc_str(&mut strpool, &version.version);
+                let version_str_id = strpool.insert(&version.version);
                 let usage = version.global_usage;
                 let date = version.release_date.unwrap_or_default();
                 let released = version.release_date.is_some();
 
                 versions.push(quote! {
                     VersionDetail {
-                        version: PooledStr(#str_start, #str_end),
+                        version: PooledStr(#version_str_id),
                         release_date: #date,
                         released: #released,
                         global_usage: #usage,
@@ -224,16 +214,16 @@ fn build_caniuse_global() -> Result<()> {
             }
 
             let end: u32 = versions.len().try_into().unwrap();
-            stats.push((name, start, end));
+            stats.push((name_str_id, start, end));
         }
 
-        stats.sort_by_key(|(name, ..)| &strpool[(name.0 as usize)..(name.1 as usize)]);
+        stats.sort_by_key(|(name_str_id, ..)| strpool.get(*name_str_id));
         let stats = stats
             .into_iter()
-            .map(|((name_start, name_end), start, end)| {
+            .map(|(name_str_id, start, end)| {
                 quote! {
                     (
-                        PooledStr(#name_start, #name_end),
+                        PooledStr(#name_str_id),
                         BrowserStat(#start, #end)
                     )
                 }
@@ -253,20 +243,20 @@ fn build_caniuse_global() -> Result<()> {
     {
         let mut global_usage = Vec::new();
         for (name, agent) in &data.agents {
-            let name = alloc_str(&mut strpool, name);
+            let name_str_id = strpool.insert(name);
             for (version, usage) in &agent.usage_global {
-                let ver = alloc_str(&mut strpool, version);
-                global_usage.push((name, ver, usage));
+                let version_str_id = strpool.insert(version);
+                global_usage.push((name_str_id, version_str_id, usage));
             }
         }
 
         global_usage.sort_unstable_by(|(.., a), (.., b)| b.total_cmp(a));
         let push_usage = global_usage.into_iter().map(
-            |((name_start, name_end), (ver_start, ver_end), usage)| {
+            |(name_str_id, version_str_id, usage)| {
                 quote! {
                     (
-                        PooledStr(#name_start, #name_end),
-                        PooledStr(#ver_start, #ver_end),
+                        PooledStr(#name_str_id),
+                        PooledStr(#version_str_id),
                         #usage
                     )
                 }
@@ -293,7 +283,7 @@ fn build_caniuse_global() -> Result<()> {
             for (browser, ver) in &feature.stats {
                 let mut list = ver.iter()
                     .map(|(version, flags)| {
-                        let version = alloc_str(&mut strpool, version);
+                        let version_str_id = strpool.insert(version);
 
                         let mut bit: u8 = 0;
                         if flags.contains('y') {
@@ -302,12 +292,12 @@ fn build_caniuse_global() -> Result<()> {
                         if flags.contains('a') {
                             bit |= 2;
                         }
-                        (version, bit)
+                        (version_str_id, bit)
                     })
                     .collect::<Vec<_>>();
 
                 // we only use `.get()`, so the original order does not need to be preserved here
-                list.sort_by_key(|(x, _)| &strpool[(x.0 as usize)..(x.1 as usize)]);
+                list.sort_by_key(|(x, _)| strpool.get(*x));
 
                 let start = versions.len();
                 versions.extend(list.iter().map(|(x, _)| *x));
@@ -320,11 +310,11 @@ fn build_caniuse_global() -> Result<()> {
 
             stats[start..end].sort_by_key(|(browser, ..)| *browser);
 
-            let name = alloc_str(&mut strpool, name);
-            features.push((name, start, end));
+            let name_str_id = strpool.insert(name);
+            features.push((name_str_id, start, end));
         }
 
-        features.sort_by_key(|(name, ..)| &strpool[(name.0 as usize)..(name.1 as usize)]);
+        features.sort_by_key(|(name, ..)| strpool.get(*name));
 
         let (stats_name, stats_list): (Vec<_>, Vec<_>) = stats.iter()
             .map(|(browser, start, end)| {
@@ -334,14 +324,12 @@ fn build_caniuse_global() -> Result<()> {
                 (browser, [start, end])
             })
             .unzip();
-        let features = features.iter().flat_map(|(name, start, end)| {
-            let name_start = name.0;
-            let name_end = name.1;
+        let features = features.iter().flat_map(|(name_str_id, start, end)| {
             let start: u32 = (*start).try_into().unwrap();
             let end: u32 = (*end).try_into().unwrap();
             quote! {
                 (
-                    PooledStr(#name_start, #name_end),
+                    PooledStr(#name_str_id),
                     Feature(#start, #end)
                 )
             }
@@ -349,7 +337,7 @@ fn build_caniuse_global() -> Result<()> {
 
         let version_store_len = write_u32(
             format!("{OUT_DIR}/caniuse-feature-versionstore.u32seq"),
-            versions.iter().flat_map(|&(start, end)| [start, end])
+            versions.iter().copied()
         )?;
         let version_index_len = write_u32(
             format!("{OUT_DIR}/caniuse-feature-versionindex.u32seq"),
@@ -374,7 +362,7 @@ fn build_caniuse_global() -> Result<()> {
                 //
                 // We do the transmute at const context,
                 // and the size and alignment are already checked and guaranteed by compiler.
-                static FEATURES_STAT_VERSION_STORE: &[PairU32; #version_store_len / core::mem::size_of::<PairU32>()] = unsafe {
+                static FEATURES_STAT_VERSION_STORE: &[U32; #version_store_len / core::mem::size_of::<U32>()] = unsafe {
                     &core::mem::transmute(*include_bytes!("caniuse-feature-versionstore.u32seq"))
                 };
                 static FEATURES_STAT_VERSION_INDEX: &[PairU32; #version_index_len / core::mem::size_of::<PairU32>()] = unsafe {
@@ -386,7 +374,7 @@ fn build_caniuse_global() -> Result<()> {
 
     fs::write(
         format!("{OUT_DIR}/caniuse-strpool.bin"),
-        strpool.as_bytes()
+        strpool.pool.as_bytes()
     )?;
 
     Ok(())
@@ -498,4 +486,35 @@ fn write_u32(path: String, iter: impl Iterator<Item = u32>) -> io::Result<usize>
 
     fd.flush()?;
     Ok(n)
+}
+
+#[derive(Default)]
+struct StrPool<'s> {
+    pool: String,
+    map: HashMap<&'s str, u32>
+}
+
+impl<'s> StrPool<'s> {
+    pub fn insert(&mut self, s: &'s str) -> u32 {
+        *self.map.entry(s).or_insert_with(|| {
+            let offset = self.pool.len();
+            self.pool.push_str(s);
+            let len: u8 = (self.pool.len() - offset).try_into().unwrap();
+            let offset: u32 = offset.try_into().unwrap();
+
+            if offset > (1 << 24) {
+                panic!("string too large");
+            }
+
+            offset | (u32::from(len) << 24)
+        })
+    }
+
+    pub fn get(&self, id: u32) -> &str {
+        // 24bit offset and 8bit len
+        let offset = id & ((1 << 24) - 1);
+        let len = id >> 24;
+
+        &self.pool[(offset as usize)..][..(len as usize)]
+    }
 }
