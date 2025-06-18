@@ -234,7 +234,7 @@ pub fn count_filter_versions(name: &str, mobile_to_desktop: bool, count: usize) 
                     .iter()
                     .filter(|version| version.released)
                     .map(|version| version.version.as_str())
-                    .last()
+                    .next_back()
                     .unwrap()
                     .parse::<f32>()
                     .unwrap();

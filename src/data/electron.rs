@@ -9,8 +9,7 @@ use std::ops::Range;
 
 include!("../generated/electron-to-chromium.rs");
 
-pub fn versions(
-) -> impl Iterator<Item = (f32, &'static str)> + ExactSizeIterator + DoubleEndedIterator {
+pub fn versions() -> impl ExactSizeIterator<Item = (f32, &'static str)> + DoubleEndedIterator {
     ELECTRON_VERSIONS
         .iter()
         .copied()

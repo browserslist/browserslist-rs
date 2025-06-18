@@ -29,7 +29,7 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                         .iter()
                         .filter(|version| version.released)
                         .filter_map(|latest_version| versions.get(latest_version.version.as_str()))
-                        .last()
+                        .next_back()
                         .is_some_and(|flags| is_supported(flags, include_partial));
                 browser_stat
                     .iter()

@@ -1,7 +1,9 @@
 use ahash::AHashMap;
-use std::borrow::Borrow;
-use std::fmt;
-use std::{borrow::Cow, sync::LazyLock};
+use std::{
+    borrow::{Borrow, Cow},
+    fmt,
+    sync::LazyLock,
+};
 
 pub(crate) mod features;
 pub(crate) mod region;
@@ -227,7 +229,7 @@ impl BrowserStat {
 
 impl PooledStr {
     pub fn as_str(&self) -> &'static str {
-        static STRPOOL: &'static str = include_str!("../generated/caniuse-strpool.bin");
+        static STRPOOL: &str = include_str!("../generated/caniuse-strpool.bin");
 
         // 24bit offset and 8bit len
         let offset = self.0 & ((1 << 24) - 1);

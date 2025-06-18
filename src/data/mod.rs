@@ -1,7 +1,7 @@
-mod utils;
 pub(crate) mod caniuse;
 pub(crate) mod electron;
 pub(crate) mod node;
+mod utils;
 
 #[doc(hidden)]
 pub fn decode_browser_name(id: u8) -> &'static str {

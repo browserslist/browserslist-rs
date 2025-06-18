@@ -16,15 +16,15 @@ impl<K, V> BinMap<'_, K, V> {
         K: Borrow<Q>,
         Q: Ord + ?Sized,
     {
-        let idx = self.0.binary_search_by(|(k, _)| k.borrow().cmp(&q)).ok()?;
+        let idx = self
+            .0
+            .binary_search_by(|(k, _)| Ord::cmp(k.borrow(), q))
+            .ok()?;
         let item = &self.0[idx];
         Some((&item.0, &item.1))
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &(K, V)>
-        + ExactSizeIterator
-        + DoubleEndedIterator
-    {
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &(K, V)> + DoubleEndedIterator {
         self.0.iter()
     }
 }

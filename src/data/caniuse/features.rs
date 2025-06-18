@@ -1,6 +1,8 @@
-use super::{ BinMap, PooledStr };
-use crate::data::decode_browser_name;
-use crate::data::utils::{ PairU32, U32 };
+use super::PooledStr;
+use crate::data::{
+    decode_browser_name,
+    utils::{BinMap, PairU32, U32},
+};
 
 #[derive(Clone, Copy)]
 pub struct Feature(u32, u32);
@@ -26,13 +28,11 @@ pub(crate) fn get_feature_stat(name: &str) -> Option<Feature> {
 impl Feature {
     pub fn get(&self, browser: &str) -> Option<VersionList> {
         let range = (self.0 as usize)..(self.1 as usize);
-        let index = FEATURES_STAT_BROWSERS[range.clone()].binary_search_by_key(
-            &browser,
-            |&k| decode_browser_name(k)
-        )
+        let index = FEATURES_STAT_BROWSERS[range.clone()]
+            .binary_search_by_key(&browser, |&k| decode_browser_name(k))
             .ok()?;
-        let pair = FEATURES_STAT_VERSION_INDEX[range.clone()][index];
-        Some(VersionList(pair))
+        let list = FEATURES_STAT_VERSION_INDEX[range][index];
+        Some(VersionList(list))
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, VersionList)> {
@@ -46,7 +46,7 @@ impl Feature {
 
 impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
-        let range = (self.0.0.get() as usize)..(self.0.1.get() as usize);
+        let range = (self.0 .0.get() as usize)..(self.0 .1.get() as usize);
         let index = FEATURES_STAT_VERSION_STORE[range.clone()]
             .binary_search_by_key(&version, |s| PooledStr(s.get()).as_str())
             .ok()?;
