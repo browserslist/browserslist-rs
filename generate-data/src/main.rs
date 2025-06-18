@@ -3,6 +3,7 @@ use indexmap::IndexMap;
 use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::{
+    borrow::Cow,
     collections::{BTreeMap, HashMap},
     fs, io::{self, Write},
 };
@@ -62,8 +63,7 @@ fn main() -> Result<()> {
     build_electron_to_chromium()?;
     build_node_versions()?;
     build_node_release_schedule()?;
-    build_caniuse_global()?;
-    build_caniuse_region()?;
+    build_caniuse()?;
 
     Ok(())
 }
@@ -183,7 +183,7 @@ fn build_node_release_schedule() -> Result<()> {
     Ok(())
 }
 
-fn build_caniuse_global() -> Result<()> {
+fn build_caniuse() -> Result<()> {
     let data = parse_caniuse_global()?;
 
     let mut strpool = StrPool::default();
@@ -368,6 +368,99 @@ fn build_caniuse_global() -> Result<()> {
                 static FEATURES_STAT_VERSION_INDEX: &[PairU32; #version_index_len / core::mem::size_of::<PairU32>()] = unsafe {
                     &core::mem::transmute(*include_bytes!("caniuse-feature-versionindex.u32seq"))
                 };
+
+                static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("caniuse-feature-flags.bin");
+                static FEATURES_STAT_BROWSERS: &[u8] = include_bytes!("caniuse-feature-browsers.bin");
+            }.to_string()
+        )?;
+    }
+
+    // caniuse region
+    {
+        #[derive(Deserialize)]
+        struct RegionData {
+            data: HashMap<String, HashMap<String, Option<f32>>>,
+        }
+
+        let files = fs::read_dir("vendor/caniuse/region-usage-json")?
+            .map(|entry| entry.map_err(anyhow::Error::from))
+            .collect::<Result<Vec<_>>>()?;
+        let mut usages = Vec::new();
+        let mut region_usages = Vec::new();
+
+        for file in &files {
+            let RegionData { data: region_data } = serde_json::from_slice(&fs::read(file.path())?)?;
+
+            let start = usages.len();
+            for (name, stat) in &region_data {
+                let agent = data.agents.get(name).unwrap();
+                for (version, usage) in stat {
+                    if let &Some(usage) = usage {
+                        let version = if version.as_str() == "0" {
+                            Cow::Borrowed(&*agent.version_list.last().unwrap().version)
+                        } else {
+                            Cow::Owned(version.clone())
+                        };
+
+                        let version_str_id = strpool.insert_cow(version);
+                        usages.push((
+                            encode_browser_name(name),
+                            version_str_id,
+                            usage
+                        ));
+                    }
+                }
+            }
+            let end = usages.len();
+            usages[start..end].sort_by(|(_, _, a), (_, _, b)| b.total_cmp(a));
+
+            let region_name = file.path().file_stem().unwrap().to_str().unwrap().to_owned();
+            let region_str_id = strpool.insert_cow(Cow::Owned(region_name));
+            region_usages.push((region_str_id, start, end));
+        }
+
+        region_usages.sort_by_key(|(region, ..)| strpool.get(*region));
+
+        let browsers = usages.iter().map(|(b, ..)| *b).collect::<Vec<_>>();
+        fs::write(
+            format!("{OUT_DIR}/caniuse-region-browsers.bin"),
+            &browsers
+        )?;
+        drop(browsers);
+
+        let versions_len = write_u32(
+            format!("{OUT_DIR}/caniuse-region-versions.u32seq"),
+            usages.iter().map(|(_, v, _)| *v)
+        )?;
+        let usages_len = write_u32(
+            format!("{OUT_DIR}/caniuse-region-usages.u32seq"),
+            usages.iter().map(|(_, _, u)| u.to_bits())
+        )?;
+
+        let region_data = region_usages.iter().copied().map(|(region_str_id, start, end)| {
+            let start: u32 = start.try_into().unwrap();
+            let end: u32 = end.try_into().unwrap();
+
+            quote! {
+                (
+                    PooledStr(#region_str_id),
+                    RegionData(#start, #end)
+                )
+            }
+        });
+
+        fs::write(
+            format!("{OUT_DIR}/caniuse-region-matching.rs"),
+            quote! {
+                static REGIONS: &[(PooledStr, RegionData)] = &[#(#region_data),*];
+
+                static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
+                static REGIONS_VERSIONS: &[U32; #versions_len / core::mem::size_of::<U32>()] = unsafe {
+                    &core::mem::transmute(*include_bytes!("caniuse-region-versions.u32seq"))
+                };
+                static REGIONS_USAGES: &[U32; #usages_len / core::mem::size_of::<U32>()] = unsafe {
+                    &core::mem::transmute(*include_bytes!("caniuse-region-usages.u32seq"))
+                };
             }.to_string()
         )?;
     }
@@ -384,94 +477,6 @@ fn parse_caniuse_global() -> Result<Caniuse> {
     Ok(serde_json::from_slice(&fs::read(
         "vendor/caniuse/fulldata-json/data-2.0.json",
     )?)?)
-}
-
-fn build_caniuse_region() -> Result<()> {
-    #[derive(Deserialize)]
-    struct RegionData {
-        data: HashMap<String, HashMap<String, Option<f32>>>,
-    }
-
-    let files = fs::read_dir("vendor/caniuse/region-usage-json")?
-        .map(|entry| entry.map_err(anyhow::Error::from))
-        .collect::<Result<Vec<_>>>()?;
-
-    let Caniuse { agents, .. } = parse_caniuse_global()?;
-
-    let region_dir = format!("{OUT_DIR}/region");
-    if matches!(fs::File::open(&region_dir), Err(e) if e.kind() == io::ErrorKind::NotFound) {
-        fs::create_dir(&region_dir)?;
-    }
-
-    for file in &files {
-        let RegionData { data } = serde_json::from_slice(&fs::read(file.path())?)?;
-        let mut usage = data
-            .into_iter()
-            .flat_map(|(name, stat)| {
-                let agent = agents.get(&name).unwrap();
-                stat.into_iter().filter_map(move |(version, usage)| {
-                    let version = if version.as_str() == "0" {
-                        agent.version_list.last().unwrap().version.clone()
-                    } else {
-                        version
-                    };
-                    usage.map(|usage| (encode_browser_name(&name), version, usage))
-                })
-            })
-            .collect::<Vec<_>>();
-        usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
-        fs::write(
-            format!("{OUT_DIR}/region/{}", file.file_name().to_str().unwrap()),
-            serde_json::to_string(&usage)?,
-        )?;
-    }
-    let mut regions = files
-        .iter()
-        .map(|entry| {
-            entry
-                .path()
-                .file_stem()
-                .unwrap()
-                .to_str()
-                .map(|s| s.to_owned())
-                .unwrap()
-        })
-        .collect::<Vec<_>>();
-    regions.sort();
-    let regions_len = regions.len();
-    let tokens = quote! {{
-        use serde_json::from_str;
-        use std::sync::LazyLock;
-        use crate::data::decode_browser_name;
-
-        type Usage = LazyLock<Vec<(&'static str, &'static str, f32)>>;
-        type Json = Vec<(u8, &'static str, f32)>;
-
-        #[inline(never)]
-        fn usage(data: &'static str) -> Vec<(&'static str, &'static str, f32)> {
-            from_str::<Json>(data)
-                .unwrap()
-                .into_iter()
-                .map(|(browser, version, usage)| (decode_browser_name(browser), version, usage))
-                .collect()
-        }
-
-        static REGIONS: &[&str] = &[
-            #( #regions ),*
-        ];
-        static USAGES: [Usage; #regions_len] = [
-            #( LazyLock::new(|| usage(include_str!(concat!("region/", #regions, ".json")))) ),*
-        ];
-
-        let idx = REGIONS.binary_search(&region).ok()?;
-        USAGES.get(idx).map(|v| &**v)
-    }};
-    fs::write(
-        format!("{OUT_DIR}/caniuse-region-matching.rs"),
-        tokens.to_string(),
-    )?;
-
-    Ok(())
 }
 
 fn write_u32(path: String, iter: impl Iterator<Item = u32>) -> io::Result<usize> {
@@ -491,14 +496,18 @@ fn write_u32(path: String, iter: impl Iterator<Item = u32>) -> io::Result<usize>
 #[derive(Default)]
 struct StrPool<'s> {
     pool: String,
-    map: HashMap<&'s str, u32>
+    map: HashMap<Cow<'s, str>, u32>
 }
 
 impl<'s> StrPool<'s> {
     pub fn insert(&mut self, s: &'s str) -> u32 {
-        *self.map.entry(s).or_insert_with(|| {
+        self.insert_cow(Cow::Borrowed(s))
+    }
+
+    pub fn insert_cow(&mut self, s: Cow<'s, str>) -> u32 {
+        *self.map.entry(s.clone()).or_insert_with(|| {
             let offset = self.pool.len();
-            self.pool.push_str(s);
+            self.pool.push_str(&s);
             let len: u8 = (self.pool.len() - offset).try_into().unwrap();
             let offset: u32 = offset.try_into().unwrap();
 

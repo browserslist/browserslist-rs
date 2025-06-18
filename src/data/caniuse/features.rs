@@ -8,10 +8,16 @@ pub struct Feature(u32, u32);
 #[derive(Clone, Copy)]
 pub struct VersionList(PairU32);
 
+// ```rust
+// static FEATURES: &[(PooledStr, Feature)]; // feature name and browsers list
+//
+// static FEATURES_STAT_VERSION_STORE: &[U32]; // version string
+// static FEATURES_STAT_VERSION_INDEX: &[PairU32]; // version range
+//
+// static FEATURES_STAT_FLAGS: &[u8]; // support flag
+// static FEATURES_STAT_BROWSERS: &[u8]; // browser name id
+// ```
 include!("../../generated/caniuse-feature-matching.rs");
-
-static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("../../generated/caniuse-feature-flags.bin");
-static FEATURES_STAT_BROWSERS: &[u8] = include_bytes!("../../generated/caniuse-feature-browsers.bin");
 
 pub(crate) fn get_feature_stat(name: &str) -> Option<Feature> {
     BinMap(FEATURES).get(name).copied()
