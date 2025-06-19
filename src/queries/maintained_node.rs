@@ -1,18 +1,15 @@
 use super::{Distrib, QueryResult};
-use crate::data::node::{NODE_VERSIONS, RELEASE_SCHEDULE};
+use crate::data::node;
 use chrono::Local;
 
 pub(super) fn maintained_node() -> QueryResult {
     let now = Local::now().naive_local();
-
-    let versions = RELEASE_SCHEDULE
-        .iter()
-        .filter(|(_, (start, end))| *start < now && now < *end)
-        .filter_map(|(version, _)| {
-            NODE_VERSIONS
+    let versions = node::release_schedule(now.date())
+        .filter_map(|version| {
+            node::versions()
                 .iter()
                 .rev()
-                .find(|v| v.split('.').next().unwrap() == *version)
+                .find(|v| v.split('.').next().unwrap() == version)
         })
         .map(|version| Distrib::new("node", *version))
         .collect();

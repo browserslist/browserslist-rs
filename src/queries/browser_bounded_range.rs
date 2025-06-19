@@ -9,25 +9,24 @@ use crate::{
 pub(super) fn browser_bounded_range(name: &str, from: &str, to: &str, opts: &Opts) -> QueryResult {
     let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
         .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
-    let from: Version = normalize_version(stat, from)
+    let from: Version = normalize_version(name, stat, from)
         .unwrap_or(from)
         .parse()
         .unwrap_or_default();
-    let to: Version = normalize_version(stat, to)
+    let to: Version = normalize_version(name, stat, to)
         .unwrap_or(to)
         .parse()
         .unwrap_or_default();
 
     let distribs = stat
-        .version_list
         .iter()
-        .filter(|version| version.release_date.is_some())
+        .filter(|version| version.released)
         .map(|version| version.version)
         .filter(|version| {
-            let version = version.parse().unwrap_or_default();
+            let version = version.as_str().parse().unwrap_or_default();
             from <= version && version <= to
         })
-        .map(|version| Distrib::new(name, version))
+        .map(|version| Distrib::new(name, version.as_str()))
         .collect();
     Ok(distribs)
 }

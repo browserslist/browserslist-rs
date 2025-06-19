@@ -1,4 +1,4 @@
-use browserslist::{Opts, resolve};
+use browserslist::{resolve, Opts};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

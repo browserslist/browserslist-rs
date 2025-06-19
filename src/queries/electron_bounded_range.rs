@@ -1,6 +1,6 @@
 use super::{Distrib, QueryResult};
 use crate::{
-    data::electron::{parse_version, ELECTRON_VERSIONS},
+    data::electron::{self, parse_version},
     error::Error,
 };
 
@@ -10,20 +10,19 @@ pub(super) fn electron_bounded_range(from: &str, to: &str) -> QueryResult {
     let from: f32 = parse_version(from)?;
     let to: f32 = parse_version(to)?;
 
-    if ELECTRON_VERSIONS
-        .iter()
-        .all(|(version, _)| *version != from)
-    {
-        return Err(Error::UnknownElectronVersion(from_str.to_string()));
-    }
-    if ELECTRON_VERSIONS.iter().all(|(version, _)| *version != to) {
-        return Err(Error::UnknownElectronVersion(to_str.to_string()));
-    }
+    let versions = electron::bounded_range(from..to).map_err(|v| {
+        let v = match v {
+            v if v == from => from_str,
+            v if v == to => to_str,
+            _ => unreachable!(),
+        };
 
-    let distribs = ELECTRON_VERSIONS
+        Error::UnknownElectronVersion(v.into())
+    })?;
+
+    let distribs = versions
         .iter()
-        .filter(|(version, _)| from <= *version && *version <= to)
-        .map(|(_, version)| Distrib::new("chrome", *version))
+        .map(|version| Distrib::new("chrome", *version))
         .collect();
     Ok(distribs)
 }

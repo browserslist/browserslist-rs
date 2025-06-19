@@ -1,22 +1,17 @@
 use super::{count_filter_versions, Distrib, QueryResult};
-use crate::{
-    data::caniuse::{get_browser_stat, CANIUSE_BROWSERS},
-    opts::Opts,
-};
+use crate::{data::caniuse, opts::Opts};
 
 pub(super) fn last_n_browsers(count: usize, opts: &Opts) -> QueryResult {
-    let distribs = CANIUSE_BROWSERS
-        .keys()
-        .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-        .flat_map(|(name, stat)| {
+    let distribs = caniuse::iter_browser_stat(opts.mobile_to_desktop)
+        .flat_map(|(name, version_list)| {
             let count = count_filter_versions(name, opts.mobile_to_desktop, count);
 
-            stat.version_list
+            version_list
                 .iter()
-                .filter(|version| version.release_date.is_some())
+                .filter(|version| version.released)
                 .rev()
                 .take(count)
-                .map(move |version| Distrib::new(name, version.version))
+                .map(move |version| Distrib::new(name, version.version.as_str()))
         })
         .collect();
 

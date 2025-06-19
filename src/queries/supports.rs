@@ -26,29 +26,27 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                     .flatten();
                 let check_desktop = desktop_name.is_some()
                     && browser_stat
-                        .version_list
                         .iter()
-                        .filter(|version| version.release_date.is_some())
-                        .filter_map(|latest_version| versions.get(latest_version.version))
-                        .last()
-                        .is_some_and(|flags| is_supported(*flags, include_partial));
+                        .filter(|version| version.released)
+                        .filter_map(|latest_version| versions.get(latest_version.version.as_str()))
+                        .next_back()
+                        .is_some_and(|flags| is_supported(flags, include_partial));
                 browser_stat
-                    .version_list
                     .iter()
                     .filter_map(move |VersionDetail { version, .. }| {
                         versions
-                            .get(version)
+                            .get(version.as_str())
                             .or_else(|| match desktop_name {
                                 Some(desktop_name) if check_desktop => feature
                                     .get(desktop_name)
-                                    .and_then(|versions| versions.get(version)),
+                                    .and_then(|versions| versions.get(version.as_str())),
                                 _ => None,
                             })
                             .and_then(|flags| {
-                                is_supported(*flags, include_partial).then_some(version)
+                                is_supported(flags, include_partial).then_some(version)
                             })
                     })
-                    .map(move |version| Distrib::new(name, *version))
+                    .map(move |version| Distrib::new(name, version.as_str()))
             })
             .collect();
         Ok(distribs)

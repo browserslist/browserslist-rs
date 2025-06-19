@@ -3,8 +3,10 @@ use indexmap::IndexMap;
 use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::{
+    borrow::Cow,
     collections::{BTreeMap, HashMap},
-    fs, io,
+    fs,
+    io::{self, Write},
 };
 
 const OUT_DIR: &str = "src/generated";
@@ -36,13 +38,13 @@ fn encode_browser_name(name: &str) -> u8 {
 
 #[derive(Deserialize)]
 struct Caniuse {
-    agents: HashMap<String, Agent>,
+    agents: BTreeMap<String, Agent>,
     data: BTreeMap<String, Feature>,
 }
 
 #[derive(Deserialize)]
 struct Agent {
-    usage_global: HashMap<String, f32>,
+    usage_global: BTreeMap<String, f32>,
     version_list: Vec<VersionDetail>,
 }
 
@@ -55,15 +57,14 @@ struct VersionDetail {
 
 #[derive(Deserialize)]
 struct Feature {
-    stats: HashMap<String, IndexMap<String, String>>,
+    stats: BTreeMap<String, IndexMap<String, String>>,
 }
 
 fn main() -> Result<()> {
     build_electron_to_chromium()?;
     build_node_versions()?;
     build_node_release_schedule()?;
-    build_caniuse_global()?;
-    build_caniuse_region()?;
+    build_caniuse()?;
 
     Ok(())
 }
@@ -79,22 +80,15 @@ fn build_electron_to_chromium() -> Result<()> {
         (electron_version.parse::<f32>().unwrap(), chromium_version)
     })
     .collect::<Vec<_>>();
-    data.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap());
-    let data = data
-        .into_iter()
-        .map(|(electron_version, chromium_version)| {
-            quote! {
-                (#electron_version, #chromium_version)
-            }
-        });
+    data.sort_by(|(a, _), (b, _)| a.total_cmp(b));
+    let (electron_versions, chromium_versions): (Vec<_>, Vec<_>) = data.into_iter().unzip();
 
-    fs::write(
-        path,
-        quote! {{
-            vec![#(#data),*]
-        }}
-        .to_string(),
-    )?;
+    let code = quote! {
+        static ELECTRON_VERSIONS: &[f32] = &[ #(#electron_versions),* ];
+        static CHROMIUM_VERSIONS: &[&str] = &[ #(#chromium_versions),* ];
+    };
+
+    fs::write(path, code.to_string())?;
 
     Ok(())
 }
@@ -113,9 +107,9 @@ fn build_node_versions() -> Result<()> {
     let versions = releases.into_iter().map(|release| release.version);
     fs::write(
         path,
-        quote! {{
-            vec![#(#versions),*]
-        }}
+        quote! {
+            static NODE_VERSIONS: &[&str] = &[#(#versions),*];
+        }
         .to_string(),
     )?;
 
@@ -123,6 +117,8 @@ fn build_node_versions() -> Result<()> {
 }
 
 fn build_node_release_schedule() -> Result<()> {
+    use chrono::{Datelike, NaiveDate};
+
     #[derive(Deserialize)]
     struct NodeRelease {
         start: String,
@@ -131,161 +127,362 @@ fn build_node_release_schedule() -> Result<()> {
 
     let path = format!("{OUT_DIR}/node-release-schedule.rs");
 
-    let schedule: HashMap<String, NodeRelease> = serde_json::from_slice(&fs::read(
+    let schedule: BTreeMap<String, NodeRelease> = serde_json::from_slice(&fs::read(
         "vendor/node-releases/data/release-schedule/release-schedule.json",
     )?)?;
-    let cap = schedule.len();
-    let versions = schedule
+    let mut versions = schedule
         .into_iter()
         .map(|(version, NodeRelease { start, end })| {
+            let date_format = "%Y-%m-%d";
+            let start = NaiveDate::parse_from_str(&start, date_format)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap();
+            let end = NaiveDate::parse_from_str(&end, date_format)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap();
+
+            (version, (start, end))
+        })
+        .collect::<Vec<_>>();
+    // filter by end date to quickly reduce scope
+    versions.sort_by_key(|(_, (_, end))| *end);
+
+    let (versions, dates): (Vec<_>, Vec<_>) = versions
+        .into_iter()
+        .map(|(version, (start, end))| {
             let version = version.trim_start_matches('v');
-            quote! {
-                map.insert(#version, (#start, #end));
-            }
-        });
+
+            let start_year = start.year();
+            let start_month = start.month();
+            let start_day = start.day();
+            let end_year = end.year();
+            let end_month = end.month();
+            let end_day = end.day();
+
+            let date = quote! {
+                (
+                    chrono::NaiveDate::from_ymd_opt(#start_year, #start_month, #start_day).unwrap(),
+                    chrono::NaiveDate::from_ymd_opt(#end_year, #end_month, #end_day).unwrap(),
+                )
+            };
+
+            (version.to_owned(), date)
+        })
+        .unzip();
 
     fs::write(
         path,
-        quote! {{
-            let mut map = ahash::AHashMap::with_capacity(#cap);
-            #(#versions)*
-            map
-        }}
+        quote! {
+            static NODE_RELEASE_VERSIONS: &[&str] = &[#(#versions),*];
+            static NODE_RELEASE_SCHEDULE: &[(chrono::NaiveDate, chrono::NaiveDate)] = &[#(#dates),*];
+        }
         .to_string(),
     )?;
 
     Ok(())
 }
 
-fn build_caniuse_global() -> Result<()> {
+fn build_caniuse() -> Result<()> {
     let data = parse_caniuse_global()?;
 
-    fs::write(
-        format!("{OUT_DIR}/caniuse-browsers.rs"),
-        {
-            let browser_stat = data.agents.iter().map(|(name, agent)| {
-                let detail = agent.version_list.iter().map(|version| {
-                    let ver = &version.version;
-                    let global_usage = version.global_usage;
-                    let release_date = if let Some(release_date) = version.release_date {
-                        quote! { Some(#release_date) }
-                    } else {
-                        quote! { None }
-                    };
-                    quote! {
-                        VersionDetail {
-                            version: #ver,
-                            global_usage: #global_usage,
-                            release_date: #release_date,
-                        }
+    let mut strpool = StrPool::default();
+
+    // caniuse browsers
+    {
+        let mut versions = Vec::new();
+        let mut stats = Vec::new();
+
+        for (name, agent) in &data.agents {
+            let name_str_id = strpool.insert(name);
+            let start: u32 = versions.len().try_into().unwrap();
+
+            for version in &agent.version_list {
+                let version_str_id = strpool.insert(&version.version);
+                let usage = version.global_usage;
+                let date = version.release_date.unwrap_or_default();
+                let released = version.release_date.is_some();
+
+                versions.push(quote! {
+                    VersionDetail {
+                        version: PooledStr(#version_str_id),
+                        release_date: #date,
+                        released: #released,
+                        global_usage: #usage,
                     }
                 });
-                quote! {
-                    (#name, BrowserStat {
-                        name: #name,
-                        version_list: vec![#(#detail),*],
-                    })
-                }
-            });
-            quote! {{
-                AHashMap::from([ #( #browser_stat ),* ])
-            }}
-        }
-        .to_string(),
-    )?;
+            }
 
-    let mut global_usage = data
-        .agents
-        .iter()
-        .flat_map(|(name, agent)| {
-            agent.usage_global.iter().map(move |(version, usage)| {
+            let end: u32 = versions.len().try_into().unwrap();
+            stats.push((name_str_id, start, end));
+        }
+
+        stats.sort_by_key(|(name_str_id, ..)| strpool.get(*name_str_id));
+        let stats = stats.into_iter().map(|(name_str_id, start, end)| {
+            quote! {
                 (
-                    usage,
-                    quote! {
-                        (#name, #version, #usage)
-                    },
+                    PooledStr(#name_str_id),
+                    BrowserStat(#start, #end)
                 )
-            })
-        })
-        .collect::<Vec<_>>();
-    global_usage.sort_unstable_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
-    let push_usage = global_usage.into_iter().map(|(_, tokens)| tokens);
-    fs::write(
-        format!("{OUT_DIR}/caniuse-global-usage.rs"),
-        quote! {
-            &[#(#push_usage),*]
-        }
-        .to_string(),
-    )?;
+            }
+        });
 
-    let features_dir = format!("{OUT_DIR}/features");
-    if matches!(fs::File::open(&features_dir), Err(e) if e.kind() == io::ErrorKind::NotFound) {
-        fs::create_dir(&features_dir)?;
-    }
-    for (name, feature) in &data.data {
         fs::write(
-            format!("{features_dir}/{name}.json"),
-            serde_json::to_string(
-                &feature
-                    .stats
-                    .iter()
-                    .map(|(name, versions)| {
-                        (
-                            encode_browser_name(name),
-                            versions
-                                .into_iter()
-                                .map(|(version, flags)| {
-                                    let mut bit = 0;
-                                    if flags.contains('y') {
-                                        bit |= 1;
-                                    }
-                                    if flags.contains('a') {
-                                        bit |= 2;
-                                    }
-                                    (version, bit)
-                                })
-                                .collect::<IndexMap<_, u8>>(),
-                        )
-                    })
-                    .collect::<HashMap<_, _>>(),
-            )?,
+            format!("{OUT_DIR}/caniuse-browsers.rs"),
+            quote! {
+                static VERSION_LIST: &[VersionDetail] = &[#(#versions),*];
+                static BROWSERS_STATS: &[(PooledStr, BrowserStat)] = &[#(#stats),*];
+            }
+            .to_string(),
         )?;
     }
-    let mut features = data.data.keys().collect::<Vec<_>>();
-    features.sort();
-    let features_len = features.len();
-    let tokens = quote! {{
-        use ahash::AHashMap;
-        use indexmap::IndexMap;
-        use serde_json::from_str;
-        use std::sync::LazyLock;
-        use crate::data::decode_browser_name;
 
-        type Stat = LazyLock<AHashMap<&'static str, IndexMap<&'static str, u8>>>;
-        type Json = AHashMap::<u8, IndexMap<&'static str, u8>>;
-
-        #[inline(never)]
-        fn stat(data: &'static str) -> AHashMap<&'static str, IndexMap<&'static str, u8>> {
-            from_str::<Json>(data)
-                .unwrap()
-                .into_iter()
-                .map(|(browser, versions)| (decode_browser_name(browser), versions))
-                .collect()
+    // caniuse usage
+    {
+        let mut global_usage = Vec::new();
+        for (name, agent) in &data.agents {
+            let name_str_id = strpool.insert(name);
+            for (version, usage) in &agent.usage_global {
+                let version_str_id = strpool.insert(version);
+                global_usage.push((name_str_id, version_str_id, usage));
+            }
         }
 
-        static FEATURES: &[&str] = &[
-            #( #features ),*
-        ];
-        static STATS: [Stat; #features_len] = [
-            #( LazyLock::new(|| stat(include_str!(concat!("features/", #features, ".json")))) ),*
-        ];
+        global_usage.sort_unstable_by(|(.., a), (.., b)| b.total_cmp(a));
+        let push_usage = global_usage
+            .into_iter()
+            .map(|(name_str_id, version_str_id, usage)| {
+                quote! {
+                    (
+                        PooledStr(#name_str_id),
+                        PooledStr(#version_str_id),
+                        #usage
+                    )
+                }
+            });
+        fs::write(
+            format!("{OUT_DIR}/caniuse-global-usage.rs"),
+            quote! {
+                &[#(#push_usage),*]
+            }
+            .to_string(),
+        )?;
+    }
 
-        let idx = FEATURES.binary_search(&name).ok()?;
-        STATS.get(idx).map(|v| &**v)
-    }};
+    // caniuse features
+    {
+        let mut features = Vec::new();
+        let mut stats = Vec::new();
+        let mut versions = Vec::new();
+        let mut flags = Vec::new();
+
+        for (name, feature) in &data.data {
+            let start = stats.len();
+            for (browser, ver) in &feature.stats {
+                let mut list = ver
+                    .iter()
+                    .map(|(version, flags)| {
+                        let version_str_id = strpool.insert(version);
+
+                        let mut bit: u8 = 0;
+                        if flags.contains('y') {
+                            bit |= 1;
+                        }
+                        if flags.contains('a') {
+                            bit |= 2;
+                        }
+                        (version_str_id, bit)
+                    })
+                    .collect::<Vec<_>>();
+
+                // we only use `.get()`, so the original order does not need to be preserved here
+                list.sort_by_key(|(x, _)| strpool.get(*x));
+
+                let start = versions.len();
+                versions.extend(list.iter().map(|(x, _)| *x));
+                flags.extend(list.iter().map(|(_, y)| *y));
+                let end = versions.len();
+
+                stats.push((browser.as_str(), start, end));
+            }
+            let end = stats.len();
+
+            stats[start..end].sort_by_key(|(browser, ..)| *browser);
+
+            let name_str_id = strpool.insert(name);
+            features.push((name_str_id, start, end));
+        }
+
+        features.sort_by_key(|(name, ..)| strpool.get(*name));
+
+        let (stats_name, stats_list): (Vec<_>, Vec<_>) = stats
+            .iter()
+            .map(|(browser, start, end)| {
+                let browser = encode_browser_name(browser);
+                let start: u32 = (*start).try_into().unwrap();
+                let end: u32 = (*end).try_into().unwrap();
+                (browser, [start, end])
+            })
+            .unzip();
+        let features = features.iter().flat_map(|(name_str_id, start, end)| {
+            let start: u32 = (*start).try_into().unwrap();
+            let end: u32 = (*end).try_into().unwrap();
+            quote! {
+                (
+                    PooledStr(#name_str_id),
+                    Feature(#start, #end)
+                )
+            }
+        });
+
+        let version_store_len = write_u32(
+            format!("{OUT_DIR}/caniuse-feature-versionstore.u32seq"),
+            versions.iter().copied(),
+        )?;
+        let version_index_len = write_u32(
+            format!("{OUT_DIR}/caniuse-feature-versionindex.u32seq"),
+            stats_list.iter().flatten().copied(),
+        )?;
+
+        fs::write(
+            format!("{OUT_DIR}/caniuse-feature-flags.bin"),
+            flags.as_slice(),
+        )?;
+        fs::write(
+            format!("{OUT_DIR}/caniuse-feature-browsers.bin"),
+            stats_name.as_slice(),
+        )?;
+
+        fs::write(
+            format!("{OUT_DIR}/caniuse-feature-matching.rs"),
+            quote! {
+                static FEATURES: &[(PooledStr, Feature)] = &[#(#features),*];
+
+                // # Safety
+                //
+                // We do the transmute at const context,
+                // and the size and alignment are already checked and guaranteed by compiler.
+                static FEATURES_STAT_VERSION_STORE: &[U32; #version_store_len / core::mem::size_of::<U32>()] = unsafe {
+                    &core::mem::transmute::<
+                        [u8; #version_store_len],
+                        [U32; #version_store_len / core::mem::size_of::<U32>()]
+                    >(*include_bytes!("caniuse-feature-versionstore.u32seq"))
+                };
+                static FEATURES_STAT_VERSION_INDEX: &[PairU32; #version_index_len / core::mem::size_of::<PairU32>()] = unsafe {
+                    &core::mem::transmute::<
+                        [u8; #version_index_len],
+                        [PairU32; #version_index_len / core::mem::size_of::<PairU32>()]
+                    >(*include_bytes!("caniuse-feature-versionindex.u32seq"))
+                };
+
+                static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("caniuse-feature-flags.bin");
+                static FEATURES_STAT_BROWSERS: &[u8] = include_bytes!("caniuse-feature-browsers.bin");
+            }.to_string()
+        )?;
+    }
+
+    // caniuse region
+    {
+        #[derive(Deserialize)]
+        struct RegionData {
+            data: BTreeMap<String, BTreeMap<String, Option<f32>>>,
+        }
+
+        let files = fs::read_dir("vendor/caniuse/region-usage-json")?
+            .map(|entry| entry.map_err(anyhow::Error::from))
+            .collect::<Result<Vec<_>>>()?;
+        let mut usages = Vec::new();
+        let mut region_usages = Vec::new();
+
+        for file in &files {
+            let RegionData { data: region_data } = serde_json::from_slice(&fs::read(file.path())?)?;
+
+            let start = usages.len();
+            for (name, stat) in &region_data {
+                let agent = data.agents.get(name).unwrap();
+                for (version, usage) in stat {
+                    if let &Some(usage) = usage {
+                        let version = if version.as_str() == "0" {
+                            Cow::Borrowed(&*agent.version_list.last().unwrap().version)
+                        } else {
+                            Cow::Owned(version.clone())
+                        };
+
+                        let version_str_id = strpool.insert_cow(version);
+                        usages.push((encode_browser_name(name), version_str_id, usage));
+                    }
+                }
+            }
+            let end = usages.len();
+            usages[start..end].sort_by(|(_, _, a), (_, _, b)| b.total_cmp(a));
+
+            let region_name = file
+                .path()
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned();
+            let region_str_id = strpool.insert_cow(Cow::Owned(region_name));
+            region_usages.push((region_str_id, start, end));
+        }
+
+        region_usages.sort_by_key(|(region, ..)| strpool.get(*region));
+
+        let browsers = usages.iter().map(|(b, ..)| *b).collect::<Vec<_>>();
+        fs::write(format!("{OUT_DIR}/caniuse-region-browsers.bin"), &browsers)?;
+        drop(browsers);
+
+        let versions_len = write_u32(
+            format!("{OUT_DIR}/caniuse-region-versions.u32seq"),
+            usages.iter().map(|(_, v, _)| *v),
+        )?;
+        let usages_len = write_u32(
+            format!("{OUT_DIR}/caniuse-region-usages.u32seq"),
+            usages.iter().map(|(_, _, u)| u.to_bits()),
+        )?;
+
+        let region_data = region_usages
+            .iter()
+            .copied()
+            .map(|(region_str_id, start, end)| {
+                let start: u32 = start.try_into().unwrap();
+                let end: u32 = end.try_into().unwrap();
+
+                quote! {
+                    (
+                        PooledStr(#region_str_id),
+                        RegionData(#start, #end)
+                    )
+                }
+            });
+
+        fs::write(
+            format!("{OUT_DIR}/caniuse-region-matching.rs"),
+            quote! {
+                static REGIONS: &[(PooledStr, RegionData)] = &[#(#region_data),*];
+
+                static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
+                static REGIONS_VERSIONS: &[U32; #versions_len / core::mem::size_of::<U32>()] = unsafe {
+                    &core::mem::transmute::<
+                        [u8; #versions_len],
+                        [U32; #versions_len / core::mem::size_of::<U32>()]
+                    >(*include_bytes!("caniuse-region-versions.u32seq"))
+                };
+                static REGIONS_USAGES: &[U32; #usages_len / core::mem::size_of::<U32>()] = unsafe {
+                    &core::mem::transmute::<
+                        [u8; #usages_len],
+                        [U32; #usages_len / core::mem::size_of::<U32>()]
+                    >(*include_bytes!("caniuse-region-usages.u32seq"))
+                };
+            }.to_string()
+        )?;
+    }
+
     fs::write(
-        format!("{OUT_DIR}/caniuse-feature-matching.rs"),
-        tokens.to_string(),
+        format!("{OUT_DIR}/caniuse-strpool.bin"),
+        strpool.pool.as_bytes(),
     )?;
 
     Ok(())
@@ -297,90 +494,51 @@ fn parse_caniuse_global() -> Result<Caniuse> {
     )?)?)
 }
 
-fn build_caniuse_region() -> Result<()> {
-    #[derive(Deserialize)]
-    struct RegionData {
-        data: HashMap<String, HashMap<String, Option<f32>>>,
+fn write_u32(path: String, iter: impl Iterator<Item = u32>) -> io::Result<usize> {
+    let fd = fs::File::create(path)?;
+    let mut fd = io::BufWriter::new(fd);
+    let mut n = 0;
+
+    for b in iter {
+        fd.write_all(&b.to_le_bytes())?;
+        n += 4;
     }
 
-    let files = fs::read_dir("vendor/caniuse/region-usage-json")?
-        .map(|entry| entry.map_err(anyhow::Error::from))
-        .collect::<Result<Vec<_>>>()?;
+    fd.flush()?;
+    Ok(n)
+}
 
-    let Caniuse { agents, .. } = parse_caniuse_global()?;
+#[derive(Default)]
+struct StrPool<'s> {
+    pool: String,
+    map: HashMap<Cow<'s, str>, u32>,
+}
 
-    let region_dir = format!("{OUT_DIR}/region");
-    if matches!(fs::File::open(&region_dir), Err(e) if e.kind() == io::ErrorKind::NotFound) {
-        fs::create_dir(&region_dir)?;
+impl<'s> StrPool<'s> {
+    pub fn insert(&mut self, s: &'s str) -> u32 {
+        self.insert_cow(Cow::Borrowed(s))
     }
 
-    for file in &files {
-        let RegionData { data } = serde_json::from_slice(&fs::read(file.path())?)?;
-        let mut usage = data
-            .into_iter()
-            .flat_map(|(name, stat)| {
-                let agent = agents.get(&name).unwrap();
-                stat.into_iter().filter_map(move |(version, usage)| {
-                    let version = if version.as_str() == "0" {
-                        agent.version_list.last().unwrap().version.clone()
-                    } else {
-                        version
-                    };
-                    usage.map(|usage| (encode_browser_name(&name), version, usage))
-                })
-            })
-            .collect::<Vec<_>>();
-        usage.sort_unstable_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
-        fs::write(
-            format!("{OUT_DIR}/region/{}", file.file_name().to_str().unwrap()),
-            serde_json::to_string(&usage)?,
-        )?;
-    }
-    let mut regions = files
-        .iter()
-        .map(|entry| {
-            entry
-                .path()
-                .file_stem()
-                .unwrap()
-                .to_str()
-                .map(|s| s.to_owned())
-                .unwrap()
+    pub fn insert_cow(&mut self, s: Cow<'s, str>) -> u32 {
+        *self.map.entry(s.clone()).or_insert_with(|| {
+            let offset = self.pool.len();
+            self.pool.push_str(&s);
+            let len: u8 = (self.pool.len() - offset).try_into().unwrap();
+            let offset: u32 = offset.try_into().unwrap();
+
+            if offset > (1 << 24) {
+                panic!("string too large");
+            }
+
+            offset | (u32::from(len) << 24)
         })
-        .collect::<Vec<_>>();
-    regions.sort();
-    let regions_len = regions.len();
-    let tokens = quote! {{
-        use serde_json::from_str;
-        use std::sync::LazyLock;
-        use crate::data::decode_browser_name;
+    }
 
-        type Usage = LazyLock<Vec<(&'static str, &'static str, f32)>>;
-        type Json = Vec<(u8, &'static str, f32)>;
+    pub fn get(&self, id: u32) -> &str {
+        // 24bit offset and 8bit len
+        let offset = id & ((1 << 24) - 1);
+        let len = id >> 24;
 
-        #[inline(never)]
-        fn usage(data: &'static str) -> Vec<(&'static str, &'static str, f32)> {
-            from_str::<Json>(data)
-                .unwrap()
-                .into_iter()
-                .map(|(browser, version, usage)| (decode_browser_name(browser), version, usage))
-                .collect()
-        }
-
-        static REGIONS: &[&str] = &[
-            #( #regions ),*
-        ];
-        static USAGES: [Usage; #regions_len] = [
-            #( LazyLock::new(|| usage(include_str!(concat!("region/", #regions, ".json")))) ),*
-        ];
-
-        let idx = REGIONS.binary_search(&region).ok()?;
-        USAGES.get(idx).map(|v| &**v)
-    }};
-    fs::write(
-        format!("{OUT_DIR}/caniuse-region-matching.rs"),
-        tokens.to_string(),
-    )?;
-
-    Ok(())
+        &self.pool[(offset as usize)..][..(len as usize)]
+    }
 }

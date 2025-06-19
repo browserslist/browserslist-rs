@@ -19,6 +19,7 @@ pub(super) fn browser_accurate(name: &str, version: &str, opts: &Opts) -> QueryR
         .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
 
     if let Some(version) = normalize_version(
+        name,
         stat,
         if original_version.eq_ignore_ascii_case("tp") {
             "TP"
@@ -35,7 +36,7 @@ pub(super) fn browser_accurate(name: &str, version: &str, opts: &Opts) -> QueryR
             v.push_str(".0");
             Cow::Owned(v)
         };
-        if let Some(version) = normalize_version(stat, &version) {
+        if let Some(version) = normalize_version(name, stat, &version) {
             Ok(vec![Distrib::new(name, version.to_owned())])
         } else if opts.ignore_unknown_versions {
             Ok(vec![])

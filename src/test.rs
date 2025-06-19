@@ -36,6 +36,7 @@ pub fn run_compare(query: &str, opts: &Opts, cwd: Option<&Path>) {
         .map(|d| d.to_string())
         .collect::<Vec<_>>();
 
+    assert_eq!(expected.len(), actual.len());
     assert_eq!(expected, actual);
 }
 

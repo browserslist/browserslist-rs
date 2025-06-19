@@ -25,7 +25,6 @@ chrono = { version = "0.4.38", features = [
     "oldtime",
 ], default-features = false } # disable wasmbind by default
 either = "1.13"
-indexmap = { version = "2.6", features = ["serde"] }
 itertools = "0.13"
 nom = "7.1"
 serde = { version = "1.0", features = ["derive"] }
