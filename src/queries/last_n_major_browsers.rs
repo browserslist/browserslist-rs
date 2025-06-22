@@ -1,32 +1,26 @@
 use super::{count_filter_versions, Distrib, QueryResult};
-use crate::{
-    data::caniuse::{get_browser_stat, CANIUSE_BROWSERS},
-    opts::Opts,
-};
+use crate::{data::caniuse, opts::Opts};
 use itertools::Itertools;
 
 pub(super) fn last_n_major_browsers(count: usize, opts: &Opts) -> QueryResult {
-    let distribs = CANIUSE_BROWSERS
-        .keys()
-        .filter_map(|name| get_browser_stat(name, opts.mobile_to_desktop))
-        .flat_map(|(name, stat)| {
+    let distribs = caniuse::iter_browser_stat(opts.mobile_to_desktop)
+        .flat_map(|(name, version_list)| {
             let count = count_filter_versions(name, opts.mobile_to_desktop, count);
 
-            let minimum: u32 = stat
-                .version_list
+            let minimum: u32 = version_list
                 .iter()
-                .filter(|version| version.release_date.is_some())
+                .filter(|version| version.released)
                 .rev()
-                .map(|version| version.version.split('.').next().unwrap())
+                .map(|version| version.version.as_str().split('.').next().unwrap())
                 .dedup()
                 .nth(count - 1)
                 .and_then(|minimum| minimum.parse().ok())
                 .unwrap_or(0);
 
-            stat.version_list
+            version_list
                 .iter()
-                .filter(|version| version.release_date.is_some())
-                .map(|version| version.version)
+                .filter(|version| version.released)
+                .map(|version| version.version.as_str())
                 .filter(move |version| {
                     version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
                 })

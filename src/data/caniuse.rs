@@ -1,31 +1,38 @@
 use ahash::AHashMap;
-use std::{borrow::Cow, sync::LazyLock};
+use std::{
+    borrow::{Borrow, Cow},
+    fmt,
+    sync::LazyLock,
+};
 
 pub(crate) mod features;
 pub(crate) mod region;
+
+use crate::data::utils::BinMap;
 
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 pub const OP_MOB_BLINK_FIRST: u32 = 14;
 
 #[derive(Clone, Debug)]
-pub struct BrowserStat {
-    name: &'static str,
-    pub version_list: Vec<VersionDetail>,
-}
+pub struct BrowserStat(u32, u32);
+
+#[derive(Clone, Copy)]
+pub struct PooledStr(u32);
 
 #[derive(Clone, Debug)]
 pub struct VersionDetail {
-    pub version: &'static str,
+    pub version: PooledStr,
+    pub release_date: i64,
+    // Use bool instead of Option to use pad space
+    pub released: bool,
     pub global_usage: f32,
-    pub release_date: Option<i64>,
 }
 
-pub type CaniuseData = AHashMap<&'static str, BrowserStat>;
+include!("../generated/caniuse-browsers.rs");
 
-pub static CANIUSE_BROWSERS: LazyLock<CaniuseData> =
-    LazyLock::new(|| include!("../generated/caniuse-browsers.rs"));
+pub static CANIUSE_BROWSERS: BinMap<PooledStr, BrowserStat> = BinMap(BROWSERS_STATS);
 
-pub static CANIUSE_GLOBAL_USAGE: &[(&'static str, &'static str, f32)] =
+pub static CANIUSE_GLOBAL_USAGE: &[(PooledStr, PooledStr, f32)] =
     include!("../generated/caniuse-global-usage.rs");
 
 pub static BROWSER_VERSION_ALIASES: LazyLock<
@@ -34,27 +41,29 @@ pub static BROWSER_VERSION_ALIASES: LazyLock<
     let mut aliases = CANIUSE_BROWSERS
         .iter()
         .filter_map(|(name, stat)| {
+            let name = name.as_str();
             let aliases = stat
-                .version_list
+                .version_list()
                 .iter()
                 .filter_map(|version| {
                     version
                         .version
+                        .as_str()
                         .split_once('-')
                         .map(|(bottom, top)| (bottom, top, version.version))
                 })
                 .fold(
                     AHashMap::<&str, &str>::new(),
                     move |mut aliases, (bottom, top, version)| {
-                        let _ = aliases.insert(bottom, version);
-                        let _ = aliases.insert(top, version);
+                        let _ = aliases.insert(bottom, version.as_str());
+                        let _ = aliases.insert(top, version.as_str());
                         aliases
                     },
                 );
             if aliases.is_empty() {
                 None
             } else {
-                Some((*name, aliases))
+                Some((name, aliases))
             }
         })
         .collect::<AHashMap<&'static str, _>>();
@@ -66,49 +75,37 @@ pub static BROWSER_VERSION_ALIASES: LazyLock<
     aliases
 });
 
-static ANDROID_TO_DESKTOP: LazyLock<BrowserStat> = LazyLock::new(|| {
+static ANDROID_TO_DESKTOP: LazyLock<Vec<VersionDetail>> = LazyLock::new(|| {
     let chrome = CANIUSE_BROWSERS.get("chrome").unwrap();
-    let mut android = CANIUSE_BROWSERS.get("android").unwrap().clone();
+    let android = CANIUSE_BROWSERS.get("android").unwrap();
 
-    android.version_list = android
-        .version_list
-        .into_iter()
+    let chrome_point = chrome
+        .version_list()
+        .binary_search_by_key(&(ANDROID_EVERGREEN_FIRST as usize), |probe| {
+            probe.version.as_str().parse::<usize>().unwrap()
+        })
+        .unwrap();
+
+    android
+        .version_list()
+        .iter()
         .filter(|version| {
-            let version = version.version;
+            let version = version.version.as_str();
             version.starts_with("2.")
                 || version.starts_with("3.")
                 || version.starts_with("4.")
                 || version == "3"
                 || version == "4"
         })
-        .chain(
-            chrome
-                .version_list
-                .iter()
-                .skip(
-                    chrome
-                        .version_list
-                        .iter()
-                        .position(|version| {
-                            version.version.parse::<usize>().unwrap()
-                                == ANDROID_EVERGREEN_FIRST as usize
-                        })
-                        .unwrap(),
-                )
-                .cloned(),
-        )
-        .collect();
-
-    android
+        .chain(chrome.version_list().iter().skip(chrome_point))
+        .cloned()
+        .collect()
 });
-
-static OPERA_MOBILE_TO_DESKTOP: LazyLock<BrowserStat> =
-    LazyLock::new(|| CANIUSE_BROWSERS.get("opera").unwrap().clone());
 
 pub fn get_browser_stat(
     name: &str,
     mobile_to_desktop: bool,
-) -> Option<(&'static str, &'static BrowserStat)> {
+) -> Option<(&'static str, &'static [VersionDetail])> {
     let name = if name.bytes().all(|b| b.is_ascii_lowercase()) {
         Cow::from(name)
     } else {
@@ -119,18 +116,53 @@ pub fn get_browser_stat(
     if mobile_to_desktop {
         if let Some(desktop_name) = to_desktop_name(name) {
             match name {
-                "android" => Some(("android", &ANDROID_TO_DESKTOP)),
-                "op_mob" => Some(("op_mob", &OPERA_MOBILE_TO_DESKTOP)),
-                _ => CANIUSE_BROWSERS
-                    .get(desktop_name)
-                    .map(|stat| (get_mobile_by_desktop_name(desktop_name), stat)),
+                "android" => Some(("android", &*ANDROID_TO_DESKTOP)),
+                "op_mob" => {
+                    let stat = CANIUSE_BROWSERS.get("opera").unwrap();
+                    Some(("op_mob", stat.version_list()))
+                }
+                _ => CANIUSE_BROWSERS.get(desktop_name).map(|stat| {
+                    (
+                        get_mobile_by_desktop_name(desktop_name),
+                        stat.version_list(),
+                    )
+                }),
             }
         } else {
-            CANIUSE_BROWSERS.get(name).map(|stat| (stat.name, stat))
+            CANIUSE_BROWSERS
+                .get_key_value(name)
+                .map(|(k, v)| (k.as_str(), v.version_list()))
         }
     } else {
-        CANIUSE_BROWSERS.get(name).map(|stat| (stat.name, stat))
+        CANIUSE_BROWSERS
+            .get_key_value(name)
+            .map(|(k, v)| (k.as_str(), v.version_list()))
     }
+}
+
+pub fn iter_browser_stat(
+    mobile_to_desktop: bool,
+) -> impl Iterator<Item = (&'static str, &'static [VersionDetail])> {
+    CANIUSE_BROWSERS.iter().filter_map(move |(name, stat)| {
+        match (
+            mobile_to_desktop,
+            to_desktop_name(name.as_str()),
+            name.as_str(),
+        ) {
+            (false, _, _) | (true, None, _) => Some((name.as_str(), stat.version_list())),
+            (true, Some(_), "android") => Some(("android", &*ANDROID_TO_DESKTOP)),
+            (true, Some(_), "op_mob") => {
+                let stat = CANIUSE_BROWSERS.get("opera").unwrap();
+                Some(("op_mob", stat.version_list()))
+            }
+            (true, Some(desktop_name), _) => CANIUSE_BROWSERS.get(desktop_name).map(|stat| {
+                (
+                    get_mobile_by_desktop_name(desktop_name),
+                    stat.version_list(),
+                )
+            }),
+        }
+    })
 }
 
 fn get_browser_alias(name: &str) -> &str {
@@ -170,19 +202,57 @@ fn get_mobile_by_desktop_name(name: &str) -> &'static str {
 }
 
 pub(crate) fn normalize_version<'a>(
-    stat: &'static BrowserStat,
+    name: &'a str,
+    version_list: &'static [VersionDetail],
     version: &'a str,
 ) -> Option<&'a str> {
-    if stat.version_list.iter().any(|v| v.version == version) {
+    if version_list.iter().any(|v| v.version.as_str() == version) {
         Some(version)
     } else if let Some(version) = BROWSER_VERSION_ALIASES
-        .get(&stat.name)
+        .get(name)
         .and_then(|aliases| aliases.get(version))
     {
         Some(version)
-    } else if stat.version_list.len() == 1 {
-        stat.version_list.first().map(|s| s.version)
+    } else if version_list.len() == 1 {
+        version_list.first().map(|s| s.version.as_str())
     } else {
         None
+    }
+}
+
+impl BrowserStat {
+    pub fn version_list(&self) -> &'static [VersionDetail] {
+        let range = (self.0 as usize)..(self.1 as usize);
+        &VERSION_LIST[range]
+    }
+}
+
+impl PooledStr {
+    pub fn as_str(&self) -> &'static str {
+        static STRPOOL: &str = include_str!("../generated/caniuse-strpool.bin");
+
+        // 24bit offset and 8bit len
+        let offset = self.0 & ((1 << 24) - 1);
+        let len = self.0 >> 24;
+
+        &STRPOOL[(offset as usize)..][..(len as usize)]
+    }
+}
+
+impl Borrow<str> for PooledStr {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl fmt::Display for PooledStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl fmt::Debug for PooledStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

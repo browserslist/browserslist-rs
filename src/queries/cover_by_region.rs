@@ -13,10 +13,10 @@ pub(super) fn cover_by_region(coverage: f32, region: &str) -> QueryResult {
         let result = region_data.iter().try_fold(
             (vec![], 0.0),
             |(mut distribs, total), (name, version, usage)| {
-                if total >= coverage || *usage == 0.0 {
+                if total >= coverage || usage == 0.0 {
                     ControlFlow::Break((distribs, total))
                 } else {
-                    distribs.push(Distrib::new(name, *version));
+                    distribs.push(Distrib::new(name, version));
                     ControlFlow::Continue((distribs, total + usage))
                 }
             },

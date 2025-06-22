@@ -1,9 +1,9 @@
 use super::{Distrib, QueryResult};
-use crate::{data::node::NODE_VERSIONS, semver::loose_compare};
+use crate::{data::node, semver::loose_compare};
 use std::cmp::Ordering;
 
 pub(super) fn node_bounded_range(from: &str, to: &str) -> QueryResult {
-    let distribs = NODE_VERSIONS
+    let distribs = node::versions()
         .iter()
         .filter(|version| {
             matches!(

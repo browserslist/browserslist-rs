@@ -231,11 +231,10 @@ pub fn count_filter_versions(name: &str, mobile_to_desktop: bool, count: usize) 
                 let last_released = &caniuse::get_browser_stat("android", mobile_to_desktop)
                     .unwrap()
                     .1
-                    .version_list
                     .iter()
-                    .filter(|version| version.release_date.is_some())
-                    .map(|version| version.version)
-                    .last()
+                    .filter(|version| version.released)
+                    .map(|version| version.version.as_str())
+                    .next_back()
                     .unwrap()
                     .parse::<f32>()
                     .unwrap();
@@ -246,11 +245,11 @@ pub fn count_filter_versions(name: &str, mobile_to_desktop: bool, count: usize) 
             let lastest = caniuse::get_browser_stat("android", mobile_to_desktop)
                 .unwrap()
                 .1
-                .version_list
                 .last()
                 .unwrap();
-            (lastest.version.parse::<Version>().unwrap().major() - caniuse::OP_MOB_BLINK_FIRST + 1)
-                as usize
+            (lastest.version.as_str().parse::<Version>().unwrap().major()
+                - caniuse::OP_MOB_BLINK_FIRST
+                + 1) as usize
         }
         _ => return count,
     };

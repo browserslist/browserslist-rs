@@ -1,9 +1,9 @@
 use super::{Distrib, QueryResult};
-use crate::{data::node::NODE_VERSIONS, parser::Comparator, semver::compare};
+use crate::{data::node, parser::Comparator, semver::compare};
 use std::cmp::Ordering;
 
 pub(super) fn node_unbounded_range(comparator: Comparator, version: &str) -> QueryResult {
-    let distribs = NODE_VERSIONS
+    let distribs = node::versions()
         .iter()
         .filter(|v| {
             let ord = compare(v, version);

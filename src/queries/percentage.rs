@@ -5,7 +5,7 @@ pub(super) fn percentage(comparator: Comparator, popularity: f32) -> QueryResult
     let distribs = CANIUSE_BROWSERS
         .iter()
         .flat_map(|(name, stat)| {
-            stat.version_list
+            stat.version_list()
                 .iter()
                 .filter(|version| {
                     let usage = version.global_usage;
@@ -16,7 +16,7 @@ pub(super) fn percentage(comparator: Comparator, popularity: f32) -> QueryResult
                         Comparator::LessOrEqual => usage <= popularity,
                     }
                 })
-                .map(|version| Distrib::new(name, version.version))
+                .map(|version| Distrib::new(name.as_str(), version.version.as_str()))
         })
         .collect();
     Ok(distribs)

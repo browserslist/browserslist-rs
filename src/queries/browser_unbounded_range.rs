@@ -23,10 +23,9 @@ pub(super) fn browser_unbounded_range(
         .unwrap_or_default();
 
     let distribs = stat
-        .version_list
         .iter()
-        .filter(|version| version.release_date.is_some())
-        .map(|version| version.version)
+        .filter(|version| version.released)
+        .map(|version| version.version.as_str())
         .filter(|v| {
             let v: Version = v.parse().unwrap_or_default();
             match comparator {
