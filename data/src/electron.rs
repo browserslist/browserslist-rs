@@ -1,13 +1,6 @@
-use crate::error::Error;
-use nom::{
-    character::complete::{char, u16},
-    combinator::{all_consuming, opt},
-    number::complete::float,
-    sequence::{pair, terminated},
-};
 use std::ops::Range;
 
-include!("../generated/electron-to-chromium.rs");
+include!("generated/electron-to-chromium.rs");
 
 pub fn versions() -> impl ExactSizeIterator<Item = (f32, &'static str)> + DoubleEndedIterator {
     ELECTRON_VERSIONS
@@ -32,12 +25,4 @@ pub fn bounded_range(range: Range<f32>) -> Result<&'static [&'static str], f32> 
         .map_err(|_| range.end)?;
 
     Ok(&CHROMIUM_VERSIONS[start..=end])
-}
-
-pub(crate) fn parse_version(version: &str) -> Result<f32, Error> {
-    all_consuming(terminated(float, opt(pair(char('.'), u16))))(version)
-        .map(|(_, v)| v)
-        .map_err(|_: nom::Err<nom::error::Error<_>>| {
-            Error::UnknownElectronVersion(version.to_string())
-        })
 }

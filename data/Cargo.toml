@@ -1,0 +1,8 @@
+[package]
+name = "browserslist-data"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ahash = { workspace = true }
+chrono = { workspace = true }

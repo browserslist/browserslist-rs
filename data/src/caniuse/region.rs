@@ -1,5 +1,5 @@
 use super::PooledStr;
-use crate::data::{
+use crate::{
     decode_browser_name,
     utils::{BinMap, U32},
 };
@@ -14,9 +14,9 @@ pub struct RegionData(u32, u32);
 // static REGIONS_VERSIONS: &[U32]; // version string
 // static REGIONS_USAGES: &[U32]; // browser usage (f32)
 // ```
-include!("../../generated/caniuse-region-matching.rs");
+include!("../generated/caniuse-region-matching.rs");
 
-pub(crate) fn get_usage_by_region(region: &str) -> Option<RegionData> {
+pub fn get_usage_by_region(region: &str) -> Option<RegionData> {
     BinMap(REGIONS).get(region).copied()
 }
 

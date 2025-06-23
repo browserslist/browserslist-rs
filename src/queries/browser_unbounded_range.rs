@@ -1,6 +1,6 @@
 use super::{Distrib, QueryResult};
 use crate::{
-    data::caniuse::{get_browser_stat, BROWSER_VERSION_ALIASES},
+    data::caniuse::{get_browser_stat, get_browser_version_alias},
     error::Error,
     opts::Opts,
     parser::Comparator,
@@ -15,9 +15,7 @@ pub(super) fn browser_unbounded_range(
 ) -> QueryResult {
     let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
         .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;
-    let version: Version = BROWSER_VERSION_ALIASES
-        .get(name)
-        .and_then(|alias| alias.get(version).copied())
+    let version: Version = get_browser_version_alias(name, version)
         .unwrap_or(version)
         .parse()
         .unwrap_or_default();
@@ -25,7 +23,7 @@ pub(super) fn browser_unbounded_range(
     let distribs = stat
         .iter()
         .filter(|version| version.released)
-        .map(|version| version.version.as_str())
+        .map(|version| version.version())
         .filter(|v| {
             let v: Version = v.parse().unwrap_or_default();
             match comparator {

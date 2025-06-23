@@ -1,15 +1,15 @@
 use super::{Distrib, QueryResult};
-use crate::data::caniuse::CANIUSE_GLOBAL_USAGE;
+use crate::data::caniuse;
 use std::ops::ControlFlow;
 
 pub(super) fn cover(coverage: f32) -> QueryResult {
-    let result = CANIUSE_GLOBAL_USAGE.iter().try_fold(
+    let result = caniuse::iter_global_usage().try_fold(
         (vec![], 0.0),
         |(mut distribs, total), (name, version, usage)| {
-            if total >= coverage || *usage == 0.0 {
+            if total >= coverage || usage == 0.0 {
                 ControlFlow::Break((distribs, total))
             } else {
-                distribs.push(Distrib::new(name.as_str(), version.as_str()));
+                distribs.push(Distrib::new(name, version));
                 ControlFlow::Continue((distribs, total + usage))
             }
         },

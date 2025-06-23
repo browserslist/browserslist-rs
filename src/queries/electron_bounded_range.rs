@@ -1,14 +1,11 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::electron::{self, parse_version},
-    error::Error,
-};
+use crate::{data::electron, error::Error, parser::parse_electron_version};
 
 pub(super) fn electron_bounded_range(from: &str, to: &str) -> QueryResult {
     let from_str = from;
     let to_str = to;
-    let from: f32 = parse_version(from)?;
-    let to: f32 = parse_version(to)?;
+    let from: f32 = parse_electron_version(from)?;
+    let to: f32 = parse_electron_version(to)?;
 
     let versions = electron::bounded_range(from..to).map_err(|v| {
         let v = match v {

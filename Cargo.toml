@@ -18,12 +18,14 @@ crate-type = ["rlib"]
 wasm_bindgen = ["chrono/wasmbind", "js-sys"]
 
 [dependencies]
-ahash = { version = "0.8.12", features = ["serde"] }
-chrono = { version = "0.4.38", features = [
+browserslist-data = { path = "data" }
+
+ahash = { workspace = true, features = [ "serde" ] }
+chrono = { workspace = true, features = [
     "std",
     "clock",
     "oldtime",
-], default-features = false } # disable wasmbind by default
+] } # disable wasmbind by default
 either = "1.13"
 itertools = "0.13"
 nom = "7.1"
@@ -39,4 +41,8 @@ test-case = "3.3"
 js-sys = { version = "0.3", optional = true }
 
 [workspace]
-members = [".", "generate-data", "wasm"]
+members = [".", "data", "generate-data", "wasm"]
+
+[workspace.dependencies]
+ahash = "0.8.12"
+chrono = { version = "0.4.38", default-features = false }

@@ -1,6 +1,6 @@
-pub(crate) mod caniuse;
-pub(crate) mod electron;
-pub(crate) mod node;
+pub mod caniuse;
+pub mod electron;
+pub mod node;
 mod utils;
 
 #[doc(hidden)]
