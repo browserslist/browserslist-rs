@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 
-include!("../generated/node-versions.rs");
-include!("../generated/node-release-schedule.rs");
+include!("generated/node-versions.rs");
+include!("generated/node-release-schedule.rs");
 
 pub fn versions() -> &'static [&'static str] {
     NODE_VERSIONS

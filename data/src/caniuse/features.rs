@@ -1,5 +1,5 @@
 use super::PooledStr;
-use crate::data::{
+use crate::{
     decode_browser_name,
     utils::{BinMap, PairU32, U32},
 };
@@ -19,9 +19,9 @@ pub struct VersionList(PairU32);
 // static FEATURES_STAT_FLAGS: &[u8]; // support flag
 // static FEATURES_STAT_BROWSERS: &[u8]; // browser name id
 // ```
-include!("../../generated/caniuse-feature-matching.rs");
+include!("../generated/caniuse-feature-matching.rs");
 
-pub(crate) fn get_feature_stat(name: &str) -> Option<Feature> {
+pub fn get_feature_stat(name: &str) -> Option<Feature> {
     BinMap(FEATURES).get(name).copied()
 }
 
@@ -46,7 +46,7 @@ impl Feature {
 
 impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
-        let range = (self.0 .0.get() as usize)..(self.0 .1.get() as usize);
+        let range = (self.0.0.get() as usize)..(self.0.1.get() as usize);
         let index = FEATURES_STAT_VERSION_STORE[range.clone()]
             .binary_search_by_key(&version, |s| PooledStr(s.get()).as_str())
             .ok()?;

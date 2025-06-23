@@ -14,7 +14,7 @@ pub(super) fn years(count: f64, opts: &Opts) -> QueryResult {
             version_list
                 .iter()
                 .filter(|version| version.released && version.release_date >= time)
-                .map(move |version| Distrib::new(name, version.version.as_str()))
+                .map(move |version| Distrib::new(name, version.version()))
         })
         .collect();
     Ok(distribs)

@@ -473,6 +473,14 @@ pub(crate) fn parse_browserslist_query(input: &str) -> PResult<Vec<SingleQuery>>
     )(input)
 }
 
+pub(crate) fn parse_electron_version(version: &str) -> Result<f32, crate::error::Error> {
+    all_consuming(terminated(float, opt(pair(char('.'), u16))))(version)
+        .map(|(_, v)| v)
+        .map_err(|_: nom::Err<nom::error::Error<_>>| {
+            crate::error::Error::UnknownElectronVersion(version.to_string())
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{opts::Opts, test::run_compare};

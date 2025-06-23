@@ -11,7 +11,7 @@ pub(super) fn last_n_browsers(count: usize, opts: &Opts) -> QueryResult {
                 .filter(|version| version.released)
                 .rev()
                 .take(count)
-                .map(move |version| Distrib::new(name, version.version.as_str()))
+                .map(move |version| Distrib::new(name, version.version()))
         })
         .collect();
 

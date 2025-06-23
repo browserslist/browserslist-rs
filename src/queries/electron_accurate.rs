@@ -1,12 +1,9 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::electron::{self, parse_version},
-    error::Error,
-};
+use crate::{data::electron, error::Error, parser::parse_electron_version};
 
 pub(super) fn electron_accurate(version: &str) -> QueryResult {
     let version_str = version;
-    let version: f32 = parse_version(version)?;
+    let version: f32 = parse_electron_version(version)?;
 
     let distribs = electron::get(version)
         .map(|chromium_version| vec![Distrib::new("chrome", chromium_version)])

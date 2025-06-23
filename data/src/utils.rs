@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
+use std::fmt;
 
-pub struct BinMap<'a, K, V>(pub(super) &'a [(K, V)]);
+pub(super) struct BinMap<'a, K, V>(pub(super) &'a [(K, V)]);
 
 impl<K, V> BinMap<'_, K, V> {
     pub fn get<Q>(&self, q: &Q) -> Option<&V>
@@ -41,5 +42,38 @@ pub(super) struct U32(u32);
 impl U32 {
     pub const fn get(self) -> u32 {
         self.0.to_le()
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct PooledStr(pub(super) u32);
+
+impl PooledStr {
+    pub fn as_str(&self) -> &'static str {
+        static STRPOOL: &str = include_str!("generated/caniuse-strpool.bin");
+
+        // 24bit offset and 8bit len
+        let offset = self.0 & ((1 << 24) - 1);
+        let len = self.0 >> 24;
+
+        &STRPOOL[(offset as usize)..][..(len as usize)]
+    }
+}
+
+impl Borrow<str> for PooledStr {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl fmt::Display for PooledStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl fmt::Debug for PooledStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }
