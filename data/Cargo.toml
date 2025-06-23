@@ -2,6 +2,7 @@
 name = "browserslist-data"
 version = "0.1.0"
 edition = "2024"
+include = ["**/*.rs", "Cargo.toml", "src/generated/**/*.bin", "src/generated/**/*.u32seq"]
 
 [dependencies]
 ahash = { workspace = true }
