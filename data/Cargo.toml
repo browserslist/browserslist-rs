@@ -2,7 +2,7 @@
 name = "browserslist-data"
 version = "0.1.0"
 authors = ["Pig Fang <g-plane@hotmail.com>"]
-edition = "2024"
+edition = "2021"
 description = "Data for browserslist-rs."
 repository = "https://github.com/browserslist/browserslist-rs"
 license = "MIT"
