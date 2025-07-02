@@ -1,11 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::caniuse::{get_browser_stat, get_browser_version_alias},
-    error::Error,
-    opts::Opts,
-    parser::Comparator,
-    semver::Version,
-};
+use crate::{error::Error, opts::Opts, parser::Comparator, semver::Version};
+use browserslist_data::caniuse::{get_browser_stat, get_browser_version_alias};
 
 pub(super) fn browser_unbounded_range(
     name: &str,

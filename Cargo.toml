@@ -8,7 +8,6 @@ repository = "https://github.com/browserslist/browserslist-rs"
 license = "MIT"
 keywords = ["web", "javascript"]
 categories = ["web-programming", "config"]
-include = ["**/*.rs", "Cargo.toml"]
 
 [lib]
 name = "browserslist"
@@ -19,7 +18,7 @@ wasm_bindgen = ["chrono/wasmbind", "js-sys"]
 
 [dependencies]
 ahash = { workspace = true, features = [ "serde" ] }
-browserslist-data = { path = "data" }
+browserslist-data = { version = "0.1.0", path = "data" }
 chrono = { workspace = true, features = [
     "std",
     "clock",

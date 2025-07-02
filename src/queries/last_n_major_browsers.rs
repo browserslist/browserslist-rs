@@ -1,5 +1,6 @@
 use super::{count_filter_versions, Distrib, QueryResult};
-use crate::{data::caniuse, opts::Opts};
+use crate::opts::Opts;
+use browserslist_data::caniuse;
 use itertools::Itertools;
 
 pub(super) fn last_n_major_browsers(count: usize, opts: &Opts) -> QueryResult {

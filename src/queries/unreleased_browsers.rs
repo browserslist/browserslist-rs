@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::caniuse, opts::Opts};
+use crate::opts::Opts;
+use browserslist_data::caniuse;
 
 pub(super) fn unreleased_browsers(opts: &Opts) -> QueryResult {
     let distribs = caniuse::iter_browser_stat(opts.mobile_to_desktop)

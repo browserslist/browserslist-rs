@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::caniuse, error::Error, opts::Opts};
+use crate::{error::Error, opts::Opts};
+use browserslist_data::caniuse;
 use chrono::{LocalResult, TimeZone, Utc};
 
 pub(super) fn since(year: i32, month: u32, day: u32, opts: &Opts) -> QueryResult {

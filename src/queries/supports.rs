@@ -1,10 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::caniuse::{features::get_feature_stat, get_browser_stat, to_desktop_name},
-    error::Error,
-    parser::SupportKind,
-    Opts,
-};
+use crate::{error::Error, parser::SupportKind, Opts};
+use browserslist_data::caniuse::{features::get_feature_stat, get_browser_stat, to_desktop_name};
 
 const Y: u8 = 1;
 const A: u8 = 2;

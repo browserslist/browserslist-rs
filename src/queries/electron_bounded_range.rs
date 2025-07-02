@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::electron, error::Error, parser::parse_electron_version};
+use crate::{error::Error, parser::parse_electron_version};
+use browserslist_data::electron;
 
 pub(super) fn electron_bounded_range(from: &str, to: &str) -> QueryResult {
     let from_str = from;

@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::caniuse::get_browser_stat, error::Error, opts::Opts};
+use crate::{error::Error, opts::Opts};
+use browserslist_data::caniuse::get_browser_stat;
 
 pub(super) fn unreleased_x_browsers(name: &str, opts: &Opts) -> QueryResult {
     let (name, version_list) = get_browser_stat(name, opts.mobile_to_desktop)

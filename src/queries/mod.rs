@@ -1,10 +1,10 @@
 use crate::{
-    data::caniuse,
     error::Error,
     opts::Opts,
     parser::{QueryAtom, Stats, VersionRange},
     semver::Version,
 };
+use browserslist_data::caniuse;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, fmt::Display};
 

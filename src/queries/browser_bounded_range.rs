@@ -1,10 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::caniuse::{get_browser_stat, normalize_version},
-    error::Error,
-    opts::Opts,
-    semver::Version,
-};
+use crate::{error::Error, opts::Opts, semver::Version};
+use browserslist_data::caniuse::{get_browser_stat, normalize_version};
 
 pub(super) fn browser_bounded_range(name: &str, from: &str, to: &str, opts: &Opts) -> QueryResult {
     let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)

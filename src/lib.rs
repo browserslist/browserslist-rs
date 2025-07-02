@@ -58,7 +58,6 @@
 //! but those environments aren't Node.js,
 //! so you will receive an error when querying `current node` in those environments.
 
-use browserslist_data as data;
 use parser::parse_browserslist_query;
 use std::cmp::Ordering;
 pub use {error::Error, opts::Opts, queries::Distrib};

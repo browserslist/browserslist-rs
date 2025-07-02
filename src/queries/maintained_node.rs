@@ -1,5 +1,5 @@
 use super::{Distrib, QueryResult};
-use crate::data::node;
+use browserslist_data::node;
 use chrono::Local;
 
 pub(super) fn maintained_node() -> QueryResult {

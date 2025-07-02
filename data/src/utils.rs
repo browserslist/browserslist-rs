@@ -1,5 +1,4 @@
-use std::borrow::Borrow;
-use std::fmt;
+use std::{borrow::Borrow, fmt};
 
 pub(super) struct BinMap<'a, K, V>(pub(super) &'a [(K, V)]);
 

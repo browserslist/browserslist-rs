@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::caniuse, parser::Comparator};
+use crate::parser::Comparator;
+use browserslist_data::caniuse;
 
 pub(super) fn percentage(comparator: Comparator, popularity: f32) -> QueryResult {
     let distribs = caniuse::iter_browser_stat(false)

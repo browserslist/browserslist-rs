@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::node, error::Error, opts::Opts};
+use crate::{error::Error, opts::Opts};
+use browserslist_data::node;
 
 pub(super) fn node_accurate(version: &str, opts: &Opts) -> QueryResult {
     let distribs = node::versions()

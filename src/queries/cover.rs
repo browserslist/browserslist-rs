@@ -1,5 +1,5 @@
 use super::{Distrib, QueryResult};
-use crate::data::caniuse;
+use browserslist_data::caniuse;
 use std::ops::ControlFlow;
 
 pub(super) fn cover(coverage: f32) -> QueryResult {

@@ -1,9 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::caniuse::{get_browser_stat, normalize_version},
-    error::Error,
-    opts::Opts,
-};
+use crate::{error::Error, opts::Opts};
+use browserslist_data::caniuse::{get_browser_stat, normalize_version};
 use std::borrow::Cow;
 
 pub(super) fn browser_accurate(name: &str, version: &str, opts: &Opts) -> QueryResult {

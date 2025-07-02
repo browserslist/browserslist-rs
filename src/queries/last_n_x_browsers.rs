@@ -1,5 +1,6 @@
 use super::{count_filter_versions, Distrib, QueryResult};
-use crate::{data::caniuse::get_browser_stat, error::Error, opts::Opts};
+use crate::{error::Error, opts::Opts};
+use browserslist_data::caniuse::get_browser_stat;
 
 pub(super) fn last_n_x_browsers(count: usize, name: &str, opts: &Opts) -> QueryResult {
     let (name, version_list) = get_browser_stat(name, opts.mobile_to_desktop)
