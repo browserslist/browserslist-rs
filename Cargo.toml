@@ -18,9 +18,8 @@ crate-type = ["rlib"]
 wasm_bindgen = ["chrono/wasmbind", "js-sys"]
 
 [dependencies]
-browserslist-data = { path = "data" }
-
 ahash = { workspace = true, features = [ "serde" ] }
+browserslist-data = { path = "data" }
 chrono = { workspace = true, features = [
     "std",
     "clock",
