@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::caniuse::region::get_usage_by_region, error::Error, parser::Comparator};
+use crate::{error::Error, parser::Comparator};
+use browserslist_data::caniuse::region::get_usage_by_region;
 
 pub(super) fn percentage_by_region(
     comparator: Comparator,

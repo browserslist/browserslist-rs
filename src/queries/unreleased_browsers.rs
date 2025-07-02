@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::caniuse, opts::Opts};
+use crate::opts::Opts;
+use browserslist_data::caniuse;
 
 pub(super) fn unreleased_browsers(opts: &Opts) -> QueryResult {
     let distribs = caniuse::iter_browser_stat(opts.mobile_to_desktop)
@@ -7,7 +8,7 @@ pub(super) fn unreleased_browsers(opts: &Opts) -> QueryResult {
             version_list
                 .iter()
                 .filter(|version| !version.released)
-                .map(move |version| Distrib::new(name, version.version.as_str()))
+                .map(move |version| Distrib::new(name, version.version()))
         })
         .collect();
     Ok(distribs)

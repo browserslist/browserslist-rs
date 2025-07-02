@@ -1,5 +1,6 @@
 use super::{count_filter_versions, Distrib, QueryResult};
-use crate::{data::caniuse, opts::Opts};
+use crate::opts::Opts;
+use browserslist_data::caniuse;
 use itertools::Itertools;
 
 pub(super) fn last_n_major_browsers(count: usize, opts: &Opts) -> QueryResult {
@@ -11,7 +12,7 @@ pub(super) fn last_n_major_browsers(count: usize, opts: &Opts) -> QueryResult {
                 .iter()
                 .filter(|version| version.released)
                 .rev()
-                .map(|version| version.version.as_str().split('.').next().unwrap())
+                .map(|version| version.version().split('.').next().unwrap())
                 .dedup()
                 .nth(count - 1)
                 .and_then(|minimum| minimum.parse().ok())
@@ -20,7 +21,7 @@ pub(super) fn last_n_major_browsers(count: usize, opts: &Opts) -> QueryResult {
             version_list
                 .iter()
                 .filter(|version| version.released)
-                .map(|version| version.version.as_str())
+                .map(|version| version.version())
                 .filter(move |version| {
                     version.split('.').next().unwrap().parse().unwrap_or(0) >= minimum
                 })

@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::caniuse, error::Error, opts::Opts};
+use crate::{error::Error, opts::Opts};
+use browserslist_data::caniuse;
 use chrono::{Duration, Utc};
 
 const ONE_YEAR_IN_SECONDS: f64 = 365.259641 * 24.0 * 60.0 * 60.0;
@@ -14,7 +15,7 @@ pub(super) fn years(count: f64, opts: &Opts) -> QueryResult {
             version_list
                 .iter()
                 .filter(|version| version.released && version.release_date >= time)
-                .map(move |version| Distrib::new(name, version.version.as_str()))
+                .map(move |version| Distrib::new(name, version.version()))
         })
         .collect();
     Ok(distribs)

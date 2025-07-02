@@ -1,10 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::caniuse::{get_browser_stat, normalize_version},
-    error::Error,
-    opts::Opts,
-    semver::Version,
-};
+use crate::{error::Error, opts::Opts, semver::Version};
+use browserslist_data::caniuse::{get_browser_stat, normalize_version};
 
 pub(super) fn browser_bounded_range(name: &str, from: &str, to: &str, opts: &Opts) -> QueryResult {
     let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
@@ -21,12 +17,12 @@ pub(super) fn browser_bounded_range(name: &str, from: &str, to: &str, opts: &Opt
     let distribs = stat
         .iter()
         .filter(|version| version.released)
-        .map(|version| version.version)
+        .map(|version| version.version())
         .filter(|version| {
-            let version = version.as_str().parse().unwrap_or_default();
+            let version = version.parse().unwrap_or_default();
             from <= version && version <= to
         })
-        .map(|version| Distrib::new(name, version.as_str()))
+        .map(|version| Distrib::new(name, version))
         .collect();
     Ok(distribs)
 }

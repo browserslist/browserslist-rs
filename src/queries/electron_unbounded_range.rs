@@ -1,11 +1,9 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::electron::{self, parse_version},
-    parser::Comparator,
-};
+use crate::{parser::parse_electron_version, parser::Comparator};
+use browserslist_data::electron;
 
 pub(super) fn electron_unbounded_range(comparator: Comparator, version: &str) -> QueryResult {
-    let version: f32 = parse_version(version)?;
+    let version: f32 = parse_electron_version(version)?;
 
     let distribs = electron::versions()
         .filter(|(electron_version, _)| match comparator {

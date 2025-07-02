@@ -1,5 +1,5 @@
 use super::{Distrib, QueryResult};
-use crate::data::electron;
+use browserslist_data::electron;
 
 pub(super) fn last_n_electron(count: usize) -> QueryResult {
     let distribs = electron::versions()

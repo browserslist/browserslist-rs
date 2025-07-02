@@ -1,12 +1,11 @@
 use super::{Distrib, QueryResult};
-use crate::{data::caniuse::CANIUSE_BROWSERS, parser::Comparator};
+use crate::parser::Comparator;
+use browserslist_data::caniuse;
 
 pub(super) fn percentage(comparator: Comparator, popularity: f32) -> QueryResult {
-    let distribs = CANIUSE_BROWSERS
-        .iter()
-        .flat_map(|(name, stat)| {
-            stat.version_list()
-                .iter()
+    let distribs = caniuse::iter_browser_stat(false)
+        .flat_map(|(name, list)| {
+            list.iter()
                 .filter(|version| {
                     let usage = version.global_usage;
                     match comparator {
@@ -16,7 +15,7 @@ pub(super) fn percentage(comparator: Comparator, popularity: f32) -> QueryResult
                         Comparator::LessOrEqual => usage <= popularity,
                     }
                 })
-                .map(|version| Distrib::new(name.as_str(), version.version.as_str()))
+                .map(move |version| Distrib::new(name, version.version()))
         })
         .collect();
     Ok(distribs)

@@ -9,7 +9,7 @@ use std::{
     io::{self, Write},
 };
 
-const OUT_DIR: &str = "src/generated";
+const OUT_DIR: &str = "data/src/generated";
 
 fn encode_browser_name(name: &str) -> u8 {
     match name {

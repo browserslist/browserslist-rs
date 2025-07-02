@@ -1,14 +1,10 @@
 use ahash::AHashMap;
-use std::{
-    borrow::{Borrow, Cow},
-    fmt,
-    sync::LazyLock,
-};
+use std::{borrow::Cow, sync::LazyLock};
 
-pub(crate) mod features;
-pub(crate) mod region;
+pub mod features;
+pub mod region;
 
-use crate::data::utils::BinMap;
+use crate::utils::{BinMap, PooledStr};
 
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 pub const OP_MOB_BLINK_FIRST: u32 = 14;
@@ -16,26 +12,23 @@ pub const OP_MOB_BLINK_FIRST: u32 = 14;
 #[derive(Clone, Debug)]
 pub struct BrowserStat(u32, u32);
 
-#[derive(Clone, Copy)]
-pub struct PooledStr(u32);
-
 #[derive(Clone, Debug)]
 pub struct VersionDetail {
-    pub version: PooledStr,
+    version: PooledStr,
     pub release_date: i64,
     // Use bool instead of Option to use pad space
     pub released: bool,
     pub global_usage: f32,
 }
 
-include!("../generated/caniuse-browsers.rs");
+include!("generated/caniuse-browsers.rs");
 
-pub static CANIUSE_BROWSERS: BinMap<PooledStr, BrowserStat> = BinMap(BROWSERS_STATS);
+static CANIUSE_BROWSERS: BinMap<PooledStr, BrowserStat> = BinMap(BROWSERS_STATS);
 
-pub static CANIUSE_GLOBAL_USAGE: &[(PooledStr, PooledStr, f32)] =
-    include!("../generated/caniuse-global-usage.rs");
+static CANIUSE_GLOBAL_USAGE: &[(PooledStr, PooledStr, f32)] =
+    include!("generated/caniuse-global-usage.rs");
 
-pub static BROWSER_VERSION_ALIASES: LazyLock<
+static BROWSER_VERSION_ALIASES: LazyLock<
     AHashMap<&'static str, AHashMap<&'static str, &'static str>>,
 > = LazyLock::new(|| {
     let mut aliases = CANIUSE_BROWSERS
@@ -165,6 +158,17 @@ pub fn iter_browser_stat(
     })
 }
 
+pub fn iter_global_usage() -> impl ExactSizeIterator<Item = (&'static str, &'static str, f32)> {
+    CANIUSE_GLOBAL_USAGE
+        .iter()
+        .copied()
+        .map(|(name, version, usage)| (name.as_str(), version.as_str(), usage))
+}
+
+pub fn get_browser_version_alias(name: &str, version: &str) -> Option<&'static str> {
+    BROWSER_VERSION_ALIASES.get(name)?.get(version).copied()
+}
+
 fn get_browser_alias(name: &str) -> &str {
     match name {
         "fx" | "ff" => "firefox",
@@ -182,7 +186,7 @@ fn get_browser_alias(name: &str) -> &str {
     }
 }
 
-pub(crate) fn to_desktop_name(name: &str) -> Option<&'static str> {
+pub fn to_desktop_name(name: &str) -> Option<&'static str> {
     match name {
         "and_chr" | "android" => Some("chrome"),
         "and_ff" => Some("firefox"),
@@ -201,17 +205,14 @@ fn get_mobile_by_desktop_name(name: &str) -> &'static str {
     }
 }
 
-pub(crate) fn normalize_version<'a>(
+pub fn normalize_version<'a>(
     name: &'a str,
     version_list: &'static [VersionDetail],
     version: &'a str,
 ) -> Option<&'a str> {
     if version_list.iter().any(|v| v.version.as_str() == version) {
         Some(version)
-    } else if let Some(version) = BROWSER_VERSION_ALIASES
-        .get(name)
-        .and_then(|aliases| aliases.get(version))
-    {
+    } else if let Some(version) = get_browser_version_alias(name, version) {
         Some(version)
     } else if version_list.len() == 1 {
         version_list.first().map(|s| s.version.as_str())
@@ -227,32 +228,8 @@ impl BrowserStat {
     }
 }
 
-impl PooledStr {
-    pub fn as_str(&self) -> &'static str {
-        static STRPOOL: &str = include_str!("../generated/caniuse-strpool.bin");
-
-        // 24bit offset and 8bit len
-        let offset = self.0 & ((1 << 24) - 1);
-        let len = self.0 >> 24;
-
-        &STRPOOL[(offset as usize)..][..(len as usize)]
-    }
-}
-
-impl Borrow<str> for PooledStr {
-    fn borrow(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl fmt::Display for PooledStr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl fmt::Debug for PooledStr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
+impl VersionDetail {
+    pub fn version(&self) -> &'static str {
+        self.version.as_str()
     }
 }

@@ -64,7 +64,6 @@ pub use {error::Error, opts::Opts, queries::Distrib};
 
 #[cfg(not(target_arch = "wasm32"))]
 mod config;
-mod data;
 mod error;
 mod opts;
 mod parser;

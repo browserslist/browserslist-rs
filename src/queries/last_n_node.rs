@@ -1,5 +1,5 @@
 use super::{Distrib, QueryResult};
-use crate::data::node;
+use browserslist_data::node;
 
 pub(super) fn last_n_node(count: usize) -> QueryResult {
     let distribs = node::versions()

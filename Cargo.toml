@@ -8,7 +8,6 @@ repository = "https://github.com/browserslist/browserslist-rs"
 license = "MIT"
 keywords = ["web", "javascript"]
 categories = ["web-programming", "config"]
-include = ["**/*.rs", "Cargo.toml", "src/generated/**/*.json"]
 
 [lib]
 name = "browserslist"
@@ -18,12 +17,13 @@ crate-type = ["rlib"]
 wasm_bindgen = ["chrono/wasmbind", "js-sys"]
 
 [dependencies]
-ahash = { version = "0.8.12", features = ["serde"] }
-chrono = { version = "0.4.38", features = [
+ahash = { workspace = true, features = ["serde"] }
+browserslist-data = { version = "0.1.0", path = "data" }
+chrono = { workspace = true, features = [
     "std",
     "clock",
     "oldtime",
-], default-features = false } # disable wasmbind by default
+] } # disable wasmbind by default
 either = "1.13"
 itertools = "0.13"
 nom = "7.1"
@@ -39,4 +39,8 @@ test-case = "3.3"
 js-sys = { version = "0.3", optional = true }
 
 [workspace]
-members = [".", "generate-data", "wasm"]
+members = [".", "data", "generate-data", "wasm"]
+
+[workspace.dependencies]
+ahash = "0.8.12"
+chrono = { version = "0.4.38", default-features = false }

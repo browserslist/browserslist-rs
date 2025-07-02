@@ -1,10 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{
-    data::caniuse::{features::get_feature_stat, get_browser_stat, to_desktop_name, VersionDetail},
-    error::Error,
-    parser::SupportKind,
-    Opts,
-};
+use crate::{error::Error, parser::SupportKind, Opts};
+use browserslist_data::caniuse::{features::get_feature_stat, get_browser_stat, to_desktop_name};
 
 const Y: u8 = 1;
 const A: u8 = 2;
@@ -28,25 +24,25 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                     && browser_stat
                         .iter()
                         .filter(|version| version.released)
-                        .filter_map(|latest_version| versions.get(latest_version.version.as_str()))
+                        .filter_map(|latest_version| versions.get(latest_version.version()))
                         .next_back()
                         .is_some_and(|flags| is_supported(flags, include_partial));
                 browser_stat
                     .iter()
-                    .filter_map(move |VersionDetail { version, .. }| {
+                    .filter_map(move |version| {
                         versions
-                            .get(version.as_str())
+                            .get(version.version())
                             .or_else(|| match desktop_name {
                                 Some(desktop_name) if check_desktop => feature
                                     .get(desktop_name)
-                                    .and_then(|versions| versions.get(version.as_str())),
+                                    .and_then(|versions| versions.get(version.version())),
                                 _ => None,
                             })
                             .and_then(|flags| {
                                 is_supported(flags, include_partial).then_some(version)
                             })
                     })
-                    .map(move |version| Distrib::new(name, version.as_str()))
+                    .map(move |version| Distrib::new(name, version.version()))
             })
             .collect();
         Ok(distribs)

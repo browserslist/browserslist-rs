@@ -1,5 +1,5 @@
 use super::{Distrib, QueryResult};
-use crate::data::electron;
+use browserslist_data::electron;
 use itertools::Itertools;
 
 pub(super) fn last_n_electron_major(count: usize) -> QueryResult {

@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::caniuse::region::get_usage_by_region, error::Error};
+use crate::error::Error;
+use browserslist_data::caniuse::region::get_usage_by_region;
 use std::ops::ControlFlow;
 
 pub(super) fn cover_by_region(coverage: f32, region: &str) -> QueryResult {

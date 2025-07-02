@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::node, parser::Comparator, semver::compare};
+use crate::{parser::Comparator, semver::compare};
+use browserslist_data::node;
 use std::cmp::Ordering;
 
 pub(super) fn node_unbounded_range(comparator: Comparator, version: &str) -> QueryResult {

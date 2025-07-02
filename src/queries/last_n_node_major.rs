@@ -1,5 +1,6 @@
 use super::{Distrib, QueryResult};
-use crate::{data::node, semver::Version};
+use crate::semver::Version;
+use browserslist_data::node;
 use itertools::Itertools;
 
 pub(super) fn last_n_node_major(count: usize) -> QueryResult {
