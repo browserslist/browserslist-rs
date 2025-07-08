@@ -71,7 +71,7 @@ fn main() -> Result<()> {
 }
 
 fn build_info() -> Result<()> {
-    use std::process::{ Command, Stdio };
+    use std::process::{Command, Stdio};
 
     let mut infofile = fs::File::create(format!("{OUT_DIR}/info.txt"))?;
 
