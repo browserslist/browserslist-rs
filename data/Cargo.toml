@@ -9,6 +9,7 @@ license = "MIT"
 include = [
     "**/*.rs",
     "Cargo.toml",
+    "src/generated/info.txt",
     "src/generated/**/*.bin",
     "src/generated/**/*.u32seq",
 ]
