@@ -61,12 +61,32 @@ struct Feature {
 }
 
 fn main() -> Result<()> {
+    build_info()?;
     build_electron_to_chromium()?;
     build_node_versions()?;
     build_node_release_schedule()?;
     build_caniuse()?;
 
     Ok(())
+}
+
+fn build_info() -> Result<()> {
+    use std::process::{ Command, Stdio };
+
+    let mut infofile = fs::File::create(format!("{OUT_DIR}/info.txt"))?;
+
+    let output = Command::new("git")
+        .arg("submodule")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .output()?;
+
+    if output.status.success() {
+        infofile.write_all(&output.stdout)?;
+        Ok(())
+    } else {
+        anyhow::bail!("git submodule failed: {:?}", output.status.code())
+    }
 }
 
 fn build_electron_to_chromium() -> Result<()> {

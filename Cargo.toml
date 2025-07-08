@@ -8,6 +8,7 @@ repository = "https://github.com/browserslist/browserslist-rs"
 license = "MIT"
 keywords = ["web", "javascript"]
 categories = ["web-programming", "config"]
+include = ["**/*.rs", "Cargo.toml"]
 
 [lib]
 name = "browserslist"
