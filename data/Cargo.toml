@@ -1,6 +1,6 @@
 [package]
 name = "browserslist-data"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Pig Fang <g-plane@hotmail.com>"]
 edition = "2021"
 description = "Data for browserslist-rs."
