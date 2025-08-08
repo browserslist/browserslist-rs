@@ -14,6 +14,8 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +31,8 @@ jobs:
       - run: cargo clippy --all-features
       - run: cargo clippy --example inspect
       - run: cargo clippy --tests
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: cratesio-auth
       - name: Publish crates
         run: |
           if ! git show --exit-code -G^version data/Cargo.toml; then
@@ -38,7 +42,7 @@ jobs:
             cargo publish -p browserslist-rs
           fi
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.cratesio-auth.outputs.token }}
 
   wasm:
     name: wasm
