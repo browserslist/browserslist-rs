@@ -44,6 +44,7 @@ The features below aren't supported currently:
 
 -   Custom usage like `> 0.5% in my stats`.
 -   Custom usage like `cover 99.5% in my stats`.
+-   Baseline queries added in [browserslist v4.26.0](https://github.com/browserslist/browserslist/releases/tag/4.26.0) like `baseline widely available`.
 
 ## Local development setup
 
