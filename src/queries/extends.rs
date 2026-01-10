@@ -47,7 +47,9 @@ fn check_extend_name(pkg: &str) -> Result<(), Error> {
         .and_then(|s| s.find('/').and_then(|i| s.get(i + 1..)))
         .unwrap_or(pkg);
     if !(unscoped.starts_with("browserslist-config-")
-        || (pkg.starts_with('@') && unscoped == "browserslist-config"))
+        || (pkg.starts_with('@')
+            && (unscoped == "browserslist-config"
+                || unscoped.starts_with("browserslist-config/"))))
     {
         return Err(Error::InvalidExtendName(
             "Browserslist config needs `browserslist-config-` prefix.",
@@ -100,6 +102,7 @@ mod tests {
     #[test_case("@scope/browserslist-config-test", json!(["ie 11"]), "extends @scope/browserslist-config-test"; "scoped package")]
     #[test_case("@example.com/browserslist-config-test", json!(["ie 11"]), "extends @example.com/browserslist-config-test"; "scoped package with dot in name")]
     #[test_case("@scope/browserslist-config-test-file/ie", json!(["ie 11"]), "extends @scope/browserslist-config-test-file/ie"; "file in scoped package")]
+    #[test_case("@scope/browserslist-config/ie", json!(["ie 11"]), "extends @scope/browserslist-config/ie"; "file in scoped package with standard name")]
     #[test_case("@scope/browserslist-config", json!(["ie 11"]), "extends @scope/browserslist-config"; "file-less scoped package")]
     #[test_case("browserslist-config-rel", json!(["ie 9-10"]), "extends browserslist-config-rel and not ie 9"; "with override")]
     #[test_case("browserslist-config-with-env-a", json!({ "someEnv": ["ie 10"] }), "extends browserslist-config-with-env-a"; "no default env")]
