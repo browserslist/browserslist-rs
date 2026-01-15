@@ -17,7 +17,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
           fetch-depth: 2
@@ -34,6 +34,7 @@ jobs:
       - uses: rust-lang/crates-io-auth-action@v1
         id: cratesio-auth
       - name: Publish crates
+        if: ${{ github.event_name == 'push' }}
         run: |
           if ! git show --exit-code -G^version data/Cargo.toml; then
             cargo publish -p browserslist-data --allow-dirty
@@ -48,7 +49,7 @@ jobs:
     name: wasm
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
