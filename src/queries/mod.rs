@@ -1,14 +1,13 @@
 use crate::{
     error::Error,
     opts::Opts,
-    parser::{BaselineKind, QueryAtom, Stats, VersionRange},
+    parser::{QueryAtom, Stats, VersionRange},
     semver::Version,
 };
 use browserslist_data::caniuse;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, fmt::Display};
 
-mod baseline;
 mod browser_accurate;
 mod browser_bounded_range;
 mod browser_unbounded_range;
@@ -209,20 +208,6 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
         }
         QueryAtom::Browser(name, VersionRange::Accurate(version)) => {
             browser_accurate::browser_accurate(name, version, opts)
-        }
-        QueryAtom::Baseline { kind: BaselineKind::WidelyAvailable, downstream, kaios } => {
-            baseline::baseline_widely(opts, downstream, kaios)
-        }
-        QueryAtom::Baseline {
-            kind: BaselineKind::WidelyAvailableOnDate(date),
-            downstream,
-            kaios,
-        } => baseline::baseline_widely_on_date(&date, opts, downstream, kaios),
-        QueryAtom::Baseline { kind: BaselineKind::NewlyAvailable, downstream, kaios } => {
-            baseline::baseline_newly(opts, downstream, kaios)
-        }
-        QueryAtom::Baseline { kind: BaselineKind::Year(year), downstream, kaios } => {
-            baseline::baseline_year(year, opts, downstream, kaios)
         }
         QueryAtom::FirefoxESR => firefox_esr::firefox_esr(),
         QueryAtom::OperaMini => op_mini::op_mini(),
