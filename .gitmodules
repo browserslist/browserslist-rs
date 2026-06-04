@@ -7,3 +7,6 @@
 [submodule "vendor/caniuse"]
 	path = vendor/caniuse
 	url = https://github.com/Fyrd/caniuse.git
+[submodule "vendor/baseline-browser-mapping"]
+	path = vendor/baseline-browser-mapping
+	url = https://github.com/web-platform-dx/baseline-browser-mapping.git

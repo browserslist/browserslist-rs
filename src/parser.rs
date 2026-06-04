@@ -12,6 +12,14 @@ use nom::{
 type PResult<'a, Output> = IResult<&'a str, Output>;
 
 #[derive(Debug, Clone)]
+pub enum BaselineKind {
+    WidelyAvailable,
+    WidelyAvailableOnDate(String), // "YYYY-MM-DD"
+    NewlyAvailable,
+    Year(u16),
+}
+
+#[derive(Debug, Clone)]
 pub enum QueryAtom<'a> {
     Last {
         count: u16,
@@ -38,6 +46,11 @@ pub enum QueryAtom<'a> {
     Electron(VersionRange<'a>),
     Node(VersionRange<'a>),
     Browser(&'a str, VersionRange<'a>),
+    Baseline {
+        kind: BaselineKind,
+        downstream: bool,
+        kaios: bool,
+    },
     FirefoxESR,
     OperaMini,
     CurrentNode,
@@ -369,6 +382,68 @@ fn parse_extends(input: &str) -> PResult<QueryAtom> {
     )(input)
 }
 
+fn parse_date_yyyy_mm_dd(input: &str) -> PResult<&str> {
+    recognize(tuple((
+        take_while_m_n(4, 4, |c: char| c.is_ascii_digit()),
+        char('-'),
+        take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        char('-'),
+        take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+    )))(input)
+}
+
+fn parse_baseline(input: &str) -> PResult<QueryAtom> {
+    // Grammar (case-insensitive):
+    //   baseline YEAR
+    //   baseline widely available [on YYYY-MM-DD]
+    //   baseline newly available
+    //   … optionally followed by: "with downstream" and/or "including kaios"
+    let (input, _) = pair(tag_no_case("baseline"), space1)(input)?;
+
+    let (input, kind) = alt((
+        map(u16, BaselineKind::Year),
+        map(
+            preceded(
+                terminated(tag_no_case("widely"), space1),
+                preceded(
+                    tag_no_case("available"),
+                    opt(preceded(
+                        tuple((space1, tag_no_case("on"), space1)),
+                        parse_date_yyyy_mm_dd,
+                    )),
+                ),
+            ),
+            |date| match date {
+                Some(d) => BaselineKind::WidelyAvailableOnDate(d.to_owned()),
+                None => BaselineKind::WidelyAvailable,
+            },
+        ),
+        value(
+            BaselineKind::NewlyAvailable,
+            tuple((tag_no_case("newly"), space1, tag_no_case("available"))),
+        ),
+    ))(input)?;
+
+    let (input, downstream) = opt(value(
+        (),
+        tuple((space1, tag_no_case("with"), space1, tag_no_case("downstream"))),
+    ))(input)?;
+
+    let (input, kaios) = opt(value(
+        (),
+        tuple((space1, tag_no_case("including"), space1, tag_no_case("kaios"))),
+    ))(input)?;
+
+    Ok((
+        input,
+        QueryAtom::Baseline {
+            kind,
+            downstream: downstream.is_some(),
+            kaios: kaios.is_some(),
+        },
+    ))
+}
+
 fn parse_unknown(input: &str) -> PResult<QueryAtom> {
     map(
         recognize(many_till(anychar, parse_composition_operator)),
@@ -392,6 +467,7 @@ fn parse_query_atom(input: &str) -> PResult<QueryAtom> {
         parse_current_node,
         parse_maintained_node,
         parse_phantom,
+        parse_baseline,
         parse_browser,
         parse_browserslist_config,
         parse_defaults,
