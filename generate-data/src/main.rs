@@ -94,7 +94,7 @@ fn build_electron_to_chromium() -> Result<()> {
     let path = format!("{OUT_DIR}/electron-to-chromium.rs");
 
     let mut data = serde_json::from_slice::<BTreeMap<String, String>>(&fs::read(
-        "vendor/electron-to-chromium/versions.json",
+        "node_modules/electron-to-chromium/versions.json",
     )?)?
     .into_iter()
     .map(|(electron_version, chromium_version)| {
@@ -123,7 +123,7 @@ fn build_node_versions() -> Result<()> {
     let path = format!("{OUT_DIR}/node-versions.rs");
 
     let releases: Vec<NodeRelease> =
-        serde_json::from_slice(&fs::read("vendor/node-releases/data/processed/envs.json")?)?;
+        serde_json::from_slice(&fs::read("node_modules/node-releases/data/processed/envs.json")?)?;
 
     let versions = releases.into_iter().map(|release| release.version);
     fs::write(
@@ -149,7 +149,7 @@ fn build_node_release_schedule() -> Result<()> {
     let path = format!("{OUT_DIR}/node-release-schedule.rs");
 
     let schedule: BTreeMap<String, NodeRelease> = serde_json::from_slice(&fs::read(
-        "vendor/node-releases/data/release-schedule/release-schedule.json",
+        "node_modules/node-releases/data/release-schedule/release-schedule.json",
     )?)?;
     let mut versions = schedule
         .into_iter()
@@ -207,6 +207,7 @@ fn build_node_release_schedule() -> Result<()> {
 
 fn build_caniuse() -> Result<()> {
     let data = parse_caniuse_global()?;
+    let region_data = parse_caniuse_regions()?;
 
     let mut strpool = StrPool::default();
 
@@ -405,47 +406,28 @@ fn build_caniuse() -> Result<()> {
 
     // caniuse region
     {
-        #[derive(Deserialize)]
-        struct RegionData {
-            data: BTreeMap<String, BTreeMap<String, Option<f32>>>,
-        }
-
-        let files = fs::read_dir("vendor/caniuse/region-usage-json")?
-            .map(|entry| entry.map_err(anyhow::Error::from))
-            .collect::<Result<Vec<_>>>()?;
         let mut usages = Vec::new();
         let mut region_usages = Vec::new();
 
-        for file in &files {
-            let RegionData { data: region_data } = serde_json::from_slice(&fs::read(file.path())?)?;
-
+        for (region_name, browsers) in &region_data {
             let start = usages.len();
-            for (name, stat) in &region_data {
+            for (name, stat) in browsers {
                 let agent = data.agents.get(name).unwrap();
-                for (version, usage) in stat {
-                    if let &Some(usage) = usage {
-                        let version = if version.as_str() == "0" {
-                            Cow::Borrowed(&*agent.version_list.last().unwrap().version)
-                        } else {
-                            Cow::Owned(version.clone())
-                        };
+                for (version, &usage) in stat {
+                    let version = if version.as_str() == "0" {
+                        Cow::Borrowed(&*agent.version_list.last().unwrap().version)
+                    } else {
+                        Cow::Owned(version.clone())
+                    };
 
-                        let version_str_id = strpool.insert_cow(version);
-                        usages.push((encode_browser_name(name), version_str_id, usage));
-                    }
+                    let version_str_id = strpool.insert_cow(version);
+                    usages.push((encode_browser_name(name), version_str_id, usage));
                 }
             }
             let end = usages.len();
             usages[start..end].sort_by(|(_, _, a), (_, _, b)| b.total_cmp(a));
 
-            let region_name = file
-                .path()
-                .file_stem()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_owned();
-            let region_str_id = strpool.insert_cow(Cow::Owned(region_name));
+            let region_str_id = strpool.insert_cow(Cow::Owned(region_name.clone()));
             region_usages.push((region_str_id, start, end));
         }
 
@@ -510,9 +492,57 @@ fn build_caniuse() -> Result<()> {
 }
 
 fn parse_caniuse_global() -> Result<Caniuse> {
-    Ok(serde_json::from_slice(&fs::read(
-        "vendor/caniuse/fulldata-json/data-2.0.json",
-    )?)?)
+    let json = run_node(r#"
+const { agents } = require('./node_modules/caniuse-lite/dist/unpacker/agents');
+const featuresMap = require('./node_modules/caniuse-lite/data/features');
+const unpackFeature = require('./node_modules/caniuse-lite/dist/unpacker/feature');
+const result = { agents: {}, data: {} };
+for (const [name, agent] of Object.entries(agents)) {
+    const releaseDate = agent.release_date || {};
+    result.agents[name] = {
+        usage_global: agent.usage_global,
+        version_list: (agent.versions || []).filter(v => v != null).map(v => ({
+            version: v,
+            global_usage: agent.usage_global[v] || 0,
+            release_date: v in releaseDate ? releaseDate[v] : null
+        }))
+    };
+}
+for (const [name, featureModule] of Object.entries(featuresMap)) {
+    const unpacked = unpackFeature(featureModule);
+    result.data[name] = { stats: unpacked.stats };
+}
+process.stdout.write(JSON.stringify(result));
+"#)?;
+    Ok(serde_json::from_str(&json)?)
+}
+
+fn parse_caniuse_regions() -> Result<BTreeMap<String, BTreeMap<String, BTreeMap<String, f32>>>> {
+    let json = run_node(r#"
+const fs = require('fs');
+const path = require('path');
+const browsersMap = require('./node_modules/caniuse-lite/data/browsers');
+const regionDir = './node_modules/caniuse-lite/data/regions';
+const files = fs.readdirSync(regionDir).filter(f => f.endsWith('.js')).sort();
+const result = {};
+for (const file of files) {
+    const name = path.basename(file, '.js');
+    const packed = require(path.resolve(regionDir, file));
+    const regionData = {};
+    for (const [browserKey, data] of Object.entries(packed)) {
+        const browserName = browsersMap[browserKey];
+        if (!browserName) continue;
+        const entries = {};
+        for (const [version, usage] of Object.entries(data)) {
+            if (version !== '_') { entries[version] = usage; }
+        }
+        if (Object.keys(entries).length > 0) { regionData[browserName] = entries; }
+    }
+    result[name] = regionData;
+}
+process.stdout.write(JSON.stringify(result));
+"#)?;
+    Ok(serde_json::from_str(&json)?)
 }
 
 fn run_node(script: &str) -> Result<String> {
