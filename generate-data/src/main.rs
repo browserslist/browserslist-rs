@@ -503,7 +503,7 @@ for (const [name, agent] of Object.entries(agents)) {
         version_list: (agent.versions || []).filter(v => v != null).map(v => ({
             version: v,
             global_usage: agent.usage_global[v] || 0,
-            release_date: v in releaseDate ? releaseDate[v] : null
+            release_date: releaseDate[v] ?? null
         }))
     };
 }
@@ -531,11 +531,8 @@ for (const file of files) {
     for (const [browserKey, data] of Object.entries(packed)) {
         const browserName = browsersMap[browserKey];
         if (!browserName) continue;
-        const entries = {};
-        for (const [version, usage] of Object.entries(data)) {
-            if (version !== '_') { entries[version] = usage; }
-        }
-        if (Object.keys(entries).length > 0) { regionData[browserName] = entries; }
+        const entries = [...Object.entries(data)].filter(([version]) => version !== '_');
+        if (entries.length > 0) { regionData[browserName] = Object.fromEntries(entries); }
     }
     result[name] = regionData;
 }
