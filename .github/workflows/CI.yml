@@ -19,7 +19,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          submodules: true
           fetch-depth: 2
       - uses: pnpm/action-setup@v4.0.0
         with:
@@ -31,7 +30,8 @@ jobs:
       - run: cargo clippy --all-features
       - run: cargo clippy --example inspect
       - run: cargo clippy --tests
-      - uses: rust-lang/crates-io-auth-action@v1
+      - uses: rust-lang/crates-io-auth-action@v1.0.5
+        if: ${{ github.event_name == 'push' }}
         id: cratesio-auth
       - name: Publish crates
         if: ${{ github.event_name == 'push' }}
@@ -44,14 +44,3 @@ jobs:
           fi
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.cratesio-auth.outputs.token }}
-
-  wasm:
-    name: wasm
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: true
-      - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - run: cargo run -p generate-data
-      - run: cd wasm; wasm-pack build --dev --target=web
