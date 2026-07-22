@@ -4,7 +4,7 @@ use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs,
     io::{self, Write},
 };
@@ -66,6 +66,7 @@ fn main() -> Result<()> {
     build_node_versions()?;
     build_node_release_schedule()?;
     build_caniuse()?;
+    build_baseline()?;
 
     Ok(())
 }
@@ -121,8 +122,9 @@ fn build_node_versions() -> Result<()> {
 
     let path = format!("{OUT_DIR}/node-versions.rs");
 
-    let releases: Vec<NodeRelease> =
-        serde_json::from_slice(&fs::read("node_modules/node-releases/data/processed/envs.json")?)?;
+    let releases: Vec<NodeRelease> = serde_json::from_slice(&fs::read(
+        "node_modules/node-releases/data/processed/envs.json",
+    )?)?;
 
     let versions = releases.into_iter().map(|release| release.version);
     fs::write(
@@ -491,7 +493,8 @@ fn build_caniuse() -> Result<()> {
 }
 
 fn parse_caniuse_global() -> Result<Caniuse> {
-    let json = run_node(r#"
+    let json = run_node(
+        r#"
 const { agents } = require('./node_modules/caniuse-lite/dist/unpacker/agents');
 const featuresMap = require('./node_modules/caniuse-lite/data/features');
 const unpackFeature = require('./node_modules/caniuse-lite/dist/unpacker/feature');
@@ -512,12 +515,14 @@ for (const [name, featureModule] of Object.entries(featuresMap)) {
     result.data[name] = { stats: unpacked.stats };
 }
 process.stdout.write(JSON.stringify(result));
-"#)?;
+"#,
+    )?;
     Ok(serde_json::from_str(&json)?)
 }
 
 fn parse_caniuse_regions() -> Result<BTreeMap<String, BTreeMap<String, BTreeMap<String, f32>>>> {
-    let json = run_node(r#"
+    let json = run_node(
+        r#"
 const fs = require('fs');
 const path = require('path');
 const browsersMap = require('./node_modules/caniuse-lite/data/browsers');
@@ -537,8 +542,98 @@ for (const file of files) {
     result[name] = regionData;
 }
 process.stdout.write(JSON.stringify(result));
-"#)?;
+"#,
+    )?;
     Ok(serde_json::from_str(&json)?)
+}
+
+fn build_baseline() -> Result<()> {
+    #[derive(Deserialize)]
+    struct TimelineEvent {
+        date: String,
+        browsers: Vec<TimelineBrowserVersion>,
+    }
+
+    #[derive(Deserialize)]
+    struct TimelineBrowserVersion {
+        browser: String,
+        version: String,
+    }
+
+    let json = run_node(
+        r#"
+const bbm = require('baseline-browser-mapping');
+const timeline = bbm.getTimeline({
+    listAllBrowsers: true,
+    includeDownstreamBrowsers: true,
+    includeKaiOS: true,
+});
+process.stdout.write(JSON.stringify(timeline));
+"#,
+    )?;
+    let timeline: Vec<TimelineEvent> = serde_json::from_str(&json)?;
+
+    // Map baseline-browser-mapping browser names to caniuse browser names,
+    // dropping browsers that caniuse doesn't track (as browserslist does).
+    let browser_map: HashMap<&str, &str> = [
+        ("chrome", "chrome"),
+        ("chrome_android", "and_chr"),
+        ("edge", "edge"),
+        ("firefox", "firefox"),
+        ("firefox_android", "and_ff"),
+        ("safari", "safari"),
+        ("safari_ios", "ios_saf"),
+        ("webview_android", "android"),
+        ("samsunginternet_android", "samsung"),
+        ("opera_android", "op_mob"),
+        ("opera", "opera"),
+        ("qq_android", "and_qq"),
+        ("uc_android", "and_uc"),
+        ("kai_os", "kaios"),
+    ]
+    .into_iter()
+    .collect();
+
+    let mut browsers = BTreeSet::new();
+    let mut events: Vec<(&str, BTreeMap<&str, &str>)> = Vec::new();
+    for event in &timeline {
+        if let Some((last_date, _)) = events.last() {
+            anyhow::ensure!(*last_date < event.date.as_str(), "timeline must be sorted");
+        }
+        let snapshot: BTreeMap<&str, &str> = event
+            .browsers
+            .iter()
+            .filter_map(|entry| {
+                browser_map
+                    .get(entry.browser.as_str())
+                    .map(|name| (*name, entry.version.as_str()))
+            })
+            .collect();
+        browsers.extend(snapshot.keys().copied());
+        // Events can become identical after dropping unmapped browsers.
+        match events.last() {
+            Some((_, last)) if *last == snapshot => {}
+            _ => events.push((event.date.as_str(), snapshot)),
+        }
+    }
+
+    let browser_tokens = browsers.iter().map(|name| quote! { #name });
+    let event_tokens = events.iter().map(|(date, snapshot)| {
+        let entries = snapshot
+            .iter()
+            .map(|(browser, version)| quote! { (#browser, #version) });
+        quote! { (#date, &[#(#entries),*]) }
+    });
+    fs::write(
+        format!("{OUT_DIR}/baseline.rs"),
+        quote! {
+            static BASELINE_BROWSERS: &[&str] = &[#(#browser_tokens),*];
+            static BASELINE_TIMELINE: &[(&str, &[(&str, &str)])] = &[#(#event_tokens),*];
+        }
+        .to_string(),
+    )?;
+
+    Ok(())
 }
 
 fn run_node(script: &str) -> Result<String> {

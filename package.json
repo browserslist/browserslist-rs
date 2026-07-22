@@ -4,6 +4,7 @@
   "license": "MIT",
   "repository": "https://github.com/browserslist/browserslist-rs",
   "devDependencies": {
+    "baseline-browser-mapping": "^2.11.0",
     "browserslist": "^4.28.6",
     "caniuse-lite": "^1.0.30001806",
     "electron-to-chromium": "^1.5.393",
