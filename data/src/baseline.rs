@@ -3,6 +3,8 @@
 //!
 //! [`baseline-browser-mapping`]: https://www.npmjs.com/package/baseline-browser-mapping
 
+use crate::{decode_browser_name, utils::PooledStr};
+
 include!("generated/baseline.rs");
 
 /// caniuse names of the seven core Baseline browsers; the remaining browsers
@@ -17,20 +19,24 @@ pub fn is_core_browser(name: &str) -> bool {
 
 /// All browsers tracked by the Baseline dataset, by caniuse name.
 pub fn browsers() -> impl Iterator<Item = &'static str> {
-    BASELINE_BROWSERS.iter().copied()
+    BASELINE_BROWSERS.iter().map(|&id| decode_browser_name(id))
 }
 
 /// Minimum compatible versions (by caniuse browser name) for the Baseline
-/// feature set as of `cutoff_date`, a `YYYY-MM-DD` baseline-low threshold
-/// (the query date minus 30 months for widely-available queries).
+/// feature set as of `cutoff_date`, a baseline-low threshold encoded as
+/// decimal `yyyymmdd` (the query date minus 30 months for widely-available
+/// queries).
 ///
 /// Returns `None` if the date predates the first Baseline feature; every
 /// version of every browser is considered compatible in that case.
 pub fn min_versions_on(
-    cutoff_date: &str,
+    cutoff_date: u32,
 ) -> Option<impl Iterator<Item = (&'static str, &'static str)>> {
-    let index = BASELINE_TIMELINE.partition_point(|(date, _)| *date <= cutoff_date);
-    index
-        .checked_sub(1)
-        .map(|index| BASELINE_TIMELINE[index].1.iter().copied())
+    let index = BASELINE_TIMELINE.partition_point(|(date, ..)| *date <= cutoff_date);
+    index.checked_sub(1).map(|index| {
+        let (_, start, end) = BASELINE_TIMELINE[index];
+        BASELINE_VERSIONS[usize::from(start)..usize::from(end)]
+            .iter()
+            .map(|(id, version)| (decode_browser_name(*id), version.as_str()))
+    })
 }

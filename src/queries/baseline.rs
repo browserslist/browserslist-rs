@@ -26,7 +26,7 @@ pub(super) fn baseline(
         BaselineKind::WidelyAvailableOnDate(date) => add_months(parse_date(date), -30),
         BaselineKind::Year(year) => (i32::from(*year), 12, 31),
     };
-    let cutoff = format!("{:04}-{:02}-{:02}", cutoff.0, cutoff.1, cutoff.2);
+    let cutoff = date_key(cutoff);
 
     // KaiOS is only included when downstream browsers are requested as well.
     let is_included = |browser: &str| {
@@ -34,7 +34,7 @@ pub(super) fn baseline(
     };
 
     let mut distribs = Vec::new();
-    match baseline::min_versions_on(&cutoff) {
+    match baseline::min_versions_on(cutoff) {
         Some(min_versions) => {
             for (browser, version) in min_versions {
                 if is_included(browser) {
@@ -63,6 +63,11 @@ pub(super) fn baseline(
         }
     }
     Ok(distribs)
+}
+
+/// Encodes a date as decimal `yyyymmdd`, the key of the Baseline timeline.
+fn date_key((year, month, day): Date) -> u32 {
+    year as u32 * 10000 + month * 100 + day
 }
 
 fn today() -> Date {
