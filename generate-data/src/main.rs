@@ -3,8 +3,7 @@ use indexmap::IndexMap;
 use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::{
-    borrow::Cow,
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs,
     io::{self, Write},
 };
@@ -65,7 +64,11 @@ fn main() -> Result<()> {
     build_electron_to_chromium()?;
     build_node_versions()?;
     build_node_release_schedule()?;
-    build_caniuse()?;
+
+    let mut strpool = StrPool::default();
+    build_caniuse(&mut strpool)?;
+    build_baseline(&mut strpool)?;
+    fs::write(format!("{OUT_DIR}/strpool.bin"), strpool.pool.as_bytes())?;
 
     Ok(())
 }
@@ -121,8 +124,9 @@ fn build_node_versions() -> Result<()> {
 
     let path = format!("{OUT_DIR}/node-versions.rs");
 
-    let releases: Vec<NodeRelease> =
-        serde_json::from_slice(&fs::read("node_modules/node-releases/data/processed/envs.json")?)?;
+    let releases: Vec<NodeRelease> = serde_json::from_slice(&fs::read(
+        "node_modules/node-releases/data/processed/envs.json",
+    )?)?;
 
     let versions = releases.into_iter().map(|release| release.version);
     fs::write(
@@ -204,11 +208,9 @@ fn build_node_release_schedule() -> Result<()> {
     Ok(())
 }
 
-fn build_caniuse() -> Result<()> {
+fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
     let data = parse_caniuse_global()?;
     let region_data = parse_caniuse_regions()?;
-
-    let mut strpool = StrPool::default();
 
     // caniuse browsers
     {
@@ -414,19 +416,19 @@ fn build_caniuse() -> Result<()> {
                 let agent = data.agents.get(name).unwrap();
                 for (version, &usage) in stat {
                     let version = if version.as_str() == "0" {
-                        Cow::Borrowed(&*agent.version_list.last().unwrap().version)
+                        &agent.version_list.last().unwrap().version
                     } else {
-                        Cow::Owned(version.clone())
+                        version
                     };
 
-                    let version_str_id = strpool.insert_cow(version);
+                    let version_str_id = strpool.insert(version);
                     usages.push((encode_browser_name(name), version_str_id, usage));
                 }
             }
             let end = usages.len();
             usages[start..end].sort_by(|(_, _, a), (_, _, b)| b.total_cmp(a));
 
-            let region_str_id = strpool.insert_cow(Cow::Owned(region_name.clone()));
+            let region_str_id = strpool.insert(region_name);
             region_usages.push((region_str_id, start, end));
         }
 
@@ -482,16 +484,12 @@ fn build_caniuse() -> Result<()> {
         )?;
     }
 
-    fs::write(
-        format!("{OUT_DIR}/caniuse-strpool.bin"),
-        strpool.pool.as_bytes(),
-    )?;
-
     Ok(())
 }
 
 fn parse_caniuse_global() -> Result<Caniuse> {
-    let json = run_node(r#"
+    let json = run_node(
+        r#"
 const { agents } = require('./node_modules/caniuse-lite/dist/unpacker/agents');
 const featuresMap = require('./node_modules/caniuse-lite/data/features');
 const unpackFeature = require('./node_modules/caniuse-lite/dist/unpacker/feature');
@@ -512,12 +510,14 @@ for (const [name, featureModule] of Object.entries(featuresMap)) {
     result.data[name] = { stats: unpacked.stats };
 }
 process.stdout.write(JSON.stringify(result));
-"#)?;
+"#,
+    )?;
     Ok(serde_json::from_str(&json)?)
 }
 
 fn parse_caniuse_regions() -> Result<BTreeMap<String, BTreeMap<String, BTreeMap<String, f32>>>> {
-    let json = run_node(r#"
+    let json = run_node(
+        r#"
 const fs = require('fs');
 const path = require('path');
 const browsersMap = require('./node_modules/caniuse-lite/data/browsers');
@@ -537,8 +537,119 @@ for (const file of files) {
     result[name] = regionData;
 }
 process.stdout.write(JSON.stringify(result));
-"#)?;
+"#,
+    )?;
     Ok(serde_json::from_str(&json)?)
+}
+
+fn build_baseline(strpool: &mut StrPool) -> Result<()> {
+    #[derive(Deserialize)]
+    struct TimelineEvent {
+        date: String,
+        browsers: Vec<TimelineBrowserVersion>,
+    }
+
+    #[derive(Deserialize)]
+    struct TimelineBrowserVersion {
+        browser: String,
+        version: String,
+    }
+
+    let json = run_node(
+        r#"
+const bbm = require('baseline-browser-mapping');
+const timeline = bbm.getTimeline({
+    listAllBrowsers: true,
+    includeDownstreamBrowsers: true,
+    includeKaiOS: true,
+});
+process.stdout.write(JSON.stringify(timeline));
+"#,
+    )?;
+    let timeline: Vec<TimelineEvent> = serde_json::from_str(&json)?;
+
+    // Map baseline-browser-mapping browser names to caniuse browser names,
+    // dropping browsers that caniuse doesn't track (as browserslist does).
+    let browser_map: HashMap<&str, &str> = [
+        ("chrome", "chrome"),
+        ("chrome_android", "and_chr"),
+        ("edge", "edge"),
+        ("firefox", "firefox"),
+        ("firefox_android", "and_ff"),
+        ("safari", "safari"),
+        ("safari_ios", "ios_saf"),
+        ("webview_android", "android"),
+        ("samsunginternet_android", "samsung"),
+        ("opera_android", "op_mob"),
+        ("opera", "opera"),
+        ("qq_android", "and_qq"),
+        ("uc_android", "and_uc"),
+        ("kai_os", "kaios"),
+    ]
+    .into_iter()
+    .collect();
+
+    let mut browsers = BTreeSet::new();
+    let mut events: Vec<(&str, BTreeMap<&str, &str>)> = Vec::new();
+    for event in &timeline {
+        if let Some((last_date, _)) = events.last() {
+            anyhow::ensure!(*last_date < event.date.as_str(), "timeline must be sorted");
+        }
+        let snapshot: BTreeMap<&str, &str> = event
+            .browsers
+            .iter()
+            .filter_map(|entry| {
+                browser_map
+                    .get(entry.browser.as_str())
+                    .map(|name| (*name, entry.version.as_str()))
+            })
+            .collect();
+        browsers.extend(snapshot.keys().copied());
+        // Events can become identical after dropping unmapped browsers.
+        match events.last() {
+            Some((_, last)) if *last == snapshot => {}
+            _ => events.push((event.date.as_str(), snapshot)),
+        }
+    }
+
+    // Flatten the snapshots into one array of (browser id, pooled version)
+    // and index into it per event, keyed by the date as a decimal `yyyymmdd`.
+    // This keeps the tables free of pointers (and their relocations).
+    let mut version_entries: Vec<(u8, u32)> = Vec::new();
+    let mut timeline_entries: Vec<(u32, u16, u16)> = Vec::new();
+    for (date, snapshot) in &events {
+        let date: u32 = date.replace('-', "").parse()?;
+        let start: u16 = version_entries.len().try_into()?;
+        version_entries.extend(
+            snapshot
+                .iter()
+                .map(|(browser, version)| (encode_browser_name(browser), strpool.insert(version))),
+        );
+        let end: u16 = version_entries.len().try_into()?;
+        timeline_entries.push((date, start, end));
+    }
+
+    let browser_tokens = browsers.iter().map(|name| {
+        let id = encode_browser_name(name);
+        quote! { #id }
+    });
+    let version_tokens = version_entries
+        .iter()
+        .map(|(browser, version)| quote! { (#browser, PooledStr(#version)) });
+    let timeline_tokens = timeline_entries
+        .iter()
+        .map(|(date, start, end)| quote! { (#date, #start, #end) });
+    fs::write(
+        format!("{OUT_DIR}/baseline.rs"),
+        quote! {
+            static BASELINE_BROWSERS: &[u8] = &[#(#browser_tokens),*];
+            static BASELINE_VERSIONS: &[(u8, PooledStr)] = &[#(#version_tokens),*];
+            static BASELINE_TIMELINE: &[(u32, u16, u16)] = &[#(#timeline_tokens),*];
+        }
+        .to_string(),
+    )?;
+
+    Ok(())
 }
 
 fn run_node(script: &str) -> Result<String> {
@@ -565,29 +676,29 @@ fn write_u32(path: String, iter: impl Iterator<Item = u32>) -> io::Result<usize>
 }
 
 #[derive(Default)]
-struct StrPool<'s> {
+struct StrPool {
     pool: String,
-    map: HashMap<Cow<'s, str>, u32>,
+    map: HashMap<String, u32>,
 }
 
-impl<'s> StrPool<'s> {
-    pub fn insert(&mut self, s: &'s str) -> u32 {
-        self.insert_cow(Cow::Borrowed(s))
-    }
+impl StrPool {
+    pub fn insert(&mut self, s: &str) -> u32 {
+        if let Some(id) = self.map.get(s) {
+            return *id;
+        }
 
-    pub fn insert_cow(&mut self, s: Cow<'s, str>) -> u32 {
-        *self.map.entry(s.clone()).or_insert_with(|| {
-            let offset = self.pool.len();
-            self.pool.push_str(&s);
-            let len: u8 = (self.pool.len() - offset).try_into().unwrap();
-            let offset: u32 = offset.try_into().unwrap();
+        let offset = self.pool.len();
+        self.pool.push_str(s);
+        let len: u8 = s.len().try_into().unwrap();
+        let offset: u32 = offset.try_into().unwrap();
 
-            if offset > (1 << 24) {
-                panic!("string too large");
-            }
+        if offset > (1 << 24) {
+            panic!("string too large");
+        }
 
-            offset | (u32::from(len) << 24)
-        })
+        let id = offset | (u32::from(len) << 24);
+        self.map.insert(s.to_owned(), id);
+        id
     }
 
     pub fn get(&self, id: u32) -> &str {

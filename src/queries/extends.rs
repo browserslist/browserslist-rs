@@ -48,8 +48,7 @@ fn check_extend_name(pkg: &str) -> Result<(), Error> {
         .unwrap_or(pkg);
     if !(unscoped.starts_with("browserslist-config-")
         || (pkg.starts_with('@')
-            && (unscoped == "browserslist-config"
-                || unscoped.starts_with("browserslist-config/"))))
+            && (unscoped == "browserslist-config" || unscoped.starts_with("browserslist-config/"))))
     {
         return Err(Error::InvalidExtendName(
             "Browserslist config needs `browserslist-config-` prefix.",
