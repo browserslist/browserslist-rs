@@ -620,9 +620,11 @@ process.stdout.write(JSON.stringify(timeline));
     for (date, snapshot) in &events {
         let date: u32 = date.replace('-', "").parse()?;
         let start: u16 = version_entries.len().try_into()?;
-        for (browser, version) in snapshot {
-            version_entries.push((encode_browser_name(browser), strpool.insert(version)));
-        }
+        version_entries.extend(
+            snapshot
+                .iter()
+                .map(|(browser, version)| (encode_browser_name(browser), strpool.insert(version))),
+        );
         let end: u16 = version_entries.len().try_into()?;
         timeline_entries.push((date, start, end));
     }
@@ -687,7 +689,7 @@ impl StrPool {
 
         let offset = self.pool.len();
         self.pool.push_str(s);
-        let len: u8 = (self.pool.len() - offset).try_into().unwrap();
+        let len: u8 = s.len().try_into().unwrap();
         let offset: u32 = offset.try_into().unwrap();
 
         if offset > (1 << 24) {

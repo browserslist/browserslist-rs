@@ -36,29 +36,25 @@ pub(super) fn baseline(
     let mut distribs = Vec::new();
     match baseline::min_versions_on(cutoff) {
         Some(min_versions) => {
-            for (browser, version) in min_versions {
-                if is_included(browser) {
-                    distribs.append(&mut browser_unbounded_range(
-                        browser,
-                        Comparator::GreaterOrEqual,
-                        version,
-                        opts,
-                    )?);
-                }
+            for (browser, version) in min_versions.filter(|(browser, _)| is_included(browser)) {
+                distribs.append(&mut browser_unbounded_range(
+                    browser,
+                    Comparator::GreaterOrEqual,
+                    version,
+                    opts,
+                )?);
             }
         }
         // Before the first Baseline feature, every version of every browser
         // is considered compatible.
         None => {
-            for browser in baseline::browsers() {
-                if is_included(browser) {
-                    distribs.append(&mut browser_unbounded_range(
-                        browser,
-                        Comparator::GreaterOrEqual,
-                        "0",
-                        opts,
-                    )?);
-                }
+            for browser in baseline::browsers().filter(|browser| is_included(browser)) {
+                distribs.append(&mut browser_unbounded_range(
+                    browser,
+                    Comparator::GreaterOrEqual,
+                    "0",
+                    opts,
+                )?);
             }
         }
     }
