@@ -1,4 +1,4 @@
-use super::{browser_unbounded_range::browser_unbounded_range, QueryResult};
+use super::{QueryResult, browser_unbounded_range::browser_unbounded_range};
 use crate::{
     opts::Opts,
     parser::{BaselineKind, Comparator},

@@ -6,7 +6,7 @@ pub(super) fn current_node() -> QueryResult {
     {
         #[cfg(feature = "wasm_bindgen")]
         {
-            use js_sys::{global, Reflect};
+            use js_sys::{Reflect, global};
 
             let obj_process = Reflect::get(&global(), &"process".into())
                 .map_err(|_| Error::UnsupportedCurrentNode)?;

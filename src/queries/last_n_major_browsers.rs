@@ -1,4 +1,4 @@
-use super::{count_filter_versions, Distrib, QueryResult};
+use super::{Distrib, QueryResult, count_filter_versions};
 use crate::opts::Opts;
 use browserslist_data::caniuse;
 use itertools::Itertools;

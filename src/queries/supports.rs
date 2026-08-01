@@ -1,5 +1,5 @@
 use super::{Distrib, QueryResult};
-use crate::{error::Error, parser::SupportKind, Opts};
+use crate::{Opts, error::Error, parser::SupportKind};
 use browserslist_data::caniuse::{features::get_feature_stat, get_browser_stat, to_desktop_name};
 
 const Y: u8 = 1;

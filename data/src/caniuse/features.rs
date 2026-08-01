@@ -46,7 +46,7 @@ impl Feature {
 
 impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
-        let range = (self.0 .0.get() as usize)..(self.0 .1.get() as usize);
+        let range = (self.0.0.get() as usize)..(self.0.1.get() as usize);
         let index = FEATURES_STAT_VERSION_STORE[range.clone()]
             .binary_search_by_key(&version, |s| PooledStr(s.get()).as_str())
             .ok()?;

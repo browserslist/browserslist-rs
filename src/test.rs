@@ -1,4 +1,4 @@
-use crate::{resolve, Error, Opts};
+use crate::{Error, Opts, resolve};
 use std::{path::Path, process::Command};
 
 pub fn run_compare(query: &str, opts: &Opts, cwd: Option<&Path>) {

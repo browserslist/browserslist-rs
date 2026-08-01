@@ -258,9 +258,5 @@ pub fn count_filter_versions(name: &str, mobile_to_desktop: bool, count: usize) 
         }
         _ => return count,
     };
-    if count <= jump {
-        1
-    } else {
-        count + 1 - jump
-    }
+    if count <= jump { 1 } else { count + 1 - jump }
 }

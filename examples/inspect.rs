@@ -1,4 +1,4 @@
-use browserslist::{resolve, Opts};
+use browserslist::{Opts, resolve};
 use clap::Parser;
 
 #[derive(Parser)]

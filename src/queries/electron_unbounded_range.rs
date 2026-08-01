@@ -1,5 +1,5 @@
 use super::{Distrib, QueryResult};
-use crate::{parser::parse_electron_version, parser::Comparator};
+use crate::{parser::Comparator, parser::parse_electron_version};
 use browserslist_data::electron;
 
 pub(super) fn electron_unbounded_range(comparator: Comparator, version: &str) -> QueryResult {
