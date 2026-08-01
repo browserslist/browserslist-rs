@@ -2,12 +2,12 @@
 name = "generate-data"
 version = "0.1.0"
 authors = ["Pig Fang <g-plane@hotmail.com>"]
-edition = "2021"
+edition = "2024"
 publish = false
 
 [dependencies]
 anyhow = "1.0"
-indexmap = { version = "2.6", features = ["serde"] }
+indexmap = { version = "2.14", features = ["serde"] }
 quote = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

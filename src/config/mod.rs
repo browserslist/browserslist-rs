@@ -179,7 +179,7 @@ fn find_config<P: AsRef<Path>>(path: P) -> Result<Either<String, PkgConfig>, Err
     Ok(Either::Left(String::from("defaults")))
 }
 
-fn get_env(opts: &Opts) -> Cow<str> {
+fn get_env(opts: &Opts) -> Cow<'_, str> {
     opts.env
         .as_ref()
         .map(Cow::from)
@@ -221,13 +221,19 @@ mod tests {
         assert_eq!(&*load(&Opts::default()).unwrap(), ["defaults"]);
 
         // read queries from env
-        set_var("BROWSERSLIST", "last 2 versions");
+        unsafe {
+            set_var("BROWSERSLIST", "last 2 versions");
+        }
         assert_eq!(&*load(&Opts::default()).unwrap(), ["last 2 versions"]);
-        remove_var("BROWSERSLIST");
+        unsafe {
+            remove_var("BROWSERSLIST");
+        }
 
         // specify config file by env
         let tmp = temp_dir().join("browserslist");
-        set_var("BROWSERSLIST_CONFIG", &tmp);
+        unsafe {
+            set_var("BROWSERSLIST_CONFIG", &tmp);
+        }
 
         assert_eq!(
             load(&Opts::default()).unwrap_err(),
@@ -237,7 +243,9 @@ mod tests {
         fs::write(&tmp, "chrome > 90").unwrap();
         assert_eq!(load(&Opts::default()).as_deref().unwrap(), ["chrome > 90"]);
         // options `config` should have higher priority than environment variable
-        set_var("BROWSERSLIST_CONFIG", "./browserslist");
+        unsafe {
+            set_var("BROWSERSLIST_CONFIG", "./browserslist");
+        }
 
         // specify config file by options
         fs::write(&tmp, "firefox > 90").unwrap();
@@ -315,9 +323,11 @@ mod tests {
             ["> 1%", "not dead"]
         );
 
-        // pick queries by env
-        set_var("BROWSERSLIST_ENV", "modern");
-        set_var("NODE_ENV", "ssr");
+        unsafe {
+            // pick queries by env
+            set_var("BROWSERSLIST_ENV", "modern");
+            set_var("NODE_ENV", "ssr");
+        }
         assert_eq!(
             load(&Opts {
                 config: Some(tmp.to_str().unwrap().into()),
@@ -337,7 +347,9 @@ mod tests {
             .unwrap(),
             ["last 1 version"]
         );
-        remove_var("BROWSERSLIST_ENV");
+        unsafe {
+            remove_var("BROWSERSLIST_ENV");
+        }
         assert_eq!(
             load(&Opts {
                 config: Some(tmp.to_str().unwrap().into()),
@@ -347,7 +359,9 @@ mod tests {
             .unwrap(),
             ["node >= 12"]
         );
-        remove_var("NODE_ENV");
+        unsafe {
+            remove_var("NODE_ENV");
+        }
 
         let tmp = temp_dir().join("browserslist");
         fs::write(
@@ -384,7 +398,9 @@ last 1 version
             ["> 1%, not dead"]
         );
 
-        remove_var("BROWSERSLIST_CONFIG");
+        unsafe {
+            remove_var("BROWSERSLIST_CONFIG");
+        }
 
         // find configuration file
         let tmp_dir = temp_dir();
@@ -494,15 +510,17 @@ last 1 version
         );
 
         // don't throw if env is `defaults`
-        assert!(load(&Opts {
-            env: Some("defaults".into()),
-            path: Some(tmp.to_str().unwrap().into()),
-            throw_on_missing: true,
-            ..Default::default()
-        })
-        .as_deref()
-        .unwrap()
-        .is_empty());
+        assert!(
+            load(&Opts {
+                env: Some("defaults".into()),
+                path: Some(tmp.to_str().unwrap().into()),
+                throw_on_missing: true,
+                ..Default::default()
+            })
+            .as_deref()
+            .unwrap()
+            .is_empty()
+        );
 
         fs::remove_file(tmp.join(".browserslistrc")).unwrap();
     }
