@@ -66,9 +66,22 @@ fn main() -> Result<()> {
     build_node_release_schedule()?;
 
     let mut strpool = StrPool::default();
-    build_caniuse(&mut strpool)?;
-    build_baseline(&mut strpool)?;
+    let mut versions_table = VersionTable::default();
+    build_caniuse(&mut strpool, &mut versions_table)?;
+    build_baseline(&mut strpool, &mut versions_table)?;
     fs::write(format!("{OUT_DIR}/strpool.bin"), strpool.pool.as_bytes())?;
+
+    let versions = versions_table
+        .ids
+        .iter()
+        .map(|id| quote! { PooledStr(#id) });
+    fs::write(
+        format!("{OUT_DIR}/version-table.rs"),
+        quote! {
+            static VERSION_TABLE: &[PooledStr] = &[#(#versions),*];
+        }
+        .to_string(),
+    )?;
 
     Ok(())
 }
@@ -210,20 +223,9 @@ fn build_node_release_schedule() -> Result<()> {
     Ok(())
 }
 
-fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
+fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Result<()> {
     let data = parse_caniuse_global()?;
     let region_data = parse_caniuse_regions()?;
-
-    // One table of version strings, shared by every array that refers to a version, so
-    // those arrays hold a `u16` index instead of a four byte string id.
-    let mut version_ids = Vec::new();
-    for agent in data.agents.values() {
-        for version in &agent.version_list {
-            version_ids.push(strpool.insert(&version.version));
-        }
-    }
-    let (version_table, version_index) = intern_versions(version_ids.into_iter())?;
-    let version_table = version_table.iter().map(|id| quote! { PooledStr(#id) });
 
     // caniuse browsers
     {
@@ -239,7 +241,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
             for version in &agent.version_list {
                 let version_str_id = strpool.insert(&version.version);
-                versions.push(version_str_id);
+                versions.push(versions_table.intern(version_str_id)?);
                 release_dates.push(u32::try_from(version.release_date.unwrap_or_default())?);
                 released_flags.push(version.release_date.is_some());
                 usages.push(per_mille(version.global_usage)?);
@@ -249,7 +251,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             stats.push((name_str_id, start, end));
         }
 
-        let versions = zigzag_delta(versions.into_iter());
+        let (versions_lo, versions_hi) = byte_planes(&versions);
         let release_dates = zigzag_delta(release_dates.into_iter());
 
         stats.sort_by_key(|(name_str_id, ..)| strpool.get(*name_str_id));
@@ -263,11 +265,11 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         fs::write(
             format!("{OUT_DIR}/caniuse-browsers.rs"),
             quote! {
-                static VERSION_LIST_VERSION_DELTA: &[u32] = &[#(#versions),*];
+                static VERSION_LIST_VERSION_LO: &[u8] = &[#(#versions_lo),*];
+                static VERSION_LIST_VERSION_HI: &[u8] = &[#(#versions_hi),*];
                 static VERSION_LIST_RELEASE_DATE_DELTA: &[u32] = &[#(#release_dates),*];
                 static VERSION_LIST_RELEASED: &[bool] = &[#(#released_flags),*];
                 static VERSION_LIST_GLOBAL_USAGE: &[u16] = &[#(#usages),*];
-                static VERSION_TABLE: &[PooledStr] = &[#(#version_table),*];
                 static BROWSERS_STATS_KEY: &[PooledStr] = &[#(#stat_keys),*];
                 static BROWSERS_STATS_WIDTH: &[u8] = &[#(#stat_widths),*];
             }
@@ -279,20 +281,17 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
     {
         let mut global_usage = Vec::new();
         for (name, agent) in &data.agents {
-            let name_str_id = strpool.insert(name);
+            let browser = encode_browser_name(name);
             for (version, usage) in &agent.usage_global {
                 let version_str_id = strpool.insert(version);
-                global_usage.push((name_str_id, version_str_id, usage));
+                global_usage.push((browser, versions_table.intern(version_str_id)?, usage));
             }
         }
 
         global_usage.sort_unstable_by(|(.., a), (.., b)| b.total_cmp(a));
-        let browsers = global_usage
-            .iter()
-            .map(|(name_str_id, ..)| quote! { PooledStr(#name_str_id) });
-        let versions = global_usage
-            .iter()
-            .map(|(_, version_str_id, _)| quote! { PooledStr(#version_str_id) });
+        let browsers = global_usage.iter().map(|(browser, ..)| browser);
+        let (versions_lo, versions_hi) =
+            byte_planes(&global_usage.iter().map(|(_, v, _)| *v).collect::<Vec<_>>());
         let usages = global_usage
             .iter()
             .map(|(.., usage)| per_mille(**usage))
@@ -300,8 +299,9 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         fs::write(
             format!("{OUT_DIR}/caniuse-global-usage.rs"),
             quote! {
-                static CANIUSE_GLOBAL_USAGE_BROWSER: &[PooledStr] = &[#(#browsers),*];
-                static CANIUSE_GLOBAL_USAGE_VERSION: &[PooledStr] = &[#(#versions),*];
+                static CANIUSE_GLOBAL_USAGE_BROWSER: &[u8] = &[#(#browsers),*];
+                static CANIUSE_GLOBAL_USAGE_VERSION_LO: &[u8] = &[#(#versions_lo),*];
+                static CANIUSE_GLOBAL_USAGE_VERSION_HI: &[u8] = &[#(#versions_hi),*];
                 static CANIUSE_GLOBAL_USAGE_USAGE: &[u16] = &[#(#usages),*];
             }
             .to_string(),
@@ -367,12 +367,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
         let version_store = versions
             .iter()
-            .map(|id| {
-                version_index
-                    .get(id)
-                    .copied()
-                    .ok_or_else(|| anyhow::anyhow!("feature version missing from the table"))
-            })
+            .map(|id| versions_table.intern(*id))
             .collect::<Result<Vec<_>>>()?;
         let (version_store_lo, version_store_hi) = byte_planes(&version_store);
         let version_widths = contiguous_widths_u8(
@@ -454,12 +449,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
         let region_versions = usages
             .iter()
-            .map(|(_, id, _)| {
-                version_index
-                    .get(id)
-                    .copied()
-                    .ok_or_else(|| anyhow::anyhow!("region version missing from the table"))
-            })
+            .map(|(_, id, _)| versions_table.intern(*id))
             .collect::<Result<Vec<_>>>()?;
         let (region_versions_lo, region_versions_hi) = byte_planes(&region_versions);
         let region_percents = usages
@@ -554,7 +544,7 @@ process.stdout.write(JSON.stringify(result));
     Ok(serde_json::from_str(&json)?)
 }
 
-fn build_baseline(strpool: &mut StrPool) -> Result<()> {
+fn build_baseline(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Result<()> {
     #[derive(Deserialize)]
     struct TimelineEvent {
         date: String,
@@ -645,9 +635,12 @@ process.stdout.write(JSON.stringify(timeline));
         let id = encode_browser_name(name);
         quote! { #id }
     });
-    let version_tokens = version_entries
-        .iter()
-        .map(|(_, version)| quote! { PooledStr(#version) });
+    let (version_tokens_lo, version_tokens_hi) = byte_planes(
+        &version_entries
+            .iter()
+            .map(|(_, version)| versions_table.intern(*version))
+            .collect::<Result<Vec<_>>>()?,
+    );
     let version_browser_tokens = version_entries.iter().map(|(browser, _)| browser);
     let timeline_dates = zigzag_delta(timeline_entries.iter().map(|(date, ..)| *date));
     let timeline_widths = contiguous_widths_u8(
@@ -660,7 +653,8 @@ process.stdout.write(JSON.stringify(timeline));
         quote! {
             static BASELINE_BROWSERS: &[u8] = &[#(#browser_tokens),*];
             static BASELINE_VERSIONS_BROWSER: &[u8] = &[#(#version_browser_tokens),*];
-            static BASELINE_VERSIONS_VERSION: &[PooledStr] = &[#(#version_tokens),*];
+            static BASELINE_VERSIONS_VERSION_LO: &[u8] = &[#(#version_tokens_lo),*];
+            static BASELINE_VERSIONS_VERSION_HI: &[u8] = &[#(#version_tokens_hi),*];
             static BASELINE_TIMELINE_DATE_DELTA: &[u32] = &[#(#timeline_dates),*];
             static BASELINE_TIMELINE_WIDTH: &[u8] = &[#(#timeline_widths),*];
         }
@@ -710,23 +704,24 @@ fn byte_planes(values: &[u16]) -> (Vec<u8>, Vec<u8>) {
         .unzip()
 }
 
-/// Interns version strings into one table shared by every reference to them, and
-/// returns the table alongside a lookup from string id to its `u16` index.
-fn intern_versions(ids: impl Iterator<Item = u32>) -> Result<(Vec<u32>, HashMap<u32, u16>)> {
-    let mut table = Vec::new();
-    let mut index = HashMap::new();
-    for id in ids {
-        if !index.contains_key(&id) {
-            index.insert(id, u16::try_from(table.len())?);
-            table.push(id);
+/// One table of version strings, shared by every array that refers to a version so
+/// that each reference costs a `u16` index rather than a four byte string id.
+#[derive(Default)]
+struct VersionTable {
+    ids: Vec<u32>,
+    index: HashMap<u32, u16>,
+}
+
+impl VersionTable {
+    fn intern(&mut self, id: u32) -> Result<u16> {
+        if let Some(index) = self.index.get(&id) {
+            return Ok(*index);
         }
+        let index = u16::try_from(self.ids.len())?;
+        self.index.insert(id, index);
+        self.ids.push(id);
+        Ok(index)
     }
-    anyhow::ensure!(
-        table.len() <= usize::from(u16::MAX),
-        "too many distinct versions to index with a u16: {}",
-        table.len()
-    );
-    Ok((table, index))
 }
 
 /// Successive differences, zigzagged so they stay unsigned. Values that drift by a

@@ -23,6 +23,16 @@ pub(crate) fn version_in_table(index: u16) -> &'static str {
     VERSION_TABLE[usize::from(index)].as_str()
 }
 
+/// Reads a column of table indices back out of its low and high byte arrays.
+pub(crate) fn version_indices(
+    low: &'static [u8],
+    high: &'static [u8],
+) -> impl Iterator<Item = u16> {
+    low.iter()
+        .zip(high)
+        .map(|(low, high)| u16::from_le_bytes([*low, *high]))
+}
+
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 pub const OP_MOB_BLINK_FIRST: u32 = 14;
 
@@ -38,17 +48,18 @@ pub struct VersionDetail {
     pub global_usage: f32,
 }
 
+include!("generated/version-table.rs");
 include!("generated/caniuse-browsers.rs");
 include!("generated/caniuse-global-usage.rs");
 
 static VERSION_LIST: LazyLock<Vec<VersionDetail>> = LazyLock::new(|| {
-    undelta(VERSION_LIST_VERSION_DELTA)
+    version_indices(VERSION_LIST_VERSION_LO, VERSION_LIST_VERSION_HI)
         .zip(undelta(VERSION_LIST_RELEASE_DATE_DELTA))
         .zip(VERSION_LIST_RELEASED)
         .zip(VERSION_LIST_GLOBAL_USAGE)
         .map(
             |(((version, release_date), released), usage)| VersionDetail {
-                version: PooledStr(version),
+                version: VERSION_TABLE[usize::from(version)],
                 release_date: i64::from(release_date),
                 released: *released,
                 global_usage: per_mille(*usage),
@@ -74,17 +85,24 @@ static BROWSERS_STATS: LazyLock<Vec<(PooledStr, BrowserStat)>> = LazyLock::new(|
 static CANIUSE_BROWSERS: LazyLock<BinMap<'static, PooledStr, BrowserStat>> =
     LazyLock::new(|| BinMap(&BROWSERS_STATS));
 
-static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(PooledStr, PooledStr, f32)>> = LazyLock::new(|| {
-    (0..CANIUSE_GLOBAL_USAGE_BROWSER.len())
-        .map(|index| {
-            (
-                CANIUSE_GLOBAL_USAGE_BROWSER[index],
-                CANIUSE_GLOBAL_USAGE_VERSION[index],
-                per_mille(CANIUSE_GLOBAL_USAGE_USAGE[index]),
-            )
-        })
-        .collect()
-});
+static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(&'static str, &'static str, f32)>> =
+    LazyLock::new(|| {
+        CANIUSE_GLOBAL_USAGE_BROWSER
+            .iter()
+            .zip(version_indices(
+                CANIUSE_GLOBAL_USAGE_VERSION_LO,
+                CANIUSE_GLOBAL_USAGE_VERSION_HI,
+            ))
+            .zip(CANIUSE_GLOBAL_USAGE_USAGE)
+            .map(|((browser, version), usage)| {
+                (
+                    crate::decode_browser_name(*browser),
+                    version_in_table(version),
+                    per_mille(*usage),
+                )
+            })
+            .collect()
+    });
 
 static BROWSER_VERSION_ALIASES: LazyLock<
     AHashMap<&'static str, AHashMap<&'static str, &'static str>>,
@@ -217,10 +235,7 @@ pub fn iter_browser_stat(
 }
 
 pub fn iter_global_usage() -> impl ExactSizeIterator<Item = (&'static str, &'static str, f32)> {
-    CANIUSE_GLOBAL_USAGE
-        .iter()
-        .copied()
-        .map(|(name, version, usage)| (name.as_str(), version.as_str(), usage))
+    CANIUSE_GLOBAL_USAGE.iter().copied()
 }
 
 pub fn get_browser_version_alias(name: &str, version: &str) -> Option<&'static str> {

@@ -3,22 +3,19 @@
 //!
 //! [`baseline-browser-mapping`]: https://www.npmjs.com/package/baseline-browser-mapping
 
-use crate::{
-    decode_browser_name,
-    utils::{PooledStr, undelta},
-};
+use crate::{caniuse::version_in_table, decode_browser_name, utils::undelta};
 use std::sync::LazyLock;
 
 include!("generated/baseline.rs");
 
-static BASELINE_VERSIONS: LazyLock<Vec<(u8, PooledStr)>> = LazyLock::new(|| {
-    (0..BASELINE_VERSIONS_BROWSER.len())
-        .map(|index| {
-            (
-                BASELINE_VERSIONS_BROWSER[index],
-                BASELINE_VERSIONS_VERSION[index],
-            )
-        })
+static BASELINE_VERSIONS: LazyLock<Vec<(u8, &'static str)>> = LazyLock::new(|| {
+    BASELINE_VERSIONS_BROWSER
+        .iter()
+        .zip(crate::caniuse::version_indices(
+            BASELINE_VERSIONS_VERSION_LO,
+            BASELINE_VERSIONS_VERSION_HI,
+        ))
+        .map(|(browser, version)| (*browser, version_in_table(version)))
         .collect()
 });
 
@@ -65,6 +62,6 @@ pub fn min_versions_on(
         let (_, start, end) = BASELINE_TIMELINE[index];
         BASELINE_VERSIONS[usize::from(start)..usize::from(end)]
             .iter()
-            .map(|(id, version)| (decode_browser_name(*id), version.as_str()))
+            .map(|(id, version)| (decode_browser_name(*id), *version))
     })
 }
