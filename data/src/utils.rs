@@ -29,16 +29,6 @@ impl<K, V> BinMap<'_, K, V> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-#[repr(C)]
-pub(super) struct U32(u32);
-
-impl U32 {
-    pub const fn get(self) -> u32 {
-        self.0.to_le()
-    }
-}
-
 #[derive(Clone, Copy)]
 pub(super) struct PooledStr(pub(super) u32);
 

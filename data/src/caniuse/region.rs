@@ -1,8 +1,5 @@
 use super::PooledStr;
-use crate::{
-    decode_browser_name,
-    utils::{BinMap, U32},
-};
+use crate::{decode_browser_name, utils::BinMap};
 use std::sync::LazyLock;
 
 #[derive(Clone, Copy)]
@@ -14,8 +11,8 @@ pub struct RegionData(u32, u32);
 // static REGIONS_END: &[u32]; // region data end
 //
 // static REGIONS_BROWSERS: &[u8]; // browser name id
-// static REGIONS_VERSIONS: &[U32]; // version string
-// static REGIONS_USAGES: &[U32]; // browser usage (f32)
+// static REGIONS_VERSIONS: &[u32]; // version string
+// static REGIONS_USAGES: &[u32]; // browser usage (f32 bits)
 // ```
 include!("../generated/caniuse-region-matching.rs");
 
@@ -45,8 +42,8 @@ impl RegionData {
             .map(|((browser, version), usage)| {
                 (
                     decode_browser_name(*browser),
-                    PooledStr(version.get()).as_str(),
-                    f32::from_bits(usage.get()),
+                    PooledStr(*version).as_str(),
+                    f32::from_bits(*usage),
                 )
             })
     }

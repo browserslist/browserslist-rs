@@ -1,8 +1,5 @@
 use super::PooledStr;
-use crate::{
-    decode_browser_name,
-    utils::{BinMap, U32},
-};
+use crate::{decode_browser_name, utils::BinMap};
 use std::sync::LazyLock;
 
 #[derive(Clone, Copy)]
@@ -16,9 +13,9 @@ pub struct VersionList(u32, u32);
 // static FEATURES_START: &[u32]; // browsers list start
 // static FEATURES_END: &[u32]; // browsers list end
 //
-// static FEATURES_STAT_VERSION_STORE: &[U32]; // version string
-// static FEATURES_STAT_VERSION_START: &[U32]; // version range start
-// static FEATURES_STAT_VERSION_END: &[U32]; // version range end
+// static FEATURES_STAT_VERSION_STORE: &[u32]; // version string
+// static FEATURES_STAT_VERSION_START: &[u32]; // version range start
+// static FEATURES_STAT_VERSION_END: &[u32]; // version range end
 //
 // static FEATURES_STAT_FLAGS: &[u8]; // support flag
 // static FEATURES_STAT_BROWSERS: &[u8]; // browser name id
@@ -40,8 +37,8 @@ static FEATURES_STAT_VERSION_INDEX: LazyLock<Vec<(u32, u32)>> = LazyLock::new(||
     (0..FEATURES_STAT_VERSION_START.len())
         .map(|index| {
             (
-                FEATURES_STAT_VERSION_START[index].get(),
-                FEATURES_STAT_VERSION_END[index].get(),
+                FEATURES_STAT_VERSION_START[index],
+                FEATURES_STAT_VERSION_END[index],
             )
         })
         .collect()
@@ -74,7 +71,7 @@ impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
         let range = (self.0 as usize)..(self.1 as usize);
         let index = FEATURES_STAT_VERSION_STORE[range.clone()]
-            .binary_search_by_key(&version, |s| PooledStr(s.get()).as_str())
+            .binary_search_by_key(&version, |s| PooledStr(*s).as_str())
             .ok()?;
         Some(FEATURES_STAT_FLAGS[range][index])
     }

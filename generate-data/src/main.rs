@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fs,
-    io::{self, Write},
+    io::Write,
 };
 
 const OUT_DIR: &str = "data/src/generated";
@@ -336,18 +336,9 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         let feature_starts = features.iter().map(|(_, start, _)| *start as u32);
         let feature_ends = features.iter().map(|(.., end)| *end as u32);
 
-        let version_store_len = write_u32(
-            format!("{OUT_DIR}/caniuse-feature-versionstore.u32seq"),
-            versions.iter().copied(),
-        )?;
-        let version_start_len = write_u32(
-            format!("{OUT_DIR}/caniuse-feature-versionstart.u32seq"),
-            stats.iter().map(|(_, start, _)| *start as u32),
-        )?;
-        let version_end_len = write_u32(
-            format!("{OUT_DIR}/caniuse-feature-versionend.u32seq"),
-            stats.iter().map(|(.., end)| *end as u32),
-        )?;
+        let version_store = versions.iter();
+        let version_starts = stats.iter().map(|(_, start, _)| *start as u32);
+        let version_ends = stats.iter().map(|(.., end)| *end as u32);
 
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-flags.bin"),
@@ -365,28 +356,9 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 static FEATURES_START: &[u32] = &[#(#feature_starts),*];
                 static FEATURES_END: &[u32] = &[#(#feature_ends),*];
 
-                // # Safety
-                //
-                // We do the transmute at const context,
-                // and the size and alignment are already checked and guaranteed by compiler.
-                static FEATURES_STAT_VERSION_STORE: &[U32; #version_store_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #version_store_len],
-                        [U32; #version_store_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-feature-versionstore.u32seq"))
-                };
-                static FEATURES_STAT_VERSION_START: &[U32; #version_start_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #version_start_len],
-                        [U32; #version_start_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-feature-versionstart.u32seq"))
-                };
-                static FEATURES_STAT_VERSION_END: &[U32; #version_end_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #version_end_len],
-                        [U32; #version_end_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-feature-versionend.u32seq"))
-                };
+                static FEATURES_STAT_VERSION_STORE: &[u32] = &[#(#version_store),*];
+                static FEATURES_STAT_VERSION_START: &[u32] = &[#(#version_starts),*];
+                static FEATURES_STAT_VERSION_END: &[u32] = &[#(#version_ends),*];
 
                 static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("caniuse-feature-flags.bin");
                 static FEATURES_STAT_BROWSERS: &[u8] = include_bytes!("caniuse-feature-browsers.bin");
@@ -427,14 +399,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         fs::write(format!("{OUT_DIR}/caniuse-region-browsers.bin"), &browsers)?;
         drop(browsers);
 
-        let versions_len = write_u32(
-            format!("{OUT_DIR}/caniuse-region-versions.u32seq"),
-            usages.iter().map(|(_, v, _)| *v),
-        )?;
-        let usages_len = write_u32(
-            format!("{OUT_DIR}/caniuse-region-usages.u32seq"),
-            usages.iter().map(|(_, _, u)| u.to_bits()),
-        )?;
+        let region_versions = usages.iter().map(|(_, v, _)| v);
+        let region_percents = usages.iter().map(|(.., usage)| usage.to_bits());
 
         let region_keys = region_usages
             .iter()
@@ -450,19 +416,10 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 static REGIONS_END: &[u32] = &[#(#region_ends),*];
 
                 static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
-                static REGIONS_VERSIONS: &[U32; #versions_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #versions_len],
-                        [U32; #versions_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-region-versions.u32seq"))
-                };
-                static REGIONS_USAGES: &[U32; #usages_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #usages_len],
-                        [U32; #usages_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-region-usages.u32seq"))
-                };
-            }.to_string()
+                static REGIONS_VERSIONS: &[u32] = &[#(#region_versions),*];
+                static REGIONS_USAGES: &[u32] = &[#(#region_percents),*];
+            }
+            .to_string(),
         )?;
     }
 
@@ -645,20 +602,6 @@ fn run_node(script: &str) -> Result<String> {
         anyhow::bail!("node failed: {}", String::from_utf8_lossy(&out.stderr));
     }
     Ok(String::from_utf8(out.stdout)?)
-}
-
-fn write_u32(path: String, iter: impl Iterator<Item = u32>) -> io::Result<usize> {
-    let fd = fs::File::create(path)?;
-    let mut fd = io::BufWriter::new(fd);
-    let mut n = 0;
-
-    for b in iter {
-        fd.write_all(&b.to_le_bytes())?;
-        n += 4;
-    }
-
-    fd.flush()?;
-    Ok(n)
 }
 
 #[derive(Default)]
