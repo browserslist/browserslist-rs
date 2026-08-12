@@ -1,5 +1,7 @@
 use anyhow::Result;
 use indexmap::IndexMap;
+use miniz_oxide::deflate::compress_to_vec;
+use proc_macro2::TokenStream;
 use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -252,6 +254,8 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
         }
 
         let (versions_lo, versions_hi) = byte_planes(&versions);
+        let versions_lo = write_blob("caniuse-version-lo.bin", &versions_lo)?;
+        let versions_hi = write_blob("caniuse-version-hi.bin", &versions_hi)?;
         let release_dates = zigzag_delta(release_dates.into_iter());
 
         stats.sort_by_key(|(name_str_id, ..)| strpool.get(*name_str_id));
@@ -265,8 +269,8 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
         fs::write(
             format!("{OUT_DIR}/caniuse-browsers.rs"),
             quote! {
-                static VERSION_LIST_VERSION_LO: &[u8] = &[#(#versions_lo),*];
-                static VERSION_LIST_VERSION_HI: &[u8] = &[#(#versions_hi),*];
+                static VERSION_LIST_VERSION_LO: Blob = #versions_lo;
+                static VERSION_LIST_VERSION_HI: Blob = #versions_hi;
                 static VERSION_LIST_RELEASE_DATE_DELTA: &[u32] = &[#(#release_dates),*];
                 static VERSION_LIST_RELEASED: &[bool] = &[#(#released_flags),*];
                 static VERSION_LIST_GLOBAL_USAGE: &[u16] = &[#(#usages),*];
@@ -289,9 +293,14 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
         }
 
         global_usage.sort_unstable_by(|(.., a), (.., b)| b.total_cmp(a));
-        let browsers = global_usage.iter().map(|(browser, ..)| browser);
+        let browsers = write_blob(
+            "caniuse-global-usage-browser.bin",
+            &global_usage.iter().map(|(b, ..)| *b).collect::<Vec<_>>(),
+        )?;
         let (versions_lo, versions_hi) =
             byte_planes(&global_usage.iter().map(|(_, v, _)| *v).collect::<Vec<_>>());
+        let versions_lo = write_blob("caniuse-global-usage-version-lo.bin", &versions_lo)?;
+        let versions_hi = write_blob("caniuse-global-usage-version-hi.bin", &versions_hi)?;
         let usages = global_usage
             .iter()
             .map(|(.., usage)| per_mille(**usage))
@@ -299,9 +308,9 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
         fs::write(
             format!("{OUT_DIR}/caniuse-global-usage.rs"),
             quote! {
-                static CANIUSE_GLOBAL_USAGE_BROWSER: &[u8] = &[#(#browsers),*];
-                static CANIUSE_GLOBAL_USAGE_VERSION_LO: &[u8] = &[#(#versions_lo),*];
-                static CANIUSE_GLOBAL_USAGE_VERSION_HI: &[u8] = &[#(#versions_hi),*];
+                static CANIUSE_GLOBAL_USAGE_BROWSER: Blob = #browsers;
+                static CANIUSE_GLOBAL_USAGE_VERSION_LO: Blob = #versions_lo;
+                static CANIUSE_GLOBAL_USAGE_VERSION_HI: Blob = #versions_hi;
                 static CANIUSE_GLOBAL_USAGE_USAGE: &[u16] = &[#(#usages),*];
             }
             .to_string(),
@@ -359,10 +368,13 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
             .map(|(browser, ..)| encode_browser_name(browser))
             .collect::<Vec<_>>();
         let feature_keys = zigzag_delta(features.iter().map(|(name_str_id, ..)| *name_str_id));
-        let feature_widths = contiguous_widths_u8(
-            features
-                .iter()
-                .map(|(_, start, end)| (*start as u32, *end as u32)),
+        let feature_widths = write_blob(
+            "caniuse-feature-width.bin",
+            &contiguous_widths_u8(
+                features
+                    .iter()
+                    .map(|(_, start, end)| (*start as u32, *end as u32)),
+            )?,
         )?;
 
         let version_store = versions
@@ -370,10 +382,15 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
             .map(|id| versions_table.intern(*id))
             .collect::<Result<Vec<_>>>()?;
         let (version_store_lo, version_store_hi) = byte_planes(&version_store);
-        let version_widths = contiguous_widths_u8(
-            stats
-                .iter()
-                .map(|(_, start, end)| (*start as u32, *end as u32)),
+        let version_store_lo = write_blob("caniuse-feature-version-lo.bin", &version_store_lo)?;
+        let version_store_hi = write_blob("caniuse-feature-version-hi.bin", &version_store_hi)?;
+        let version_widths = write_blob(
+            "caniuse-feature-version-width.bin",
+            &contiguous_widths_u8(
+                stats
+                    .iter()
+                    .map(|(_, start, end)| (*start as u32, *end as u32)),
+            )?,
         )?;
 
         // Two bits per flag; only `y` and `a` are recorded.
@@ -386,28 +403,23 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
                     .fold(0u8, |byte, (i, flag)| byte | (flag << (2 * i)))
             })
             .collect::<Vec<_>>();
-        fs::write(
-            format!("{OUT_DIR}/caniuse-feature-flags.bin"),
-            packed_flags.as_slice(),
-        )?;
-        fs::write(
-            format!("{OUT_DIR}/caniuse-feature-browsers.bin"),
-            stats_name.as_slice(),
-        )?;
+        let packed_flags = write_blob("caniuse-feature-flags.bin", &packed_flags)?;
+        let stats_name = write_blob("caniuse-feature-browsers.bin", &stats_name)?;
 
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-matching.rs"),
             quote! {
                 static FEATURES_KEY_DELTA: &[u32] = &[#(#feature_keys),*];
-                static FEATURES_WIDTH: &[u8] = &[#(#feature_widths),*];
+                static FEATURES_WIDTH: Blob = #feature_widths;
 
-                static FEATURES_STAT_VERSION_LO: &[u8] = &[#(#version_store_lo),*];
-                static FEATURES_STAT_VERSION_HI: &[u8] = &[#(#version_store_hi),*];
-                static FEATURES_STAT_VERSION_WIDTH: &[u8] = &[#(#version_widths),*];
+                static FEATURES_STAT_VERSION_LO: Blob = #version_store_lo;
+                static FEATURES_STAT_VERSION_HI: Blob = #version_store_hi;
+                static FEATURES_STAT_VERSION_WIDTH: Blob = #version_widths;
 
-                static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("caniuse-feature-flags.bin");
-                static FEATURES_STAT_BROWSERS: &[u8] = include_bytes!("caniuse-feature-browsers.bin");
-            }.to_string()
+                static FEATURES_STAT_FLAGS: Blob = #packed_flags;
+                static FEATURES_STAT_BROWSERS: Blob = #stats_name;
+            }
+            .to_string(),
         )?;
     }
 
@@ -443,19 +455,31 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
 
         region_usages.sort_by_key(|(region, ..)| strpool.get(*region));
 
-        let browsers = usages.iter().map(|(b, ..)| *b).collect::<Vec<_>>();
-        fs::write(format!("{OUT_DIR}/caniuse-region-browsers.bin"), &browsers)?;
-        drop(browsers);
+        let browsers = write_blob(
+            "caniuse-region-browsers.bin",
+            &usages.iter().map(|(b, ..)| *b).collect::<Vec<_>>(),
+        )?;
 
         let region_versions = usages
             .iter()
             .map(|(_, id, _)| versions_table.intern(*id))
             .collect::<Result<Vec<_>>>()?;
         let (region_versions_lo, region_versions_hi) = byte_planes(&region_versions);
-        let region_percents = usages
+        let region_versions_lo = write_blob("caniuse-region-version-lo.bin", &region_versions_lo)?;
+        let region_versions_hi = write_blob("caniuse-region-version-hi.bin", &region_versions_hi)?;
+        let region_percents = u32_planes(
+            &usages
+                .iter()
+                .map(|(.., usage)| per_100k(*usage))
+                .collect::<Result<Vec<_>>>()?,
+        );
+        let [usage_0, usage_1, usage_2, usage_3] = region_percents
             .iter()
-            .map(|(.., usage)| per_100k(*usage))
-            .collect::<Result<Vec<_>>>()?;
+            .enumerate()
+            .map(|(i, plane)| write_blob(&format!("caniuse-region-usage-{i}.bin"), plane))
+            .collect::<Result<Vec<_>>>()?
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("expected four usage planes"))?;
 
         let region_keys = zigzag_delta(
             region_usages
@@ -477,10 +501,13 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
                 static REGIONS_KEY_DELTA: &[u32] = &[#(#region_keys),*];
                 static REGIONS_WIDTH: &[u16] = &[#(#region_widths),*];
 
-                static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
-                static REGIONS_VERSION_LO: &[u8] = &[#(#region_versions_lo),*];
-                static REGIONS_VERSION_HI: &[u8] = &[#(#region_versions_hi),*];
-                static REGIONS_USAGES: &[u32] = &[#(#region_percents),*];
+                static REGIONS_BROWSERS: Blob = #browsers;
+                static REGIONS_VERSION_LO: Blob = #region_versions_lo;
+                static REGIONS_VERSION_HI: Blob = #region_versions_hi;
+                static REGIONS_USAGE_0: Blob = #usage_0;
+                static REGIONS_USAGE_1: Blob = #usage_1;
+                static REGIONS_USAGE_2: Blob = #usage_2;
+                static REGIONS_USAGE_3: Blob = #usage_3;
             }
             .to_string(),
         )?;
@@ -641,7 +668,15 @@ process.stdout.write(JSON.stringify(timeline));
             .map(|(_, version)| versions_table.intern(*version))
             .collect::<Result<Vec<_>>>()?,
     );
-    let version_browser_tokens = version_entries.iter().map(|(browser, _)| browser);
+    let version_tokens_lo = write_blob("baseline-versions-version-lo.bin", &version_tokens_lo)?;
+    let version_tokens_hi = write_blob("baseline-versions-version-hi.bin", &version_tokens_hi)?;
+    let version_browser_tokens = write_blob(
+        "baseline-versions-browser.bin",
+        &version_entries
+            .iter()
+            .map(|(browser, _)| *browser)
+            .collect::<Vec<_>>(),
+    )?;
     let timeline_dates = zigzag_delta(timeline_entries.iter().map(|(date, ..)| *date));
     let timeline_widths = contiguous_widths_u8(
         timeline_entries
@@ -652,9 +687,9 @@ process.stdout.write(JSON.stringify(timeline));
         format!("{OUT_DIR}/baseline.rs"),
         quote! {
             static BASELINE_BROWSERS: &[u8] = &[#(#browser_tokens),*];
-            static BASELINE_VERSIONS_BROWSER: &[u8] = &[#(#version_browser_tokens),*];
-            static BASELINE_VERSIONS_VERSION_LO: &[u8] = &[#(#version_tokens_lo),*];
-            static BASELINE_VERSIONS_VERSION_HI: &[u8] = &[#(#version_tokens_hi),*];
+            static BASELINE_VERSIONS_BROWSER: Blob = #version_browser_tokens;
+            static BASELINE_VERSIONS_VERSION_LO: Blob = #version_tokens_lo;
+            static BASELINE_VERSIONS_VERSION_HI: Blob = #version_tokens_hi;
             static BASELINE_TIMELINE_DATE_DELTA: &[u32] = &[#(#timeline_dates),*];
             static BASELINE_TIMELINE_WIDTH: &[u8] = &[#(#timeline_widths),*];
         }
@@ -692,6 +727,40 @@ fn contiguous_widths_u8(ranges: impl Iterator<Item = (u32, u32)>) -> Result<Vec<
         .into_iter()
         .map(|width| Ok(u8::try_from(width)?))
         .collect()
+}
+
+/// Writes a byte array twice -- verbatim as `<name>`, and deflated as `<name>.deflate`
+/// with its inflated length prefixed -- and returns the declaration of a `Blob` static
+/// reading whichever one the `deflate` feature selects. Shipping both keeps the feature
+/// a plain compile-time switch, with no compressor in anyone's build graph.
+fn write_blob(name: &str, bytes: &[u8]) -> Result<TokenStream> {
+    fs::write(format!("{OUT_DIR}/{name}"), bytes)?;
+
+    let mut deflated = (bytes.len() as u32).to_le_bytes().to_vec();
+    deflated.extend(compress_to_vec(bytes, 10));
+    fs::write(format!("{OUT_DIR}/{name}.deflate"), &deflated)?;
+
+    let deflate_name = format!("{name}.deflate");
+    Ok(quote! {
+        {
+            #[cfg(feature = "deflate")]
+            const BYTES: &[u8] = include_bytes!(#deflate_name);
+            #[cfg(not(feature = "deflate"))]
+            const BYTES: &[u8] = include_bytes!(#name);
+            Blob::new(BYTES)
+        }
+    })
+}
+
+/// Splits a `u32` column into four byte arrays, one per byte position.
+fn u32_planes(values: &[u32]) -> [Vec<u8>; 4] {
+    let mut planes = [const { Vec::new() }; 4];
+    for value in values {
+        for (plane, byte) in planes.iter_mut().zip(value.to_le_bytes()) {
+            plane.push(byte);
+        }
+    }
+    planes
 }
 
 /// Splits a `u16` column into its low and high bytes, each kept contiguously. Every

@@ -1,4 +1,5 @@
 pub mod baseline;
+mod blob;
 pub mod caniuse;
 pub mod electron;
 pub mod node;

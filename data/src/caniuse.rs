@@ -4,7 +4,10 @@ use std::{borrow::Cow, sync::LazyLock};
 pub mod features;
 pub mod region;
 
-use crate::utils::{BinMap, PooledStr, undelta};
+use crate::{
+    blob::Blob,
+    utils::{BinMap, PooledStr, undelta},
+};
 
 /// Usage percentages are bundled as thousandths.
 fn per_mille(value: u16) -> f32 {
@@ -25,11 +28,12 @@ pub(crate) fn version_in_table(index: u16) -> &'static str {
 
 /// Reads a column of table indices back out of its low and high byte arrays.
 pub(crate) fn version_indices(
-    low: &'static [u8],
-    high: &'static [u8],
+    low: &'static Blob,
+    high: &'static Blob,
 ) -> impl Iterator<Item = u16> {
-    low.iter()
-        .zip(high)
+    low.get()
+        .iter()
+        .zip(high.get())
         .map(|(low, high)| u16::from_le_bytes([*low, *high]))
 }
 
@@ -53,7 +57,7 @@ include!("generated/caniuse-browsers.rs");
 include!("generated/caniuse-global-usage.rs");
 
 static VERSION_LIST: LazyLock<Vec<VersionDetail>> = LazyLock::new(|| {
-    version_indices(VERSION_LIST_VERSION_LO, VERSION_LIST_VERSION_HI)
+    version_indices(&VERSION_LIST_VERSION_LO, &VERSION_LIST_VERSION_HI)
         .zip(undelta(VERSION_LIST_RELEASE_DATE_DELTA))
         .zip(VERSION_LIST_RELEASED)
         .zip(VERSION_LIST_GLOBAL_USAGE)
@@ -88,10 +92,11 @@ static CANIUSE_BROWSERS: LazyLock<BinMap<'static, PooledStr, BrowserStat>> =
 static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(&'static str, &'static str, f32)>> =
     LazyLock::new(|| {
         CANIUSE_GLOBAL_USAGE_BROWSER
+            .get()
             .iter()
             .zip(version_indices(
-                CANIUSE_GLOBAL_USAGE_VERSION_LO,
-                CANIUSE_GLOBAL_USAGE_VERSION_HI,
+                &CANIUSE_GLOBAL_USAGE_VERSION_LO,
+                &CANIUSE_GLOBAL_USAGE_VERSION_HI,
             ))
             .zip(CANIUSE_GLOBAL_USAGE_USAGE)
             .map(|((browser, version), usage)| {

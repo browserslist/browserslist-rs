@@ -16,6 +16,7 @@ crate-type = ["rlib"]
 
 [features]
 wasm_bindgen = ["chrono/wasmbind", "js-sys"]
+deflate = ["browserslist-data/deflate"]
 
 [dependencies]
 ahash = { workspace = true, features = ["serde"] }

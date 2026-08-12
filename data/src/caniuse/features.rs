@@ -1,5 +1,6 @@
 use super::PooledStr;
 use crate::{
+    blob::Blob,
     decode_browser_name,
     utils::{BinMap, undelta},
 };
@@ -16,21 +17,21 @@ pub struct VersionList(u32, u32);
 // starts are a prefix sum, rebuilt on first use.
 //
 // static FEATURES_KEY_DELTA: &[u32]; // feature name
-// static FEATURES_WIDTH: &[u8]; // browsers list width
+// static FEATURES_WIDTH: Blob; // browsers list width
 //
-// static FEATURES_STAT_VERSION_LO: &[u8]; // version, low byte of a VERSION_TABLE index
-// static FEATURES_STAT_VERSION_HI: &[u8]; // version, high byte
-// static FEATURES_STAT_VERSION_WIDTH: &[u8]; // version range width
+// static FEATURES_STAT_VERSION_LO: Blob; // version, low byte of a VERSION_TABLE index
+// static FEATURES_STAT_VERSION_HI: Blob; // version, high byte
+// static FEATURES_STAT_VERSION_WIDTH: Blob; // version range width
 //
-// static FEATURES_STAT_FLAGS: &[u8]; // support flag, two bits each
-// static FEATURES_STAT_BROWSERS: &[u8]; // browser name id
+// static FEATURES_STAT_FLAGS: Blob; // support flag, two bits each
+// static FEATURES_STAT_BROWSERS: Blob; // browser name id
 // ```
 include!("../generated/caniuse-feature-matching.rs");
 
 static FEATURES: LazyLock<Vec<(PooledStr, Feature)>> = LazyLock::new(|| {
     let mut start = 0;
     undelta(FEATURES_KEY_DELTA)
-        .zip(FEATURES_WIDTH)
+        .zip(FEATURES_WIDTH.get())
         .map(|(key, width)| {
             let end = start + u32::from(*width);
             let feature = Feature(start, end);
@@ -43,6 +44,7 @@ static FEATURES: LazyLock<Vec<(PooledStr, Feature)>> = LazyLock::new(|| {
 static FEATURES_STAT_VERSION_INDEX: LazyLock<Vec<(u32, u32)>> = LazyLock::new(|| {
     let mut start = 0;
     FEATURES_STAT_VERSION_WIDTH
+        .get()
         .iter()
         .map(|width| {
             let end = start + u32::from(*width);
@@ -60,7 +62,7 @@ pub fn get_feature_stat(name: &str) -> Option<Feature> {
 impl Feature {
     pub fn get(&self, browser: &str) -> Option<VersionList> {
         let range = (self.0 as usize)..(self.1 as usize);
-        let index = FEATURES_STAT_BROWSERS[range.clone()]
+        let index = FEATURES_STAT_BROWSERS.get()[range.clone()]
             .binary_search_by_key(&browser, |&k| decode_browser_name(k))
             .ok()?;
         let list = FEATURES_STAT_VERSION_INDEX[range][index];
@@ -69,7 +71,7 @@ impl Feature {
 
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, VersionList)> {
         let range = (self.0 as usize)..(self.1 as usize);
-        FEATURES_STAT_BROWSERS[range.clone()]
+        FEATURES_STAT_BROWSERS.get()[range.clone()]
             .iter()
             .zip(&FEATURES_STAT_VERSION_INDEX[range])
             .map(|(&name, &list)| (decode_browser_name(name), VersionList(list.0, list.1)))
@@ -81,8 +83,8 @@ impl Feature {
 /// the heap.
 fn version_at(index: usize) -> &'static str {
     let table_index = u16::from_le_bytes([
-        FEATURES_STAT_VERSION_LO[index],
-        FEATURES_STAT_VERSION_HI[index],
+        FEATURES_STAT_VERSION_LO.get()[index],
+        FEATURES_STAT_VERSION_HI.get()[index],
     ]);
     super::version_in_table(table_index)
 }
@@ -99,7 +101,7 @@ impl VersionList {
                 Ordering::Greater => high = mid,
                 // Two bits per flag.
                 Ordering::Equal => {
-                    return Some((FEATURES_STAT_FLAGS[mid / 4] >> (2 * (mid % 4))) & 3);
+                    return Some((FEATURES_STAT_FLAGS.get()[mid / 4] >> (2 * (mid % 4))) & 3);
                 }
             }
         }
