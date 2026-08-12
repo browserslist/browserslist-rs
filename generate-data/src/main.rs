@@ -173,34 +173,26 @@ fn build_node_release_schedule() -> Result<()> {
     // filter by end date to quickly reduce scope
     versions.sort_by_key(|(_, (_, end))| *end);
 
+    let date_token = |date: chrono::NaiveDateTime| {
+        let (year, month, day) = (date.year(), date.month(), date.day());
+        quote! { chrono::NaiveDate::from_ymd_opt(#year, #month, #day).unwrap() }
+    };
     let (versions, dates): (Vec<_>, Vec<_>) = versions
         .into_iter()
         .map(|(version, (start, end))| {
             let version = version.trim_start_matches('v');
-
-            let start_year = start.year();
-            let start_month = start.month();
-            let start_day = start.day();
-            let end_year = end.year();
-            let end_month = end.month();
-            let end_day = end.day();
-
-            let date = quote! {
-                (
-                    chrono::NaiveDate::from_ymd_opt(#start_year, #start_month, #start_day).unwrap(),
-                    chrono::NaiveDate::from_ymd_opt(#end_year, #end_month, #end_day).unwrap(),
-                )
-            };
-
-            (version.to_owned(), date)
+            (version.to_owned(), (date_token(start), date_token(end)))
         })
         .unzip();
+    let starts = dates.iter().map(|(start, _)| start);
+    let ends = dates.iter().map(|(_, end)| end);
 
     fs::write(
         path,
         quote! {
             static NODE_RELEASE_VERSIONS: &[&str] = &[#(#versions),*];
-            static NODE_RELEASE_SCHEDULE: &[(chrono::NaiveDate, chrono::NaiveDate)] = &[#(#dates),*];
+            static NODE_RELEASE_START: &[chrono::NaiveDate] = &[#(#starts),*];
+            static NODE_RELEASE_END: &[chrono::NaiveDate] = &[#(#ends),*];
         }
         .to_string(),
     )?;
@@ -215,6 +207,9 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
     // caniuse browsers
     {
         let mut versions = Vec::new();
+        let mut release_dates = Vec::new();
+        let mut released_flags = Vec::new();
+        let mut usages = Vec::new();
         let mut stats = Vec::new();
 
         for (name, agent) in &data.agents {
@@ -223,18 +218,10 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
             for version in &agent.version_list {
                 let version_str_id = strpool.insert(&version.version);
-                let usage = version.global_usage;
-                let date = version.release_date.unwrap_or_default();
-                let released = version.release_date.is_some();
-
-                versions.push(quote! {
-                    VersionDetail {
-                        version: PooledStr(#version_str_id),
-                        release_date: #date,
-                        released: #released,
-                        global_usage: #usage,
-                    }
-                });
+                versions.push(quote! { PooledStr(#version_str_id) });
+                release_dates.push(version.release_date.unwrap_or_default());
+                released_flags.push(version.release_date.is_some());
+                usages.push(version.global_usage);
             }
 
             let end: u32 = versions.len().try_into().unwrap();
@@ -242,20 +229,22 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         }
 
         stats.sort_by_key(|(name_str_id, ..)| strpool.get(*name_str_id));
-        let stats = stats.into_iter().map(|(name_str_id, start, end)| {
-            quote! {
-                (
-                    PooledStr(#name_str_id),
-                    BrowserStat(#start, #end)
-                )
-            }
-        });
+        let stat_keys = stats
+            .iter()
+            .map(|(name_str_id, ..)| quote! { PooledStr(#name_str_id) });
+        let stat_starts = stats.iter().map(|(_, start, _)| start);
+        let stat_ends = stats.iter().map(|(.., end)| end);
 
         fs::write(
             format!("{OUT_DIR}/caniuse-browsers.rs"),
             quote! {
-                static VERSION_LIST: &[VersionDetail] = &[#(#versions),*];
-                static BROWSERS_STATS: &[(PooledStr, BrowserStat)] = &[#(#stats),*];
+                static VERSION_LIST_VERSION: &[PooledStr] = &[#(#versions),*];
+                static VERSION_LIST_RELEASE_DATE: &[i64] = &[#(#release_dates),*];
+                static VERSION_LIST_RELEASED: &[bool] = &[#(#released_flags),*];
+                static VERSION_LIST_GLOBAL_USAGE: &[f32] = &[#(#usages),*];
+                static BROWSERS_STATS_KEY: &[PooledStr] = &[#(#stat_keys),*];
+                static BROWSERS_STATS_START: &[u32] = &[#(#stat_starts),*];
+                static BROWSERS_STATS_END: &[u32] = &[#(#stat_ends),*];
             }
             .to_string(),
         )?;
@@ -273,21 +262,19 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         }
 
         global_usage.sort_unstable_by(|(.., a), (.., b)| b.total_cmp(a));
-        let push_usage = global_usage
-            .into_iter()
-            .map(|(name_str_id, version_str_id, usage)| {
-                quote! {
-                    (
-                        PooledStr(#name_str_id),
-                        PooledStr(#version_str_id),
-                        #usage
-                    )
-                }
-            });
+        let browsers = global_usage
+            .iter()
+            .map(|(name_str_id, ..)| quote! { PooledStr(#name_str_id) });
+        let versions = global_usage
+            .iter()
+            .map(|(_, version_str_id, _)| quote! { PooledStr(#version_str_id) });
+        let usages = global_usage.iter().map(|(.., usage)| usage);
         fs::write(
             format!("{OUT_DIR}/caniuse-global-usage.rs"),
             quote! {
-                &[#(#push_usage),*]
+                static CANIUSE_GLOBAL_USAGE_BROWSER: &[PooledStr] = &[#(#browsers),*];
+                static CANIUSE_GLOBAL_USAGE_VERSION: &[PooledStr] = &[#(#versions),*];
+                static CANIUSE_GLOBAL_USAGE_USAGE: &[f32] = &[#(#usages),*];
             }
             .to_string(),
         )?;
@@ -339,33 +326,27 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
         features.sort_by_key(|(name, ..)| strpool.get(*name));
 
-        let (stats_name, stats_list): (Vec<_>, Vec<_>) = stats
+        let stats_name = stats
             .iter()
-            .map(|(browser, start, end)| {
-                let browser = encode_browser_name(browser);
-                let start: u32 = (*start).try_into().unwrap();
-                let end: u32 = (*end).try_into().unwrap();
-                (browser, [start, end])
-            })
-            .unzip();
-        let features = features.iter().flat_map(|(name_str_id, start, end)| {
-            let start: u32 = (*start).try_into().unwrap();
-            let end: u32 = (*end).try_into().unwrap();
-            quote! {
-                (
-                    PooledStr(#name_str_id),
-                    Feature(#start, #end)
-                )
-            }
-        });
+            .map(|(browser, ..)| encode_browser_name(browser))
+            .collect::<Vec<_>>();
+        let feature_keys = features
+            .iter()
+            .map(|(name_str_id, ..)| quote! { PooledStr(#name_str_id) });
+        let feature_starts = features.iter().map(|(_, start, _)| *start as u32);
+        let feature_ends = features.iter().map(|(.., end)| *end as u32);
 
         let version_store_len = write_u32(
             format!("{OUT_DIR}/caniuse-feature-versionstore.u32seq"),
             versions.iter().copied(),
         )?;
-        let version_index_len = write_u32(
-            format!("{OUT_DIR}/caniuse-feature-versionindex.u32seq"),
-            stats_list.iter().flatten().copied(),
+        let version_start_len = write_u32(
+            format!("{OUT_DIR}/caniuse-feature-versionstart.u32seq"),
+            stats.iter().map(|(_, start, _)| *start as u32),
+        )?;
+        let version_end_len = write_u32(
+            format!("{OUT_DIR}/caniuse-feature-versionend.u32seq"),
+            stats.iter().map(|(.., end)| *end as u32),
         )?;
 
         fs::write(
@@ -380,7 +361,9 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-matching.rs"),
             quote! {
-                static FEATURES: &[(PooledStr, Feature)] = &[#(#features),*];
+                static FEATURES_KEY: &[PooledStr] = &[#(#feature_keys),*];
+                static FEATURES_START: &[u32] = &[#(#feature_starts),*];
+                static FEATURES_END: &[u32] = &[#(#feature_ends),*];
 
                 // # Safety
                 //
@@ -392,11 +375,17 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                         [U32; #version_store_len / core::mem::size_of::<U32>()]
                     >(*include_bytes!("caniuse-feature-versionstore.u32seq"))
                 };
-                static FEATURES_STAT_VERSION_INDEX: &[PairU32; #version_index_len / core::mem::size_of::<PairU32>()] = unsafe {
+                static FEATURES_STAT_VERSION_START: &[U32; #version_start_len / core::mem::size_of::<U32>()] = unsafe {
                     &core::mem::transmute::<
-                        [u8; #version_index_len],
-                        [PairU32; #version_index_len / core::mem::size_of::<PairU32>()]
-                    >(*include_bytes!("caniuse-feature-versionindex.u32seq"))
+                        [u8; #version_start_len],
+                        [U32; #version_start_len / core::mem::size_of::<U32>()]
+                    >(*include_bytes!("caniuse-feature-versionstart.u32seq"))
+                };
+                static FEATURES_STAT_VERSION_END: &[U32; #version_end_len / core::mem::size_of::<U32>()] = unsafe {
+                    &core::mem::transmute::<
+                        [u8; #version_end_len],
+                        [U32; #version_end_len / core::mem::size_of::<U32>()]
+                    >(*include_bytes!("caniuse-feature-versionend.u32seq"))
                 };
 
                 static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("caniuse-feature-flags.bin");
@@ -447,25 +436,18 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             usages.iter().map(|(_, _, u)| u.to_bits()),
         )?;
 
-        let region_data = region_usages
+        let region_keys = region_usages
             .iter()
-            .copied()
-            .map(|(region_str_id, start, end)| {
-                let start: u32 = start.try_into().unwrap();
-                let end: u32 = end.try_into().unwrap();
-
-                quote! {
-                    (
-                        PooledStr(#region_str_id),
-                        RegionData(#start, #end)
-                    )
-                }
-            });
+            .map(|(region_str_id, ..)| quote! { PooledStr(#region_str_id) });
+        let region_starts = region_usages.iter().map(|(_, start, _)| *start as u32);
+        let region_ends = region_usages.iter().map(|(.., end)| *end as u32);
 
         fs::write(
             format!("{OUT_DIR}/caniuse-region-matching.rs"),
             quote! {
-                static REGIONS: &[(PooledStr, RegionData)] = &[#(#region_data),*];
+                static REGIONS_KEY: &[PooledStr] = &[#(#region_keys),*];
+                static REGIONS_START: &[u32] = &[#(#region_starts),*];
+                static REGIONS_END: &[u32] = &[#(#region_ends),*];
 
                 static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
                 static REGIONS_VERSIONS: &[U32; #versions_len / core::mem::size_of::<U32>()] = unsafe {
@@ -635,16 +617,20 @@ process.stdout.write(JSON.stringify(timeline));
     });
     let version_tokens = version_entries
         .iter()
-        .map(|(browser, version)| quote! { (#browser, PooledStr(#version)) });
-    let timeline_tokens = timeline_entries
-        .iter()
-        .map(|(date, start, end)| quote! { (#date, #start, #end) });
+        .map(|(_, version)| quote! { PooledStr(#version) });
+    let version_browser_tokens = version_entries.iter().map(|(browser, _)| browser);
+    let timeline_dates = timeline_entries.iter().map(|(date, ..)| date);
+    let timeline_starts = timeline_entries.iter().map(|(_, start, _)| start);
+    let timeline_ends = timeline_entries.iter().map(|(.., end)| end);
     fs::write(
         format!("{OUT_DIR}/baseline.rs"),
         quote! {
             static BASELINE_BROWSERS: &[u8] = &[#(#browser_tokens),*];
-            static BASELINE_VERSIONS: &[(u8, PooledStr)] = &[#(#version_tokens),*];
-            static BASELINE_TIMELINE: &[(u32, u16, u16)] = &[#(#timeline_tokens),*];
+            static BASELINE_VERSIONS_BROWSER: &[u8] = &[#(#version_browser_tokens),*];
+            static BASELINE_VERSIONS_VERSION: &[PooledStr] = &[#(#version_tokens),*];
+            static BASELINE_TIMELINE_DATE: &[u32] = &[#(#timeline_dates),*];
+            static BASELINE_TIMELINE_START: &[u16] = &[#(#timeline_starts),*];
+            static BASELINE_TIMELINE_END: &[u16] = &[#(#timeline_ends),*];
         }
         .to_string(),
     )?;

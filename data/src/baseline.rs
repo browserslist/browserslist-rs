@@ -4,8 +4,32 @@
 //! [`baseline-browser-mapping`]: https://www.npmjs.com/package/baseline-browser-mapping
 
 use crate::{decode_browser_name, utils::PooledStr};
+use std::sync::LazyLock;
 
 include!("generated/baseline.rs");
+
+static BASELINE_VERSIONS: LazyLock<Vec<(u8, PooledStr)>> = LazyLock::new(|| {
+    (0..BASELINE_VERSIONS_BROWSER.len())
+        .map(|index| {
+            (
+                BASELINE_VERSIONS_BROWSER[index],
+                BASELINE_VERSIONS_VERSION[index],
+            )
+        })
+        .collect()
+});
+
+static BASELINE_TIMELINE: LazyLock<Vec<(u32, u16, u16)>> = LazyLock::new(|| {
+    (0..BASELINE_TIMELINE_DATE.len())
+        .map(|index| {
+            (
+                BASELINE_TIMELINE_DATE[index],
+                BASELINE_TIMELINE_START[index],
+                BASELINE_TIMELINE_END[index],
+            )
+        })
+        .collect()
+});
 
 /// caniuse names of the seven core Baseline browsers; the remaining browsers
 /// in the dataset are downstream browsers sharing a core browser's engine.

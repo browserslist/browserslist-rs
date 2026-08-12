@@ -22,11 +22,44 @@ pub struct VersionDetail {
 }
 
 include!("generated/caniuse-browsers.rs");
+include!("generated/caniuse-global-usage.rs");
 
-static CANIUSE_BROWSERS: BinMap<PooledStr, BrowserStat> = BinMap(BROWSERS_STATS);
+static VERSION_LIST: LazyLock<Vec<VersionDetail>> = LazyLock::new(|| {
+    (0..VERSION_LIST_VERSION.len())
+        .map(|index| VersionDetail {
+            version: VERSION_LIST_VERSION[index],
+            release_date: VERSION_LIST_RELEASE_DATE[index],
+            released: VERSION_LIST_RELEASED[index],
+            global_usage: VERSION_LIST_GLOBAL_USAGE[index],
+        })
+        .collect()
+});
 
-static CANIUSE_GLOBAL_USAGE: &[(PooledStr, PooledStr, f32)] =
-    include!("generated/caniuse-global-usage.rs");
+static BROWSERS_STATS: LazyLock<Vec<(PooledStr, BrowserStat)>> = LazyLock::new(|| {
+    (0..BROWSERS_STATS_KEY.len())
+        .map(|index| {
+            (
+                BROWSERS_STATS_KEY[index],
+                BrowserStat(BROWSERS_STATS_START[index], BROWSERS_STATS_END[index]),
+            )
+        })
+        .collect()
+});
+
+static CANIUSE_BROWSERS: LazyLock<BinMap<'static, PooledStr, BrowserStat>> =
+    LazyLock::new(|| BinMap(&BROWSERS_STATS));
+
+static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(PooledStr, PooledStr, f32)>> = LazyLock::new(|| {
+    (0..CANIUSE_GLOBAL_USAGE_BROWSER.len())
+        .map(|index| {
+            (
+                CANIUSE_GLOBAL_USAGE_BROWSER[index],
+                CANIUSE_GLOBAL_USAGE_VERSION[index],
+                CANIUSE_GLOBAL_USAGE_USAGE[index],
+            )
+        })
+        .collect()
+});
 
 static BROWSER_VERSION_ALIASES: LazyLock<
     AHashMap<&'static str, AHashMap<&'static str, &'static str>>,
