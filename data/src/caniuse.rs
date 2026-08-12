@@ -4,7 +4,18 @@ use std::{borrow::Cow, sync::LazyLock};
 pub mod features;
 pub mod region;
 
-use crate::utils::{BinMap, PooledStr};
+use crate::utils::{BinMap, PooledStr, undelta};
+
+/// Usage percentages are bundled as thousandths.
+fn per_mille(value: u16) -> f32 {
+    f32::from(value) / 1000.0
+}
+
+/// Region usage percentages are bundled as hundred-thousandths; see `per_100k` in
+/// generate-data for why they need the extra range.
+pub(crate) fn per_100k(value: u32) -> f32 {
+    value as f32 / 100_000.0
+}
 
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 pub const OP_MOB_BLINK_FIRST: u32 = 14;
@@ -25,23 +36,31 @@ include!("generated/caniuse-browsers.rs");
 include!("generated/caniuse-global-usage.rs");
 
 static VERSION_LIST: LazyLock<Vec<VersionDetail>> = LazyLock::new(|| {
-    (0..VERSION_LIST_VERSION.len())
-        .map(|index| VersionDetail {
-            version: VERSION_LIST_VERSION[index],
-            release_date: VERSION_LIST_RELEASE_DATE[index],
-            released: VERSION_LIST_RELEASED[index],
-            global_usage: VERSION_LIST_GLOBAL_USAGE[index],
-        })
+    undelta(VERSION_LIST_VERSION_DELTA)
+        .zip(undelta(VERSION_LIST_RELEASE_DATE_DELTA))
+        .zip(VERSION_LIST_RELEASED)
+        .zip(VERSION_LIST_GLOBAL_USAGE)
+        .map(
+            |(((version, release_date), released), usage)| VersionDetail {
+                version: PooledStr(version),
+                release_date: i64::from(release_date),
+                released: *released,
+                global_usage: per_mille(*usage),
+            },
+        )
         .collect()
 });
 
 static BROWSERS_STATS: LazyLock<Vec<(PooledStr, BrowserStat)>> = LazyLock::new(|| {
-    (0..BROWSERS_STATS_KEY.len())
-        .map(|index| {
-            (
-                BROWSERS_STATS_KEY[index],
-                BrowserStat(BROWSERS_STATS_START[index], BROWSERS_STATS_END[index]),
-            )
+    let mut start = 0;
+    BROWSERS_STATS_KEY
+        .iter()
+        .zip(BROWSERS_STATS_WIDTH)
+        .map(|(key, width)| {
+            let end = start + u32::from(*width);
+            let stat = BrowserStat(start, end);
+            start = end;
+            (*key, stat)
         })
         .collect()
 });
@@ -55,7 +74,7 @@ static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(PooledStr, PooledStr, f32)>> = LazyLo
             (
                 CANIUSE_GLOBAL_USAGE_BROWSER[index],
                 CANIUSE_GLOBAL_USAGE_VERSION[index],
-                CANIUSE_GLOBAL_USAGE_USAGE[index],
+                per_mille(CANIUSE_GLOBAL_USAGE_USAGE[index]),
             )
         })
         .collect()

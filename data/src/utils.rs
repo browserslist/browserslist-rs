@@ -29,6 +29,16 @@ impl<K, V> BinMap<'_, K, V> {
     }
 }
 
+/// Undoes the zigzag delta the generator applies to arrays whose values drift by a
+/// little; see `zigzag_delta` there.
+pub(super) fn undelta(deltas: &'static [u32]) -> impl Iterator<Item = u32> {
+    let mut value = 0i64;
+    deltas.iter().map(move |delta| {
+        value += i64::from(*delta >> 1) ^ -i64::from(*delta & 1);
+        value as u32
+    })
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct PooledStr(pub(super) u32);
 

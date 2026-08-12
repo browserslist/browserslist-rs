@@ -1,5 +1,8 @@
 use super::PooledStr;
-use crate::{decode_browser_name, utils::BinMap};
+use crate::{
+    decode_browser_name,
+    utils::{BinMap, undelta},
+};
 use std::sync::LazyLock;
 
 #[derive(Clone, Copy)]
@@ -9,37 +12,42 @@ pub struct Feature(u32, u32);
 pub struct VersionList(u32, u32);
 
 // ```rust
-// static FEATURES_KEY: &[PooledStr]; // feature name
-// static FEATURES_START: &[u32]; // browsers list start
-// static FEATURES_END: &[u32]; // browsers list end
+// The ranges below tile their arrays end to end, so only widths are bundled and the
+// starts are a prefix sum, rebuilt on first use.
+//
+// static FEATURES_KEY_DELTA: &[u32]; // feature name
+// static FEATURES_WIDTH: &[u8]; // browsers list width
 //
 // static FEATURES_STAT_VERSION_STORE: &[u32]; // version string
-// static FEATURES_STAT_VERSION_START: &[u32]; // version range start
-// static FEATURES_STAT_VERSION_END: &[u32]; // version range end
+// static FEATURES_STAT_VERSION_WIDTH: &[u8]; // version range width
 //
-// static FEATURES_STAT_FLAGS: &[u8]; // support flag
+// static FEATURES_STAT_FLAGS: &[u8]; // support flag, two bits each
 // static FEATURES_STAT_BROWSERS: &[u8]; // browser name id
 // ```
 include!("../generated/caniuse-feature-matching.rs");
 
 static FEATURES: LazyLock<Vec<(PooledStr, Feature)>> = LazyLock::new(|| {
-    (0..FEATURES_KEY.len())
-        .map(|index| {
-            (
-                FEATURES_KEY[index],
-                Feature(FEATURES_START[index], FEATURES_END[index]),
-            )
+    let mut start = 0;
+    undelta(FEATURES_KEY_DELTA)
+        .zip(FEATURES_WIDTH)
+        .map(|(key, width)| {
+            let end = start + u32::from(*width);
+            let feature = Feature(start, end);
+            start = end;
+            (PooledStr(key), feature)
         })
         .collect()
 });
 
 static FEATURES_STAT_VERSION_INDEX: LazyLock<Vec<(u32, u32)>> = LazyLock::new(|| {
-    (0..FEATURES_STAT_VERSION_START.len())
-        .map(|index| {
-            (
-                FEATURES_STAT_VERSION_START[index],
-                FEATURES_STAT_VERSION_END[index],
-            )
+    let mut start = 0;
+    FEATURES_STAT_VERSION_WIDTH
+        .iter()
+        .map(|width| {
+            let end = start + u32::from(*width);
+            let range = (start, end);
+            start = end;
+            range
         })
         .collect()
 });
@@ -73,6 +81,8 @@ impl VersionList {
         let index = FEATURES_STAT_VERSION_STORE[range.clone()]
             .binary_search_by_key(&version, |s| PooledStr(*s).as_str())
             .ok()?;
-        Some(FEATURES_STAT_FLAGS[range][index])
+        // Two bits per flag.
+        let index = range.start + index;
+        Some((FEATURES_STAT_FLAGS[index / 4] >> (2 * (index % 4))) & 3)
     }
 }

@@ -11,7 +11,12 @@ pub(super) fn cover_by_region(coverage: f32, region: &str) -> QueryResult {
     };
 
     if let Some(region_data) = get_usage_by_region(&normalized_region) {
-        let result = region_data.iter().try_fold(
+        // The data is bundled in canonical browser order, which is the order that
+        // compresses; this query is the only one that needs it by usage instead. The
+        // sort is stable, so equal usages keep the canonical order.
+        let mut entries = region_data.iter().collect::<Vec<_>>();
+        entries.sort_by(|(_, _, a), (_, _, b)| b.total_cmp(a));
+        let result = entries.into_iter().try_fold(
             (vec![], 0.0),
             |(mut distribs, total), (name, version, usage)| {
                 if total >= coverage || usage == 0.0 {

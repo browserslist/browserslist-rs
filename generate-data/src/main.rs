@@ -105,9 +105,19 @@ fn build_electron_to_chromium() -> Result<()> {
     .collect::<Vec<_>>();
     data.sort_by(|(a, _), (b, _)| a.total_cmp(b));
     let (electron_versions, chromium_versions): (Vec<_>, Vec<_>) = data.into_iter().unzip();
+    let mut previous = 0;
+    let electron_steps = electron_versions
+        .into_iter()
+        .map(|version| {
+            let hundredths = hundredths(version)?;
+            let step = u8::try_from(hundredths - previous)?;
+            previous = hundredths;
+            Ok(step)
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     let code = quote! {
-        static ELECTRON_VERSIONS: &[f32] = &[ #(#electron_versions),* ];
+        static ELECTRON_VERSION_STEP: &[u8] = &[ #(#electron_steps),* ];
         static CHROMIUM_VERSIONS: &[&str] = &[ #(#chromium_versions),* ];
     };
 
@@ -218,33 +228,36 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
             for version in &agent.version_list {
                 let version_str_id = strpool.insert(&version.version);
-                versions.push(quote! { PooledStr(#version_str_id) });
-                release_dates.push(version.release_date.unwrap_or_default());
+                versions.push(version_str_id);
+                release_dates.push(u32::try_from(version.release_date.unwrap_or_default())?);
                 released_flags.push(version.release_date.is_some());
-                usages.push(version.global_usage);
+                usages.push(per_mille(version.global_usage)?);
             }
 
             let end: u32 = versions.len().try_into().unwrap();
             stats.push((name_str_id, start, end));
         }
 
+        let versions = zigzag_delta(versions.into_iter());
+        let release_dates = zigzag_delta(release_dates.into_iter());
+
         stats.sort_by_key(|(name_str_id, ..)| strpool.get(*name_str_id));
         let stat_keys = stats
             .iter()
             .map(|(name_str_id, ..)| quote! { PooledStr(#name_str_id) });
-        let stat_starts = stats.iter().map(|(_, start, _)| start);
-        let stat_ends = stats.iter().map(|(.., end)| end);
+        // The ranges are contiguous, so only their widths are stored; the starts are
+        // rebuilt by prefix sum on first use.
+        let stat_widths = contiguous_widths_u8(stats.iter().map(|(_, start, end)| (*start, *end)))?;
 
         fs::write(
             format!("{OUT_DIR}/caniuse-browsers.rs"),
             quote! {
-                static VERSION_LIST_VERSION: &[PooledStr] = &[#(#versions),*];
-                static VERSION_LIST_RELEASE_DATE: &[i64] = &[#(#release_dates),*];
+                static VERSION_LIST_VERSION_DELTA: &[u32] = &[#(#versions),*];
+                static VERSION_LIST_RELEASE_DATE_DELTA: &[u32] = &[#(#release_dates),*];
                 static VERSION_LIST_RELEASED: &[bool] = &[#(#released_flags),*];
-                static VERSION_LIST_GLOBAL_USAGE: &[f32] = &[#(#usages),*];
+                static VERSION_LIST_GLOBAL_USAGE: &[u16] = &[#(#usages),*];
                 static BROWSERS_STATS_KEY: &[PooledStr] = &[#(#stat_keys),*];
-                static BROWSERS_STATS_START: &[u32] = &[#(#stat_starts),*];
-                static BROWSERS_STATS_END: &[u32] = &[#(#stat_ends),*];
+                static BROWSERS_STATS_WIDTH: &[u8] = &[#(#stat_widths),*];
             }
             .to_string(),
         )?;
@@ -268,13 +281,16 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         let versions = global_usage
             .iter()
             .map(|(_, version_str_id, _)| quote! { PooledStr(#version_str_id) });
-        let usages = global_usage.iter().map(|(.., usage)| usage);
+        let usages = global_usage
+            .iter()
+            .map(|(.., usage)| per_mille(**usage))
+            .collect::<Result<Vec<_>>>()?;
         fs::write(
             format!("{OUT_DIR}/caniuse-global-usage.rs"),
             quote! {
                 static CANIUSE_GLOBAL_USAGE_BROWSER: &[PooledStr] = &[#(#browsers),*];
                 static CANIUSE_GLOBAL_USAGE_VERSION: &[PooledStr] = &[#(#versions),*];
-                static CANIUSE_GLOBAL_USAGE_USAGE: &[f32] = &[#(#usages),*];
+                static CANIUSE_GLOBAL_USAGE_USAGE: &[u16] = &[#(#usages),*];
             }
             .to_string(),
         )?;
@@ -330,19 +346,33 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .iter()
             .map(|(browser, ..)| encode_browser_name(browser))
             .collect::<Vec<_>>();
-        let feature_keys = features
-            .iter()
-            .map(|(name_str_id, ..)| quote! { PooledStr(#name_str_id) });
-        let feature_starts = features.iter().map(|(_, start, _)| *start as u32);
-        let feature_ends = features.iter().map(|(.., end)| *end as u32);
+        let feature_keys = zigzag_delta(features.iter().map(|(name_str_id, ..)| *name_str_id));
+        let feature_widths = contiguous_widths_u8(
+            features
+                .iter()
+                .map(|(_, start, end)| (*start as u32, *end as u32)),
+        )?;
 
         let version_store = versions.iter();
-        let version_starts = stats.iter().map(|(_, start, _)| *start as u32);
-        let version_ends = stats.iter().map(|(.., end)| *end as u32);
+        let version_widths = contiguous_widths_u8(
+            stats
+                .iter()
+                .map(|(_, start, end)| (*start as u32, *end as u32)),
+        )?;
 
+        // Two bits per flag; only `y` and `a` are recorded.
+        let packed_flags = flags
+            .chunks(4)
+            .map(|chunk| {
+                chunk
+                    .iter()
+                    .enumerate()
+                    .fold(0u8, |byte, (i, flag)| byte | (flag << (2 * i)))
+            })
+            .collect::<Vec<_>>();
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-flags.bin"),
-            flags.as_slice(),
+            packed_flags.as_slice(),
         )?;
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-browsers.bin"),
@@ -352,13 +382,11 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-matching.rs"),
             quote! {
-                static FEATURES_KEY: &[PooledStr] = &[#(#feature_keys),*];
-                static FEATURES_START: &[u32] = &[#(#feature_starts),*];
-                static FEATURES_END: &[u32] = &[#(#feature_ends),*];
+                static FEATURES_KEY_DELTA: &[u32] = &[#(#feature_keys),*];
+                static FEATURES_WIDTH: &[u8] = &[#(#feature_widths),*];
 
                 static FEATURES_STAT_VERSION_STORE: &[u32] = &[#(#version_store),*];
-                static FEATURES_STAT_VERSION_START: &[u32] = &[#(#version_starts),*];
-                static FEATURES_STAT_VERSION_END: &[u32] = &[#(#version_ends),*];
+                static FEATURES_STAT_VERSION_WIDTH: &[u8] = &[#(#version_widths),*];
 
                 static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("caniuse-feature-flags.bin");
                 static FEATURES_STAT_BROWSERS: &[u8] = include_bytes!("caniuse-feature-browsers.bin");
@@ -387,7 +415,10 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 }
             }
             let end = usages.len();
-            usages[start..end].sort_by(|(_, _, a), (_, _, b)| b.total_cmp(a));
+            // Canonical order, identical in every region, so the browser and version
+            // columns repeat and compress; `cover_by_region` re-sorts by usage, which is
+            // the only query that depends on the order.
+            usages[start..end].sort_by_key(|(browser, version, _)| (*browser, *version));
 
             let region_str_id = strpool.insert(region_name);
             region_usages.push((region_str_id, start, end));
@@ -400,20 +431,30 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         drop(browsers);
 
         let region_versions = usages.iter().map(|(_, v, _)| v);
-        let region_percents = usages.iter().map(|(.., usage)| usage.to_bits());
-
-        let region_keys = region_usages
+        let region_percents = usages
             .iter()
-            .map(|(region_str_id, ..)| quote! { PooledStr(#region_str_id) });
-        let region_starts = region_usages.iter().map(|(_, start, _)| *start as u32);
-        let region_ends = region_usages.iter().map(|(.., end)| *end as u32);
+            .map(|(.., usage)| per_100k(*usage))
+            .collect::<Result<Vec<_>>>()?;
+
+        let region_keys = zigzag_delta(
+            region_usages
+                .iter()
+                .map(|(region_str_id, ..)| *region_str_id),
+        );
+        let region_widths = contiguous_widths(
+            region_usages
+                .iter()
+                .map(|(_, start, end)| (*start as u32, *end as u32)),
+        )?
+        .into_iter()
+        .map(|width| Ok(u16::try_from(width)?))
+        .collect::<Result<Vec<_>>>()?;
 
         fs::write(
             format!("{OUT_DIR}/caniuse-region-matching.rs"),
             quote! {
-                static REGIONS_KEY: &[PooledStr] = &[#(#region_keys),*];
-                static REGIONS_START: &[u32] = &[#(#region_starts),*];
-                static REGIONS_END: &[u32] = &[#(#region_ends),*];
+                static REGIONS_KEY_DELTA: &[u32] = &[#(#region_keys),*];
+                static REGIONS_WIDTH: &[u16] = &[#(#region_widths),*];
 
                 static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
                 static REGIONS_VERSIONS: &[u32] = &[#(#region_versions),*];
@@ -576,18 +617,20 @@ process.stdout.write(JSON.stringify(timeline));
         .iter()
         .map(|(_, version)| quote! { PooledStr(#version) });
     let version_browser_tokens = version_entries.iter().map(|(browser, _)| browser);
-    let timeline_dates = timeline_entries.iter().map(|(date, ..)| date);
-    let timeline_starts = timeline_entries.iter().map(|(_, start, _)| start);
-    let timeline_ends = timeline_entries.iter().map(|(.., end)| end);
+    let timeline_dates = zigzag_delta(timeline_entries.iter().map(|(date, ..)| *date));
+    let timeline_widths = contiguous_widths_u8(
+        timeline_entries
+            .iter()
+            .map(|(_, start, end)| (u32::from(*start), u32::from(*end))),
+    )?;
     fs::write(
         format!("{OUT_DIR}/baseline.rs"),
         quote! {
             static BASELINE_BROWSERS: &[u8] = &[#(#browser_tokens),*];
             static BASELINE_VERSIONS_BROWSER: &[u8] = &[#(#version_browser_tokens),*];
             static BASELINE_VERSIONS_VERSION: &[PooledStr] = &[#(#version_tokens),*];
-            static BASELINE_TIMELINE_DATE: &[u32] = &[#(#timeline_dates),*];
-            static BASELINE_TIMELINE_START: &[u16] = &[#(#timeline_starts),*];
-            static BASELINE_TIMELINE_END: &[u16] = &[#(#timeline_ends),*];
+            static BASELINE_TIMELINE_DATE_DELTA: &[u32] = &[#(#timeline_dates),*];
+            static BASELINE_TIMELINE_WIDTH: &[u8] = &[#(#timeline_widths),*];
         }
         .to_string(),
     )?;
@@ -602,6 +645,80 @@ fn run_node(script: &str) -> Result<String> {
         anyhow::bail!("node failed: {}", String::from_utf8_lossy(&out.stderr));
     }
     Ok(String::from_utf8(out.stdout)?)
+}
+
+/// Checks that the ranges tile the array end to end and returns just their widths;
+/// the starts are a prefix sum of these, rebuilt at load time.
+fn contiguous_widths(ranges: impl Iterator<Item = (u32, u32)>) -> Result<Vec<u32>> {
+    let mut widths = Vec::new();
+    let mut expected = 0;
+    for (start, end) in ranges {
+        anyhow::ensure!(start == expected, "ranges must be contiguous");
+        widths.push(end - start);
+        expected = end;
+    }
+    Ok(widths)
+}
+
+/// [`contiguous_widths`], for ranges narrow enough to hold a width in a byte.
+fn contiguous_widths_u8(ranges: impl Iterator<Item = (u32, u32)>) -> Result<Vec<u8>> {
+    contiguous_widths(ranges)?
+        .into_iter()
+        .map(|width| Ok(u8::try_from(width)?))
+        .collect()
+}
+
+/// Successive differences, zigzagged so they stay unsigned. Values that drift by a
+/// little compress far better this way; the array is summed back at load time.
+fn zigzag_delta(values: impl Iterator<Item = u32>) -> Vec<u32> {
+    let mut previous = 0i64;
+    values
+        .map(|value| {
+            let delta = i64::from(value) - previous;
+            previous = i64::from(value);
+            ((delta << 1) ^ (delta >> 63)) as u32
+        })
+        .collect()
+}
+
+/// A usage percentage as thousandths. Global usage tops out around 45%, so a `u16`
+/// holds it, and 0.001 is fine enough that no threshold query lands differently --
+/// checked by the comparison tests against the JS implementation, which do fail at
+/// hundredths.
+fn per_mille(value: f32) -> Result<u16> {
+    let scaled = (value * 1000.0).round();
+    anyhow::ensure!(
+        (0.0..65536.0).contains(&scaled),
+        "usage out of range: {value}"
+    );
+    // `> 0%` is a real query, so a usage that is small but not zero must not round down
+    // to zero; give it the smallest value that still counts as used.
+    if value > 0.0 && scaled == 0.0 {
+        return Ok(1);
+    }
+    Ok(scaled as u16)
+}
+
+/// A region usage percentage as hundred-thousandths. Region usage reaches 83%, which
+/// overflows a `u16` at any scale finer than hundredths, and the caniuse region data
+/// carries five decimals -- so this one stays 32 bits wide.
+fn per_100k(value: f32) -> Result<u32> {
+    let scaled = (value * 100_000.0).round();
+    anyhow::ensure!(
+        (0.0..4294967296.0).contains(&scaled),
+        "usage out of range: {value}"
+    );
+    Ok(scaled as u32)
+}
+
+/// An electron version as hundredths, which represents every released version exactly.
+fn hundredths(value: f32) -> Result<u16> {
+    let scaled = (value * 100.0).round();
+    anyhow::ensure!(
+        (0.0..65536.0).contains(&scaled),
+        "version out of range: {value}"
+    );
+    Ok(scaled as u16)
 }
 
 #[derive(Default)]

@@ -1,6 +1,19 @@
-use std::ops::Range;
+use std::{ops::Range, sync::LazyLock};
 
 include!("generated/electron-to-chromium.rs");
+
+// Electron versions are bundled as hundredths, which represents every released
+// version exactly.
+static ELECTRON_VERSIONS: LazyLock<Vec<f32>> = LazyLock::new(|| {
+    let mut hundredths = 0u16;
+    ELECTRON_VERSION_STEP
+        .iter()
+        .map(|step| {
+            hundredths += u16::from(*step);
+            f32::from(hundredths) / 100.0
+        })
+        .collect()
+});
 
 pub fn versions() -> impl ExactSizeIterator<Item = (f32, &'static str)> + DoubleEndedIterator {
     ELECTRON_VERSIONS

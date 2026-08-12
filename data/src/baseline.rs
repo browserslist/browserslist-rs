@@ -3,7 +3,10 @@
 //!
 //! [`baseline-browser-mapping`]: https://www.npmjs.com/package/baseline-browser-mapping
 
-use crate::{decode_browser_name, utils::PooledStr};
+use crate::{
+    decode_browser_name,
+    utils::{PooledStr, undelta},
+};
 use std::sync::LazyLock;
 
 include!("generated/baseline.rs");
@@ -20,13 +23,14 @@ static BASELINE_VERSIONS: LazyLock<Vec<(u8, PooledStr)>> = LazyLock::new(|| {
 });
 
 static BASELINE_TIMELINE: LazyLock<Vec<(u32, u16, u16)>> = LazyLock::new(|| {
-    (0..BASELINE_TIMELINE_DATE.len())
-        .map(|index| {
-            (
-                BASELINE_TIMELINE_DATE[index],
-                BASELINE_TIMELINE_START[index],
-                BASELINE_TIMELINE_END[index],
-            )
+    let mut start = 0;
+    undelta(BASELINE_TIMELINE_DATE_DELTA)
+        .zip(BASELINE_TIMELINE_WIDTH)
+        .map(|(date, width)| {
+            let end = start + u16::from(*width);
+            let entry = (date, start, end);
+            start = end;
+            entry
         })
         .collect()
 });

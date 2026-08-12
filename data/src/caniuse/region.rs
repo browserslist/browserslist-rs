@@ -1,28 +1,35 @@
 use super::PooledStr;
-use crate::{decode_browser_name, utils::BinMap};
+use crate::{
+    decode_browser_name,
+    utils::{BinMap, undelta},
+};
 use std::sync::LazyLock;
 
 #[derive(Clone, Copy)]
 pub struct RegionData(u32, u32);
 
 // ```rust
-// static REGIONS_KEY: &[PooledStr]; // region name
-// static REGIONS_START: &[u32]; // region data start
-// static REGIONS_END: &[u32]; // region data end
+// The regions tile the data arrays end to end, so only widths are bundled and the
+// starts are a prefix sum, rebuilt on first use.
+//
+// static REGIONS_KEY_DELTA: &[u32]; // region name
+// static REGIONS_WIDTH: &[u16]; // region data width
 //
 // static REGIONS_BROWSERS: &[u8]; // browser name id
 // static REGIONS_VERSIONS: &[u32]; // version string
-// static REGIONS_USAGES: &[u32]; // browser usage (f32 bits)
+// static REGIONS_USAGES: &[u32]; // browser usage, in hundred-thousandths of a percent
 // ```
 include!("../generated/caniuse-region-matching.rs");
 
 static REGIONS: LazyLock<Vec<(PooledStr, RegionData)>> = LazyLock::new(|| {
-    (0..REGIONS_KEY.len())
-        .map(|index| {
-            (
-                REGIONS_KEY[index],
-                RegionData(REGIONS_START[index], REGIONS_END[index]),
-            )
+    let mut start = 0;
+    undelta(REGIONS_KEY_DELTA)
+        .zip(REGIONS_WIDTH)
+        .map(|(key, width)| {
+            let end = start + u32::from(*width);
+            let region = RegionData(start, end);
+            start = end;
+            (PooledStr(key), region)
         })
         .collect()
 });
@@ -43,7 +50,7 @@ impl RegionData {
                 (
                     decode_browser_name(*browser),
                     PooledStr(*version).as_str(),
-                    f32::from_bits(*usage),
+                    super::per_100k(*usage),
                 )
             })
     }
