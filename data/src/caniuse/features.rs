@@ -1,16 +1,23 @@
-use super::PooledStr;
+use super::{PooledStr, VersionDetail};
 use crate::{
     blob::Blob,
     decode_browser_name,
     utils::{BinMap, undelta},
 };
-use std::{cmp::Ordering, sync::LazyLock};
+use std::sync::LazyLock;
 
 #[derive(Clone, Copy)]
 pub struct Feature(u32, u32);
 
 #[derive(Clone, Copy)]
-pub struct VersionList(u32, u32);
+pub struct VersionList {
+    // The browser's own version list, in release order, paired with the permutation
+    // that puts it in lexicographic order.
+    versions: &'static [VersionDetail],
+    lex_order: &'static [u8],
+    // Index of this browser's first flag within FEATURES_STAT_FLAGS.
+    base: u32,
+}
 
 // ```rust
 // The ranges below tile their arrays end to end, so only widths are bundled and the
@@ -19,10 +26,7 @@ pub struct VersionList(u32, u32);
 // static FEATURES_KEY_DELTA: &[u32]; // feature name
 // static FEATURES_WIDTH: Blob; // browsers list width
 //
-// static FEATURES_STAT_VERSION_LO: Blob; // version, low byte of a VERSION_TABLE index
-// static FEATURES_STAT_VERSION_HI: Blob; // version, high byte
 // static FEATURES_STAT_VERSION_WIDTH: Blob; // version range width
-//
 // static FEATURES_STAT_FLAGS: Blob; // support flag, two bits each
 // static FEATURES_STAT_BROWSERS: Blob; // browser name id
 // ```
@@ -41,16 +45,15 @@ static FEATURES: LazyLock<Vec<(PooledStr, Feature)>> = LazyLock::new(|| {
         .collect()
 });
 
-static FEATURES_STAT_VERSION_INDEX: LazyLock<Vec<(u32, u32)>> = LazyLock::new(|| {
+static FEATURES_STAT_FLAG_START: LazyLock<Vec<u32>> = LazyLock::new(|| {
     let mut start = 0;
     FEATURES_STAT_VERSION_WIDTH
         .get()
         .iter()
         .map(|width| {
-            let end = start + u32::from(*width);
-            let range = (start, end);
-            start = end;
-            range
+            let base = start;
+            start += u32::from(*width);
+            base
         })
         .collect()
 });
@@ -59,52 +62,49 @@ pub fn get_feature_stat(name: &str) -> Option<Feature> {
     BinMap(&FEATURES).get(name).copied()
 }
 
+// caniuse states every feature for every version of a browser (checked by
+// generate-data), so a browser's flags line up with its version list position by
+// position and no versions are stored on the feature side at all.
+fn version_list_at(index: usize, browser: &str) -> VersionList {
+    let stat = super::browser_stat(browser).expect("feature refers to unknown browser");
+    VersionList {
+        versions: stat.version_list(),
+        lex_order: stat.lex_order(),
+        base: FEATURES_STAT_FLAG_START[index],
+    }
+}
+
 impl Feature {
     pub fn get(&self, browser: &str) -> Option<VersionList> {
         let range = (self.0 as usize)..(self.1 as usize);
         let index = FEATURES_STAT_BROWSERS.get()[range.clone()]
             .binary_search_by_key(&browser, |&k| decode_browser_name(k))
             .ok()?;
-        let list = FEATURES_STAT_VERSION_INDEX[range][index];
-        Some(VersionList(list.0, list.1))
+        Some(version_list_at(range.start + index, browser))
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, VersionList)> {
-        let range = (self.0 as usize)..(self.1 as usize);
-        FEATURES_STAT_BROWSERS.get()[range.clone()]
+        let start = self.0 as usize;
+        FEATURES_STAT_BROWSERS.get()[start..(self.1 as usize)]
             .iter()
-            .zip(&FEATURES_STAT_VERSION_INDEX[range])
-            .map(|(&name, &list)| (decode_browser_name(name), VersionList(list.0, list.1)))
+            .enumerate()
+            .map(move |(offset, &id)| {
+                let name = decode_browser_name(id);
+                (name, version_list_at(start + offset, name))
+            })
     }
-}
-
-/// The version at `index`, resolved through the shared table. Kept as a lookup rather
-/// than a materialized array so that neither the indices nor the strings are copied to
-/// the heap.
-fn version_at(index: usize) -> &'static str {
-    let table_index = u16::from_le_bytes([
-        FEATURES_STAT_VERSION_LO.get()[index],
-        FEATURES_STAT_VERSION_HI.get()[index],
-    ]);
-    super::version_in_table(table_index)
 }
 
 impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
-        // The range is ordered by version string, so it is binary searched by hand:
-        // the versions live behind an index and are not a slice to search over.
-        let (mut low, mut high) = (self.0 as usize, self.1 as usize);
-        while low < high {
-            let mid = low + (high - low) / 2;
-            match version_at(mid).cmp(version) {
-                Ordering::Less => low = mid + 1,
-                Ordering::Greater => high = mid,
-                // Two bits per flag.
-                Ordering::Equal => {
-                    return Some((FEATURES_STAT_FLAGS.get()[mid / 4] >> (2 * (mid % 4))) & 3);
-                }
-            }
-        }
-        None
+        let rank = self
+            .lex_order
+            .binary_search_by(|&position| {
+                self.versions[usize::from(position)].version().cmp(version)
+            })
+            .ok()?;
+        let index = self.base as usize + usize::from(self.lex_order[rank]);
+        // Two bits per flag.
+        Some((FEATURES_STAT_FLAGS.get()[index / 4] >> (2 * (index % 4))) & 3)
     }
 }

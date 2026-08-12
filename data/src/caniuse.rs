@@ -299,10 +299,24 @@ pub fn normalize_version<'a>(
     }
 }
 
+/// Looks up one browser by name, for the feature tables to resolve versions through.
+pub(crate) fn browser_stat(name: &str) -> Option<&'static BrowserStat> {
+    CANIUSE_BROWSERS.get(name)
+}
+
 impl BrowserStat {
     pub fn version_list(&self) -> &'static [VersionDetail] {
-        let range = (self.0 as usize)..(self.1 as usize);
-        &VERSION_LIST[range]
+        &VERSION_LIST[self.range()]
+    }
+
+    /// The version list permuted into lexicographic order, so that a feature lookup can
+    /// binary search it by version string.
+    pub(crate) fn lex_order(&self) -> &'static [u8] {
+        &VERSION_LIST_LEX_ORDER.get()[self.range()]
+    }
+
+    fn range(&self) -> std::ops::Range<usize> {
+        (self.0 as usize)..(self.1 as usize)
     }
 }
 

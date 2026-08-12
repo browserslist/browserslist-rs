@@ -236,10 +236,20 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
         let mut released_flags = Vec::new();
         let mut usages = Vec::new();
         let mut stats = Vec::new();
+        let mut lex_order = Vec::new();
 
         for (name, agent) in &data.agents {
             let name_str_id = strpool.insert(name);
             let start: u32 = versions.len().try_into().unwrap();
+
+            // Feature lookups take a version string, but the version list is in release
+            // order; bundle the permutation that puts it in lexicographic order so that
+            // the lookup can binary search through it.
+            let mut order = (0..agent.version_list.len())
+                .map(u8::try_from)
+                .collect::<Result<Vec<_>, _>>()?;
+            order.sort_by_key(|position| &agent.version_list[usize::from(*position)].version);
+            lex_order.extend(order);
 
             for version in &agent.version_list {
                 let version_str_id = strpool.insert(&version.version);
@@ -253,6 +263,7 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
             stats.push((name_str_id, start, end));
         }
 
+        let lex_order = write_blob("caniuse-version-lex-order.bin", &lex_order)?;
         let (versions_lo, versions_hi) = byte_planes(&versions);
         let versions_lo = write_blob("caniuse-version-lo.bin", &versions_lo)?;
         let versions_hi = write_blob("caniuse-version-hi.bin", &versions_hi)?;
@@ -269,6 +280,7 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
         fs::write(
             format!("{OUT_DIR}/caniuse-browsers.rs"),
             quote! {
+                static VERSION_LIST_LEX_ORDER: Blob = #lex_order;
                 static VERSION_LIST_VERSION_LO: Blob = #versions_lo;
                 static VERSION_LIST_VERSION_HI: Blob = #versions_hi;
                 static VERSION_LIST_RELEASE_DATE_DELTA: &[u32] = &[#(#release_dates),*];
@@ -321,37 +333,39 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
     {
         let mut features = Vec::new();
         let mut stats = Vec::new();
-        let mut versions = Vec::new();
-        let mut flags = Vec::new();
+        let mut flags: Vec<u8> = Vec::new();
 
         for (name, feature) in &data.data {
             let start = stats.len();
             for (browser, ver) in &feature.stats {
-                let mut list = ver
-                    .iter()
-                    .map(|(version, flags)| {
-                        let version_str_id = strpool.insert(version);
+                let agent = data.agents.get(browser).ok_or_else(|| {
+                    anyhow::anyhow!("feature `{name}`: unknown browser `{browser}`")
+                })?;
+                // caniuse states every feature for every version of a browser, so no
+                // versions are stored here at all: the flags line up with the browser's
+                // own version list, position by position.
+                anyhow::ensure!(
+                    agent.version_list.len() == ver.len()
+                        && agent
+                            .version_list
+                            .iter()
+                            .all(|version| ver.contains_key(&version.version)),
+                    "feature `{name}` does not cover every version of `{browser}`"
+                );
 
-                        let mut bit: u8 = 0;
-                        if flags.contains('y') {
-                            bit |= 1;
-                        }
-                        if flags.contains('a') {
-                            bit |= 2;
-                        }
-                        (version_str_id, bit)
-                    })
-                    .collect::<Vec<_>>();
-
-                // we only use `.get()`, so the original order does not need to be preserved here
-                list.sort_by_key(|(x, _)| strpool.get(*x));
-
-                let start = versions.len();
-                versions.extend(list.iter().map(|(x, _)| *x));
-                flags.extend(list.iter().map(|(_, y)| *y));
-                let end = versions.len();
-
-                stats.push((browser.as_str(), start, end));
+                let start = flags.len();
+                flags.extend(agent.version_list.iter().map(|version| {
+                    let support = &ver[&version.version];
+                    let mut bit: u8 = 0;
+                    if support.contains('y') {
+                        bit |= 1;
+                    }
+                    if support.contains('a') {
+                        bit |= 2;
+                    }
+                    bit
+                }));
+                stats.push((browser.as_str(), start, flags.len()));
             }
             let end = stats.len();
 
@@ -377,13 +391,6 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
             )?,
         )?;
 
-        let version_store = versions
-            .iter()
-            .map(|id| versions_table.intern(*id))
-            .collect::<Result<Vec<_>>>()?;
-        let (version_store_lo, version_store_hi) = byte_planes(&version_store);
-        let version_store_lo = write_blob("caniuse-feature-version-lo.bin", &version_store_lo)?;
-        let version_store_hi = write_blob("caniuse-feature-version-hi.bin", &version_store_hi)?;
         let version_widths = write_blob(
             "caniuse-feature-version-width.bin",
             &contiguous_widths_u8(
@@ -412,8 +419,6 @@ fn build_caniuse(strpool: &mut StrPool, versions_table: &mut VersionTable) -> Re
                 static FEATURES_KEY_DELTA: &[u32] = &[#(#feature_keys),*];
                 static FEATURES_WIDTH: Blob = #feature_widths;
 
-                static FEATURES_STAT_VERSION_LO: Blob = #version_store_lo;
-                static FEATURES_STAT_VERSION_HI: Blob = #version_store_hi;
                 static FEATURES_STAT_VERSION_WIDTH: Blob = #version_widths;
 
                 static FEATURES_STAT_FLAGS: Blob = #packed_flags;
