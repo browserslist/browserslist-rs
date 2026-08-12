@@ -16,7 +16,8 @@ pub struct RegionData(u32, u32);
 // static REGIONS_WIDTH: &[u16]; // region data width
 //
 // static REGIONS_BROWSERS: &[u8]; // browser name id
-// static REGIONS_VERSIONS: &[u32]; // version string
+// static REGIONS_VERSION_LO: &[u8]; // version, low byte of a VERSION_TABLE index
+// static REGIONS_VERSION_HI: &[u8]; // version, high byte
 // static REGIONS_USAGES: &[u32]; // browser usage, in hundred-thousandths of a percent
 // ```
 include!("../generated/caniuse-region-matching.rs");
@@ -44,12 +45,13 @@ impl RegionData {
 
         REGIONS_BROWSERS[range.clone()]
             .iter()
-            .zip(&REGIONS_VERSIONS[range.clone()])
+            .zip(&REGIONS_VERSION_LO[range.clone()])
+            .zip(&REGIONS_VERSION_HI[range.clone()])
             .zip(&REGIONS_USAGES[range])
-            .map(|((browser, version), usage)| {
+            .map(|(((browser, low), high), usage)| {
                 (
                     decode_browser_name(*browser),
-                    PooledStr(*version).as_str(),
+                    super::version_in_table(u16::from_le_bytes([*low, *high])),
                     super::per_100k(*usage),
                 )
             })

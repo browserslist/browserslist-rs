@@ -3,7 +3,7 @@ use crate::{
     decode_browser_name,
     utils::{BinMap, undelta},
 };
-use std::sync::LazyLock;
+use std::{cmp::Ordering, sync::LazyLock};
 
 #[derive(Clone, Copy)]
 pub struct Feature(u32, u32);
@@ -18,7 +18,8 @@ pub struct VersionList(u32, u32);
 // static FEATURES_KEY_DELTA: &[u32]; // feature name
 // static FEATURES_WIDTH: &[u8]; // browsers list width
 //
-// static FEATURES_STAT_VERSION_STORE: &[u32]; // version string
+// static FEATURES_STAT_VERSION_LO: &[u8]; // version, low byte of a VERSION_TABLE index
+// static FEATURES_STAT_VERSION_HI: &[u8]; // version, high byte
 // static FEATURES_STAT_VERSION_WIDTH: &[u8]; // version range width
 //
 // static FEATURES_STAT_FLAGS: &[u8]; // support flag, two bits each
@@ -75,14 +76,33 @@ impl Feature {
     }
 }
 
+/// The version at `index`, resolved through the shared table. Kept as a lookup rather
+/// than a materialized array so that neither the indices nor the strings are copied to
+/// the heap.
+fn version_at(index: usize) -> &'static str {
+    let table_index = u16::from_le_bytes([
+        FEATURES_STAT_VERSION_LO[index],
+        FEATURES_STAT_VERSION_HI[index],
+    ]);
+    super::version_in_table(table_index)
+}
+
 impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
-        let range = (self.0 as usize)..(self.1 as usize);
-        let index = FEATURES_STAT_VERSION_STORE[range.clone()]
-            .binary_search_by_key(&version, |s| PooledStr(*s).as_str())
-            .ok()?;
-        // Two bits per flag.
-        let index = range.start + index;
-        Some((FEATURES_STAT_FLAGS[index / 4] >> (2 * (index % 4))) & 3)
+        // The range is ordered by version string, so it is binary searched by hand:
+        // the versions live behind an index and are not a slice to search over.
+        let (mut low, mut high) = (self.0 as usize, self.1 as usize);
+        while low < high {
+            let mid = low + (high - low) / 2;
+            match version_at(mid).cmp(version) {
+                Ordering::Less => low = mid + 1,
+                Ordering::Greater => high = mid,
+                // Two bits per flag.
+                Ordering::Equal => {
+                    return Some((FEATURES_STAT_FLAGS[mid / 4] >> (2 * (mid % 4))) & 3);
+                }
+            }
+        }
+        None
     }
 }

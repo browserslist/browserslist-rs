@@ -17,6 +17,12 @@ pub(crate) fn per_100k(value: u32) -> f32 {
     value as f32 / 100_000.0
 }
 
+/// Version strings are interned into one table; every array that refers to a version
+/// holds a `u16` index into it, split across a low and a high byte array.
+pub(crate) fn version_in_table(index: u16) -> &'static str {
+    VERSION_TABLE[usize::from(index)].as_str()
+}
+
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 pub const OP_MOB_BLINK_FIRST: u32 = 14;
 

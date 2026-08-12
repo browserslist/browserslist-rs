@@ -214,6 +214,17 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
     let data = parse_caniuse_global()?;
     let region_data = parse_caniuse_regions()?;
 
+    // One table of version strings, shared by every array that refers to a version, so
+    // those arrays hold a `u16` index instead of a four byte string id.
+    let mut version_ids = Vec::new();
+    for agent in data.agents.values() {
+        for version in &agent.version_list {
+            version_ids.push(strpool.insert(&version.version));
+        }
+    }
+    let (version_table, version_index) = intern_versions(version_ids.into_iter())?;
+    let version_table = version_table.iter().map(|id| quote! { PooledStr(#id) });
+
     // caniuse browsers
     {
         let mut versions = Vec::new();
@@ -256,6 +267,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 static VERSION_LIST_RELEASE_DATE_DELTA: &[u32] = &[#(#release_dates),*];
                 static VERSION_LIST_RELEASED: &[bool] = &[#(#released_flags),*];
                 static VERSION_LIST_GLOBAL_USAGE: &[u16] = &[#(#usages),*];
+                static VERSION_TABLE: &[PooledStr] = &[#(#version_table),*];
                 static BROWSERS_STATS_KEY: &[PooledStr] = &[#(#stat_keys),*];
                 static BROWSERS_STATS_WIDTH: &[u8] = &[#(#stat_widths),*];
             }
@@ -353,7 +365,16 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 .map(|(_, start, end)| (*start as u32, *end as u32)),
         )?;
 
-        let version_store = versions.iter();
+        let version_store = versions
+            .iter()
+            .map(|id| {
+                version_index
+                    .get(id)
+                    .copied()
+                    .ok_or_else(|| anyhow::anyhow!("feature version missing from the table"))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let (version_store_lo, version_store_hi) = byte_planes(&version_store);
         let version_widths = contiguous_widths_u8(
             stats
                 .iter()
@@ -385,7 +406,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 static FEATURES_KEY_DELTA: &[u32] = &[#(#feature_keys),*];
                 static FEATURES_WIDTH: &[u8] = &[#(#feature_widths),*];
 
-                static FEATURES_STAT_VERSION_STORE: &[u32] = &[#(#version_store),*];
+                static FEATURES_STAT_VERSION_LO: &[u8] = &[#(#version_store_lo),*];
+                static FEATURES_STAT_VERSION_HI: &[u8] = &[#(#version_store_hi),*];
                 static FEATURES_STAT_VERSION_WIDTH: &[u8] = &[#(#version_widths),*];
 
                 static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("caniuse-feature-flags.bin");
@@ -430,7 +452,16 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         fs::write(format!("{OUT_DIR}/caniuse-region-browsers.bin"), &browsers)?;
         drop(browsers);
 
-        let region_versions = usages.iter().map(|(_, v, _)| v);
+        let region_versions = usages
+            .iter()
+            .map(|(_, id, _)| {
+                version_index
+                    .get(id)
+                    .copied()
+                    .ok_or_else(|| anyhow::anyhow!("region version missing from the table"))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let (region_versions_lo, region_versions_hi) = byte_planes(&region_versions);
         let region_percents = usages
             .iter()
             .map(|(.., usage)| per_100k(*usage))
@@ -457,7 +488,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 static REGIONS_WIDTH: &[u16] = &[#(#region_widths),*];
 
                 static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
-                static REGIONS_VERSIONS: &[u32] = &[#(#region_versions),*];
+                static REGIONS_VERSION_LO: &[u8] = &[#(#region_versions_lo),*];
+                static REGIONS_VERSION_HI: &[u8] = &[#(#region_versions_hi),*];
                 static REGIONS_USAGES: &[u32] = &[#(#region_percents),*];
             }
             .to_string(),
@@ -666,6 +698,35 @@ fn contiguous_widths_u8(ranges: impl Iterator<Item = (u32, u32)>) -> Result<Vec<
         .into_iter()
         .map(|width| Ok(u8::try_from(width)?))
         .collect()
+}
+
+/// Splits a `u16` column into its low and high bytes, each kept contiguously. Every
+/// index here points into a table of a few hundred versions, so the high plane is
+/// almost entirely zero and all but vanishes once the data is compressed.
+fn byte_planes(values: &[u16]) -> (Vec<u8>, Vec<u8>) {
+    values
+        .iter()
+        .map(|value| ((value & 0xff) as u8, (value >> 8) as u8))
+        .unzip()
+}
+
+/// Interns version strings into one table shared by every reference to them, and
+/// returns the table alongside a lookup from string id to its `u16` index.
+fn intern_versions(ids: impl Iterator<Item = u32>) -> Result<(Vec<u32>, HashMap<u32, u16>)> {
+    let mut table = Vec::new();
+    let mut index = HashMap::new();
+    for id in ids {
+        if !index.contains_key(&id) {
+            index.insert(id, u16::try_from(table.len())?);
+            table.push(id);
+        }
+    }
+    anyhow::ensure!(
+        table.len() <= usize::from(u16::MAX),
+        "too many distinct versions to index with a u16: {}",
+        table.len()
+    );
+    Ok((table, index))
 }
 
 /// Successive differences, zigzagged so they stay unsigned. Values that drift by a
