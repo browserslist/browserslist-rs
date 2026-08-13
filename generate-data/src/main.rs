@@ -734,11 +734,27 @@ fn contiguous_widths_u8(ranges: impl Iterator<Item = (u32, u32)>) -> Result<Vec<
         .collect()
 }
 
-/// Writes a byte array twice -- verbatim as `<name>`, and deflated as `<name>.deflate`
-/// with its inflated length prefixed -- and returns the declaration of a `Blob` static
-/// reading whichever one the `deflate` feature selects. Shipping both keeps the feature
-/// a plain compile-time switch, with no compressor in anyone's build graph.
+/// Writes a byte array as a `Blob`, run-length encoded into a `<stem>-count.bin`
+/// companion where that pays for itself. Expanding a run-length array costs a heap copy
+/// at load time, so it is only taken when it saves at least a third.
 fn write_blob(name: &str, bytes: &[u8]) -> Result<TokenStream> {
+    let (values, counts) = run_lengths(bytes);
+    if (values.len() + counts.len()) * 3 <= bytes.len() * 2 {
+        let stem = name.strip_suffix(".bin").unwrap_or(name);
+        let values = write_bytes(name, &values)?;
+        let counts = write_bytes(&format!("{stem}-count.bin"), &counts)?;
+        return Ok(quote! { Blob::rle(#values, #counts) });
+    }
+
+    let bytes = write_bytes(name, bytes)?;
+    Ok(quote! { Blob::new(#bytes) })
+}
+
+/// Writes a byte array twice -- verbatim as `<name>`, and deflated as `<name>.deflate`
+/// with its inflated length prefixed -- and returns the expression reading whichever one
+/// the `deflate` feature selects. Shipping both keeps the feature a plain compile-time
+/// switch, with no compressor in anyone's build graph.
+fn write_bytes(name: &str, bytes: &[u8]) -> Result<TokenStream> {
     fs::write(format!("{OUT_DIR}/{name}"), bytes)?;
 
     let mut deflated = (bytes.len() as u32).to_le_bytes().to_vec();
@@ -752,9 +768,28 @@ fn write_blob(name: &str, bytes: &[u8]) -> Result<TokenStream> {
             const BYTES: &[u8] = include_bytes!(#deflate_name);
             #[cfg(not(feature = "deflate"))]
             const BYTES: &[u8] = include_bytes!(#name);
-            Blob::new(BYTES)
+            BYTES
         }
     })
+}
+
+/// Splits an array into one value per run and one count per run, breaking up runs longer
+/// than a count byte can hold. Columns that are sorted, or that are the high plane of an
+/// index which never reaches its second byte, collapse to almost nothing; the array is
+/// expanded back at load time by `unrle`.
+fn run_lengths(bytes: &[u8]) -> (Vec<u8>, Vec<u8>) {
+    let mut runs: Vec<u8> = Vec::new();
+    let mut counts: Vec<u8> = Vec::new();
+    for byte in bytes {
+        match counts.last_mut() {
+            Some(count) if runs.last() == Some(byte) && *count < u8::MAX => *count += 1,
+            _ => {
+                runs.push(*byte);
+                counts.push(1);
+            }
+        }
+    }
+    (runs, counts)
 }
 
 /// Splits a `u32` column into four byte arrays, one per byte position.
