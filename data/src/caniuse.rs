@@ -25,8 +25,21 @@ include!("generated/caniuse-browsers.rs");
 
 static CANIUSE_BROWSERS: BinMap<PooledStr, BrowserStat> = BinMap(BROWSERS_STATS);
 
-static CANIUSE_GLOBAL_USAGE: &[(PooledStr, PooledStr, f32)] =
-    include!("generated/caniuse-global-usage.rs");
+/// Every version carries its own global usage, and caniuse lists a usage for exactly the
+/// versions in the version list, so the usage table is that data sorted by usage.
+static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(&'static str, &'static str, f32)>> =
+    LazyLock::new(|| {
+        let mut usage = CANIUSE_BROWSERS
+            .iter()
+            .flat_map(|(name, stat)| {
+                stat.version_list()
+                    .iter()
+                    .map(|version| (name.as_str(), version.version(), version.global_usage))
+            })
+            .collect::<Vec<_>>();
+        usage.sort_unstable_by(|(.., a), (.., b)| b.total_cmp(a));
+        usage
+    });
 
 static BROWSER_VERSION_ALIASES: LazyLock<
     AHashMap<&'static str, AHashMap<&'static str, &'static str>>,
@@ -159,10 +172,7 @@ pub fn iter_browser_stat(
 }
 
 pub fn iter_global_usage() -> impl ExactSizeIterator<Item = (&'static str, &'static str, f32)> {
-    CANIUSE_GLOBAL_USAGE
-        .iter()
-        .copied()
-        .map(|(name, version, usage)| (name.as_str(), version.as_str(), usage))
+    CANIUSE_GLOBAL_USAGE.iter().copied()
 }
 
 pub fn get_browser_version_alias(name: &str, version: &str) -> Option<&'static str> {
@@ -221,10 +231,18 @@ pub fn normalize_version<'a>(
     }
 }
 
+/// Looks up one browser by name, for the feature tables to resolve versions through.
+pub(crate) fn browser_stat(name: &str) -> Option<&'static BrowserStat> {
+    CANIUSE_BROWSERS.get(name)
+}
+
 impl BrowserStat {
     pub fn version_list(&self) -> &'static [VersionDetail] {
-        let range = (self.0 as usize)..(self.1 as usize);
-        &VERSION_LIST[range]
+        &VERSION_LIST[self.range()]
+    }
+
+    fn range(&self) -> std::ops::Range<usize> {
+        (self.0 as usize)..(self.1 as usize)
     }
 }
 
