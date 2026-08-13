@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fs,
-    io::{self, Write},
+    io::Write,
 };
 
 const OUT_DIR: &str = "data/src/generated";
@@ -379,14 +379,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         fs::write(format!("{OUT_DIR}/caniuse-region-browsers.bin"), &browsers)?;
         drop(browsers);
 
-        let versions_len = write_u32(
-            format!("{OUT_DIR}/caniuse-region-versions.u32seq"),
-            usages.iter().map(|(_, v, _)| *v),
-        )?;
-        let usages_len = write_u32(
-            format!("{OUT_DIR}/caniuse-region-usages.u32seq"),
-            usages.iter().map(|(_, _, u)| u.to_bits()),
-        )?;
+        let versions = usages.iter().map(|(_, v, _)| *v);
+        let region_usages_bits = usages.iter().map(|(_, _, u)| u.to_bits());
 
         let region_data = region_usages
             .iter()
@@ -409,18 +403,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 static REGIONS: &[(PooledStr, RegionData)] = &[#(#region_data),*];
 
                 static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
-                static REGIONS_VERSIONS: &[U32; #versions_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #versions_len],
-                        [U32; #versions_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-region-versions.u32seq"))
-                };
-                static REGIONS_USAGES: &[U32; #usages_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #usages_len],
-                        [U32; #usages_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-region-usages.u32seq"))
-                };
+                static REGIONS_VERSIONS: &[u32] = &[#(#versions),*];
+                static REGIONS_USAGES: &[u32] = &[#(#region_usages_bits),*];
             }.to_string()
         )?;
     }
@@ -599,20 +583,6 @@ fn run_node(script: &str) -> Result<String> {
         anyhow::bail!("node failed: {}", String::from_utf8_lossy(&out.stderr));
     }
     Ok(String::from_utf8(out.stdout)?)
-}
-
-fn write_u32(path: String, iter: impl Iterator<Item = u32>) -> io::Result<usize> {
-    let fd = fs::File::create(path)?;
-    let mut fd = io::BufWriter::new(fd);
-    let mut n = 0;
-
-    for b in iter {
-        fd.write_all(&b.to_le_bytes())?;
-        n += 4;
-    }
-
-    fd.flush()?;
-    Ok(n)
 }
 
 #[derive(Default)]
