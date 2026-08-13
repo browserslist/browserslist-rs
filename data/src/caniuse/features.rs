@@ -1,5 +1,6 @@
-use super::{PooledStr, VersionDetail};
+use super::PooledStr;
 use crate::{decode_browser_name, utils::BinMap};
+use ahash::AHashMap;
 use std::sync::LazyLock;
 
 #[derive(Clone, Copy)]
@@ -7,8 +8,9 @@ pub struct Feature(u32, u32);
 
 #[derive(Clone, Copy)]
 pub struct VersionList {
-    // The browser's own version list, in release order.
-    versions: &'static [VersionDetail],
+    // Where each of the browser's versions sits in its version list, which is also where
+    // that version's flag sits within the browser's run of flags.
+    indexes: &'static AHashMap<&'static str, u32>,
     // Index of this browser's first flag within FEATURES_STAT_FLAGS.
     base: u32,
 }
@@ -45,9 +47,9 @@ fn browser_of(id: u8) -> &'static super::BrowserStat {
 }
 
 fn version_list_at(index: usize) -> VersionList {
-    let stat = browser_of(FEATURES_STAT_BROWSERS[index]);
+    let name = decode_browser_name(FEATURES_STAT_BROWSERS[index]);
     VersionList {
-        versions: stat.version_list(),
+        indexes: super::version_indexes(name).expect("feature refers to unknown browser"),
         base: FEATURES_STAT_FLAG_START[index],
     }
 }
@@ -72,10 +74,7 @@ impl Feature {
 
 impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
-        let position = self
-            .versions
-            .iter()
-            .position(|probe| probe.version() == version)?;
-        Some(FEATURES_STAT_FLAGS[self.base as usize + position])
+        let position = *self.indexes.get(version)?;
+        Some(FEATURES_STAT_FLAGS[self.base as usize + position as usize])
     }
 }

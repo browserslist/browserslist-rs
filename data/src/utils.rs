@@ -29,7 +29,8 @@ impl<K, V> BinMap<'_, K, V> {
     }
 }
 
-// We define repr C instead of using tuple to ensure a stable memory layout.
+// We define repr C to ensure a stable memory layout, since these are transmuted from
+// the bytes of the generated `.u32seq` files.
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub(super) struct U32(u32);
