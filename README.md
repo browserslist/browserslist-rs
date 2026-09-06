@@ -54,10 +54,10 @@ The features below aren't supported currently:
    cd browserslist-rs
    ```
 
-2. Initialize Git submodules
+2. Install dependencies
 
     ```sh
-    git submodule update --init --recursive
+    pnpm install
     ```
 
 3. Generate data
