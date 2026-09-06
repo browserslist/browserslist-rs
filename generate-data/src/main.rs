@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fs,
-    io::{self, Write},
+    io::Write,
 };
 
 const OUT_DIR: &str = "data/src/generated";
@@ -43,7 +43,6 @@ struct Caniuse {
 
 #[derive(Deserialize)]
 struct Agent {
-    usage_global: BTreeMap<String, f32>,
     version_list: Vec<VersionDetail>,
 }
 
@@ -261,77 +260,50 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         )?;
     }
 
-    // caniuse usage
-    {
-        let mut global_usage = Vec::new();
-        for (name, agent) in &data.agents {
-            let name_str_id = strpool.insert(name);
-            for (version, usage) in &agent.usage_global {
-                let version_str_id = strpool.insert(version);
-                global_usage.push((name_str_id, version_str_id, usage));
-            }
-        }
-
-        global_usage.sort_unstable_by(|(.., a), (.., b)| b.total_cmp(a));
-        let push_usage = global_usage
-            .into_iter()
-            .map(|(name_str_id, version_str_id, usage)| {
-                quote! {
-                    (
-                        PooledStr(#name_str_id),
-                        PooledStr(#version_str_id),
-                        #usage
-                    )
-                }
-            });
-        fs::write(
-            format!("{OUT_DIR}/caniuse-global-usage.rs"),
-            quote! {
-                &[#(#push_usage),*]
-            }
-            .to_string(),
-        )?;
-    }
-
     // caniuse features
     {
         let mut features = Vec::new();
         let mut stats = Vec::new();
-        let mut versions = Vec::new();
-        let mut flags = Vec::new();
+        let mut flags: Vec<u8> = Vec::new();
 
         for (name, feature) in &data.data {
             let start = stats.len();
+            // `feature.stats` is keyed by browser name, so the browsers of one feature
+            // already come out in the order `Feature::get` binary searches for.
             for (browser, ver) in &feature.stats {
-                let mut list = ver
-                    .iter()
-                    .map(|(version, flags)| {
-                        let version_str_id = strpool.insert(version);
+                let agent = data.agents.get(browser).ok_or_else(|| {
+                    anyhow::anyhow!("feature `{name}`: unknown browser `{browser}`")
+                })?;
+                // caniuse states every feature for every version of a browser, so no
+                // versions are stored here at all: the flags line up with the browser's
+                // own version list, position by position.
+                anyhow::ensure!(
+                    agent.version_list.len() == ver.len()
+                        && agent
+                            .version_list
+                            .iter()
+                            .all(|version| ver.contains_key(&version.version)),
+                    "feature `{name}` does not cover every version of `{browser}`"
+                );
 
-                        let mut bit: u8 = 0;
-                        if flags.contains('y') {
-                            bit |= 1;
-                        }
-                        if flags.contains('a') {
-                            bit |= 2;
-                        }
-                        (version_str_id, bit)
-                    })
-                    .collect::<Vec<_>>();
-
-                // we only use `.get()`, so the original order does not need to be preserved here
-                list.sort_by_key(|(x, _)| strpool.get(*x));
-
-                let start = versions.len();
-                versions.extend(list.iter().map(|(x, _)| *x));
-                flags.extend(list.iter().map(|(_, y)| *y));
-                let end = versions.len();
-
-                stats.push((browser.as_str(), start, end));
+                flags.extend(agent.version_list.iter().map(|version| {
+                    let support = &ver[&version.version];
+                    let mut bit: u8 = 0;
+                    if support.contains('y') {
+                        bit |= 1;
+                    }
+                    if support.contains('a') {
+                        bit |= 2;
+                    }
+                    bit
+                }));
+                stats.push(browser.as_str());
             }
             let end = stats.len();
-
-            stats[start..end].sort_by_key(|(browser, ..)| *browser);
+            anyhow::ensure!(
+                stats[start..end].is_sorted(),
+                "feature `{name}`: browsers must be in name order"
+            );
 
             let name_str_id = strpool.insert(name);
             features.push((name_str_id, start, end));
@@ -339,15 +311,10 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
         features.sort_by_key(|(name, ..)| strpool.get(*name));
 
-        let (stats_name, stats_list): (Vec<_>, Vec<_>) = stats
+        let stats_name = stats
             .iter()
-            .map(|(browser, start, end)| {
-                let browser = encode_browser_name(browser);
-                let start: u32 = (*start).try_into().unwrap();
-                let end: u32 = (*end).try_into().unwrap();
-                (browser, [start, end])
-            })
-            .unzip();
+            .map(|browser| encode_browser_name(browser))
+            .collect::<Vec<_>>();
         let features = features.iter().flat_map(|(name_str_id, start, end)| {
             let start: u32 = (*start).try_into().unwrap();
             let end: u32 = (*end).try_into().unwrap();
@@ -358,15 +325,6 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 )
             }
         });
-
-        let version_store_len = write_u32(
-            format!("{OUT_DIR}/caniuse-feature-versionstore.u32seq"),
-            versions.iter().copied(),
-        )?;
-        let version_index_len = write_u32(
-            format!("{OUT_DIR}/caniuse-feature-versionindex.u32seq"),
-            stats_list.iter().flatten().copied(),
-        )?;
 
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-flags.bin"),
@@ -381,23 +339,6 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             format!("{OUT_DIR}/caniuse-feature-matching.rs"),
             quote! {
                 static FEATURES: &[(PooledStr, Feature)] = &[#(#features),*];
-
-                // # Safety
-                //
-                // We do the transmute at const context,
-                // and the size and alignment are already checked and guaranteed by compiler.
-                static FEATURES_STAT_VERSION_STORE: &[U32; #version_store_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #version_store_len],
-                        [U32; #version_store_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-feature-versionstore.u32seq"))
-                };
-                static FEATURES_STAT_VERSION_INDEX: &[PairU32; #version_index_len / core::mem::size_of::<PairU32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #version_index_len],
-                        [PairU32; #version_index_len / core::mem::size_of::<PairU32>()]
-                    >(*include_bytes!("caniuse-feature-versionindex.u32seq"))
-                };
 
                 static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("caniuse-feature-flags.bin");
                 static FEATURES_STAT_BROWSERS: &[u8] = include_bytes!("caniuse-feature-browsers.bin");
@@ -438,14 +379,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         fs::write(format!("{OUT_DIR}/caniuse-region-browsers.bin"), &browsers)?;
         drop(browsers);
 
-        let versions_len = write_u32(
-            format!("{OUT_DIR}/caniuse-region-versions.u32seq"),
-            usages.iter().map(|(_, v, _)| *v),
-        )?;
-        let usages_len = write_u32(
-            format!("{OUT_DIR}/caniuse-region-usages.u32seq"),
-            usages.iter().map(|(_, _, u)| u.to_bits()),
-        )?;
+        let versions = usages.iter().map(|(_, v, _)| *v);
+        let region_usages_bits = usages.iter().map(|(_, _, u)| u.to_bits());
 
         let region_data = region_usages
             .iter()
@@ -468,18 +403,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 static REGIONS: &[(PooledStr, RegionData)] = &[#(#region_data),*];
 
                 static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
-                static REGIONS_VERSIONS: &[U32; #versions_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #versions_len],
-                        [U32; #versions_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-region-versions.u32seq"))
-                };
-                static REGIONS_USAGES: &[U32; #usages_len / core::mem::size_of::<U32>()] = unsafe {
-                    &core::mem::transmute::<
-                        [u8; #usages_len],
-                        [U32; #usages_len / core::mem::size_of::<U32>()]
-                    >(*include_bytes!("caniuse-region-usages.u32seq"))
-                };
+                static REGIONS_VERSIONS: &[u32] = &[#(#versions),*];
+                static REGIONS_USAGES: &[u32] = &[#(#region_usages_bits),*];
             }.to_string()
         )?;
     }
@@ -497,7 +422,6 @@ const result = { agents: {}, data: {} };
 for (const [name, agent] of Object.entries(agents)) {
     const releaseDate = agent.release_date || {};
     result.agents[name] = {
-        usage_global: agent.usage_global,
         version_list: (agent.versions || []).filter(v => v != null).map(v => ({
             version: v,
             global_usage: agent.usage_global[v] || 0,
@@ -659,20 +583,6 @@ fn run_node(script: &str) -> Result<String> {
         anyhow::bail!("node failed: {}", String::from_utf8_lossy(&out.stderr));
     }
     Ok(String::from_utf8(out.stdout)?)
-}
-
-fn write_u32(path: String, iter: impl Iterator<Item = u32>) -> io::Result<usize> {
-    let fd = fs::File::create(path)?;
-    let mut fd = io::BufWriter::new(fd);
-    let mut n = 0;
-
-    for b in iter {
-        fd.write_all(&b.to_le_bytes())?;
-        n += 4;
-    }
-
-    fd.flush()?;
-    Ok(n)
 }
 
 #[derive(Default)]

@@ -29,21 +29,6 @@ impl<K, V> BinMap<'_, K, V> {
     }
 }
 
-// We define repr C instead of using tuple to ensure a stable memory layout.
-#[derive(Clone, Copy, Debug)]
-#[repr(C)]
-pub(super) struct PairU32(pub U32, pub U32);
-
-#[derive(Clone, Copy, Debug)]
-#[repr(C)]
-pub(super) struct U32(u32);
-
-impl U32 {
-    pub const fn get(self) -> u32 {
-        self.0.to_le()
-    }
-}
-
 #[derive(Clone, Copy)]
 pub(super) struct PooledStr(pub(super) u32);
 
