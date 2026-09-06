@@ -54,7 +54,7 @@ The features below aren't supported currently:
    cd browserslist-rs
    ```
 
-2. Install depedencies
+2. Install dependencies
 
     ```sh
     pnpm install
