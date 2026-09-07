@@ -1,5 +1,5 @@
 use super::PooledStr;
-use crate::{decode_browser_name, utils::BinMap};
+use crate::{blob::Blob, decode_browser_name, utils::BinMap};
 
 #[derive(Clone, Copy)]
 pub struct RegionData(u32, u32);
@@ -21,7 +21,7 @@ impl RegionData {
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, &'static str, f32)> {
         let range = (self.0 as usize)..(self.1 as usize);
 
-        REGIONS_BROWSERS[range.clone()]
+        REGIONS_BROWSERS.get()[range.clone()]
             .iter()
             .zip(&REGIONS_VERSIONS[range.clone()])
             .zip(&REGIONS_USAGES[range])

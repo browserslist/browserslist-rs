@@ -1,5 +1,5 @@
 use super::PooledStr;
-use crate::{decode_browser_name, utils::BinMap};
+use crate::{blob::Blob, decode_browser_name, utils::BinMap};
 use ahash::AHashMap;
 use std::sync::LazyLock;
 
@@ -29,6 +29,7 @@ include!("../generated/caniuse-feature-matching.rs");
 static FEATURES_STAT_FLAG_START: LazyLock<Vec<u32>> = LazyLock::new(|| {
     let mut start = 0;
     FEATURES_STAT_BROWSERS
+        .get()
         .iter()
         .map(|id| {
             let base = start;
@@ -47,7 +48,7 @@ fn browser_of(id: u8) -> &'static super::BrowserStat {
 }
 
 fn version_list_at(index: usize) -> VersionList {
-    let name = decode_browser_name(FEATURES_STAT_BROWSERS[index]);
+    let name = decode_browser_name(FEATURES_STAT_BROWSERS.get()[index]);
     VersionList {
         indexes: super::version_indexes(name).expect("feature refers to unknown browser"),
         base: FEATURES_STAT_FLAG_START[index],
@@ -57,7 +58,7 @@ fn version_list_at(index: usize) -> VersionList {
 impl Feature {
     pub fn get(&self, browser: &str) -> Option<VersionList> {
         let range = (self.0 as usize)..(self.1 as usize);
-        let index = FEATURES_STAT_BROWSERS[range.clone()]
+        let index = FEATURES_STAT_BROWSERS.get()[range.clone()]
             .binary_search_by_key(&browser, |&k| decode_browser_name(k))
             .ok()?;
         Some(version_list_at(range.start + index))
@@ -65,7 +66,7 @@ impl Feature {
 
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, VersionList)> {
         let start = self.0 as usize;
-        FEATURES_STAT_BROWSERS[start..(self.1 as usize)]
+        FEATURES_STAT_BROWSERS.get()[start..(self.1 as usize)]
             .iter()
             .enumerate()
             .map(move |(offset, &id)| (decode_browser_name(id), version_list_at(start + offset)))
@@ -75,6 +76,6 @@ impl Feature {
 impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
         let position = *self.indexes.get(version)?;
-        Some(FEATURES_STAT_FLAGS[self.base as usize + position as usize])
+        Some(FEATURES_STAT_FLAGS.get()[self.base as usize + position as usize])
     }
 }
