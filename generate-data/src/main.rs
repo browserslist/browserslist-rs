@@ -706,8 +706,10 @@ fn write_array(
         #[cfg(feature = "deflate")]
         static #static_name: LazyLock<Vec<#value_type>> = LazyLock::new(|| {
             crate::inflate(include_bytes!(#deflate_name))
-                .chunks_exact(std::mem::size_of::<#value_type>())
-                .map(|bytes| #value_type::from_le_bytes(bytes.try_into().unwrap()))
+                .as_chunks::<{ std::mem::size_of::<#value_type>() }>()
+                .0
+                .iter()
+                .map(|bytes| #value_type::from_le_bytes(*bytes))
                 .collect()
         });
         #[cfg(not(feature = "deflate"))]
