@@ -4,6 +4,8 @@
 //! [`baseline-browser-mapping`]: https://www.npmjs.com/package/baseline-browser-mapping
 
 use crate::{decode_browser_name, utils::PooledStr};
+#[cfg(feature = "deflate")]
+use std::sync::LazyLock;
 
 include!("generated/baseline.rs");
 
@@ -32,11 +34,13 @@ pub fn browsers() -> impl Iterator<Item = &'static str> {
 pub fn min_versions_on(
     cutoff_date: u32,
 ) -> Option<impl Iterator<Item = (&'static str, &'static str)>> {
-    let index = BASELINE_TIMELINE.partition_point(|(date, ..)| *date <= cutoff_date);
+    let index = BASELINE_TIMELINE_DATE.partition_point(|date| *date <= cutoff_date);
     index.checked_sub(1).map(|index| {
-        let (_, start, end) = BASELINE_TIMELINE[index];
-        BASELINE_VERSIONS[usize::from(start)..usize::from(end)]
+        let start = BASELINE_TIMELINE_START[index];
+        let end = BASELINE_TIMELINE_END[index];
+        BASELINE_VERSION_BROWSER[usize::from(start)..usize::from(end)]
             .iter()
-            .map(|(id, version)| (decode_browser_name(*id), version.as_str()))
+            .zip(&BASELINE_VERSION_VERSION[usize::from(start)..usize::from(end)])
+            .map(|(id, version)| (decode_browser_name(*id), PooledStr(*version).as_str()))
     })
 }

@@ -23,7 +23,34 @@ pub struct VersionDetail {
 
 include!("generated/caniuse-browsers.rs");
 
-static CANIUSE_BROWSERS: BinMap<PooledStr, BrowserStat> = BinMap(BROWSERS_STATS);
+static VERSION_LIST: LazyLock<Vec<VersionDetail>> = LazyLock::new(|| {
+    VERSION_LIST_VERSION
+        .iter()
+        .zip(&*VERSION_LIST_RELEASE_DATE)
+        .zip(&*VERSION_LIST_RELEASED)
+        .zip(&*VERSION_LIST_GLOBAL_USAGE)
+        .map(
+            |(((version, release_date), released), global_usage)| VersionDetail {
+                version: PooledStr(*version),
+                release_date: *release_date,
+                released: *released != 0,
+                global_usage: *global_usage,
+            },
+        )
+        .collect()
+});
+
+static BROWSERS_STATS: LazyLock<Vec<(PooledStr, BrowserStat)>> = LazyLock::new(|| {
+    BROWSERS_STATS_KEY
+        .iter()
+        .zip(&*BROWSERS_STATS_START)
+        .zip(&*BROWSERS_STATS_END)
+        .map(|((key, start), end)| (PooledStr(*key), BrowserStat(*start, *end)))
+        .collect()
+});
+
+static CANIUSE_BROWSERS: LazyLock<BinMap<'static, PooledStr, BrowserStat>> =
+    LazyLock::new(|| BinMap(&BROWSERS_STATS));
 
 /// Every version carries its own global usage, and caniuse lists a usage for exactly the
 /// versions in the version list, so the usage table is that data sorted by usage.

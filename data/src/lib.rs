@@ -1,8 +1,12 @@
 pub mod baseline;
-mod blob;
 pub mod caniuse;
 pub mod electron;
 pub mod node;
+
+#[cfg(feature = "deflate")]
+pub(crate) fn inflate(blob: &[u8]) -> Vec<u8> {
+    miniz_oxide::inflate::decompress_to_vec(blob).expect("failed to inflate bundled data")
+}
 mod utils;
 
 #[doc(hidden)]
