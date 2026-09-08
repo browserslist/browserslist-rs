@@ -1,5 +1,7 @@
 use anyhow::Result;
 use indexmap::IndexMap;
+use miniz_oxide::deflate::compress_to_vec;
+use proc_macro2::TokenStream;
 use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -326,23 +328,18 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             }
         });
 
-        fs::write(
-            format!("{OUT_DIR}/caniuse-feature-flags.bin"),
-            flags.as_slice(),
-        )?;
-        fs::write(
-            format!("{OUT_DIR}/caniuse-feature-browsers.bin"),
-            stats_name.as_slice(),
-        )?;
+        let flags = write_blob("caniuse-feature-flags.bin", &flags)?;
+        let stats_name = write_blob("caniuse-feature-browsers.bin", &stats_name)?;
 
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-matching.rs"),
             quote! {
                 static FEATURES: &[(PooledStr, Feature)] = &[#(#features),*];
 
-                static FEATURES_STAT_FLAGS: &[u8] = include_bytes!("caniuse-feature-flags.bin");
-                static FEATURES_STAT_BROWSERS: &[u8] = include_bytes!("caniuse-feature-browsers.bin");
-            }.to_string()
+                static FEATURES_STAT_FLAGS: Blob = #flags;
+                static FEATURES_STAT_BROWSERS: Blob = #stats_name;
+            }
+            .to_string(),
         )?;
     }
 
@@ -375,9 +372,10 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
         region_usages.sort_by_key(|(region, ..)| strpool.get(*region));
 
-        let browsers = usages.iter().map(|(b, ..)| *b).collect::<Vec<_>>();
-        fs::write(format!("{OUT_DIR}/caniuse-region-browsers.bin"), &browsers)?;
-        drop(browsers);
+        let browsers = write_blob(
+            "caniuse-region-browsers.bin",
+            &usages.iter().map(|(b, ..)| *b).collect::<Vec<_>>(),
+        )?;
 
         let versions = usages.iter().map(|(_, v, _)| *v);
         let region_usages_bits = usages.iter().map(|(_, _, u)| u.to_bits());
@@ -402,10 +400,11 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             quote! {
                 static REGIONS: &[(PooledStr, RegionData)] = &[#(#region_data),*];
 
-                static REGIONS_BROWSERS: &[u8] = include_bytes!("caniuse-region-browsers.bin");
+                static REGIONS_BROWSERS: Blob = #browsers;
                 static REGIONS_VERSIONS: &[u32] = &[#(#versions),*];
                 static REGIONS_USAGES: &[u32] = &[#(#region_usages_bits),*];
-            }.to_string()
+            }
+            .to_string(),
         )?;
     }
 
@@ -574,6 +573,29 @@ process.stdout.write(JSON.stringify(timeline));
     )?;
 
     Ok(())
+}
+
+/// Writes a byte array twice: verbatim as `<name>`, and as a raw deflate stream in
+/// `<name>.deflate`.
+///
+/// The returned expression selects one input at compile time; both representations
+/// are deliberately published so consumers can choose with `deflate`.
+fn write_blob(name: &str, bytes: &[u8]) -> Result<TokenStream> {
+    fs::write(format!("{OUT_DIR}/{name}"), bytes)?;
+
+    let deflated = compress_to_vec(bytes, 10);
+    fs::write(format!("{OUT_DIR}/{name}.deflate"), deflated)?;
+
+    let deflate_name = format!("{name}.deflate");
+    Ok(quote! {
+        {
+            #[cfg(feature = "deflate")]
+            const BYTES: &[u8] = include_bytes!(#deflate_name);
+            #[cfg(not(feature = "deflate"))]
+            const BYTES: &[u8] = include_bytes!(#name);
+            Blob::new(BYTES)
+        }
+    })
 }
 
 fn run_node(script: &str) -> Result<String> {
