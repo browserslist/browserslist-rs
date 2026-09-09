@@ -1,9 +1,13 @@
 pub mod baseline;
-mod blob;
 pub mod caniuse;
 pub mod electron;
 pub mod node;
 mod utils;
+
+#[cfg(feature = "deflate")]
+pub(crate) fn inflate(blob: &[u8]) -> Vec<u8> {
+    miniz_oxide::inflate::decompress_to_vec(blob).expect("failed to inflate bundled data")
+}
 
 #[doc(hidden)]
 pub fn decode_browser_name(id: u8) -> &'static str {

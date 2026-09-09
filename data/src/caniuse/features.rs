@@ -1,5 +1,5 @@
 use super::PooledStr;
-use crate::{blob::Blob, decode_browser_name, utils::BinMap};
+use crate::{decode_browser_name, utils::BinMap};
 use ahash::AHashMap;
 use std::sync::LazyLock;
 
@@ -16,12 +16,21 @@ pub struct VersionList {
 }
 
 // ```rust
-// static FEATURES: &[(PooledStr, Feature)]; // feature name and browsers list
+// static FEATURES_KEY/START/END: parallel feature name and browser-list ranges
 //
 // static FEATURES_STAT_FLAGS: &[u8]; // support flag
 // static FEATURES_STAT_BROWSERS: &[u8]; // browser name id
 // ```
 include!("../generated/caniuse-feature-matching.rs");
+
+static FEATURES: LazyLock<Vec<(PooledStr, Feature)>> = LazyLock::new(|| {
+    FEATURES_KEY
+        .iter()
+        .zip(&*FEATURES_START)
+        .zip(&*FEATURES_END)
+        .map(|((key, start), end)| (PooledStr(*key), Feature(*start, *end)))
+        .collect()
+});
 
 // caniuse states every feature for every version of a browser (checked by
 // generate-data), so a browser's flags line up with its version list position by
@@ -29,7 +38,6 @@ include!("../generated/caniuse-feature-matching.rs");
 static FEATURES_STAT_FLAG_START: LazyLock<Vec<u32>> = LazyLock::new(|| {
     let mut start = 0;
     FEATURES_STAT_BROWSERS
-        .get()
         .iter()
         .map(|id| {
             let base = start;
@@ -40,7 +48,7 @@ static FEATURES_STAT_FLAG_START: LazyLock<Vec<u32>> = LazyLock::new(|| {
 });
 
 pub fn get_feature_stat(name: &str) -> Option<Feature> {
-    BinMap(FEATURES).get(name).copied()
+    BinMap(&FEATURES).get(name).copied()
 }
 
 fn browser_of(id: u8) -> &'static super::BrowserStat {
@@ -48,7 +56,7 @@ fn browser_of(id: u8) -> &'static super::BrowserStat {
 }
 
 fn version_list_at(index: usize) -> VersionList {
-    let name = decode_browser_name(FEATURES_STAT_BROWSERS.get()[index]);
+    let name = decode_browser_name(FEATURES_STAT_BROWSERS[index]);
     VersionList {
         indexes: super::version_indexes(name).expect("feature refers to unknown browser"),
         base: FEATURES_STAT_FLAG_START[index],
@@ -58,7 +66,7 @@ fn version_list_at(index: usize) -> VersionList {
 impl Feature {
     pub fn get(&self, browser: &str) -> Option<VersionList> {
         let range = (self.0 as usize)..(self.1 as usize);
-        let index = FEATURES_STAT_BROWSERS.get()[range.clone()]
+        let index = FEATURES_STAT_BROWSERS[range.clone()]
             .binary_search_by_key(&browser, |&k| decode_browser_name(k))
             .ok()?;
         Some(version_list_at(range.start + index))
@@ -66,7 +74,7 @@ impl Feature {
 
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, VersionList)> {
         let start = self.0 as usize;
-        FEATURES_STAT_BROWSERS.get()[start..(self.1 as usize)]
+        FEATURES_STAT_BROWSERS[start..(self.1 as usize)]
             .iter()
             .enumerate()
             .map(move |(offset, &id)| (decode_browser_name(id), version_list_at(start + offset)))
@@ -76,6 +84,6 @@ impl Feature {
 impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
         let position = *self.indexes.get(version)?;
-        Some(FEATURES_STAT_FLAGS.get()[self.base as usize + position as usize])
+        Some(FEATURES_STAT_FLAGS[self.base as usize + position as usize])
     }
 }

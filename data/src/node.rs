@@ -8,11 +8,11 @@ pub fn versions() -> &'static [&'static str] {
 }
 
 pub fn release_schedule(now: NaiveDate) -> impl Iterator<Item = &'static str> {
-    let end = NODE_RELEASE_SCHEDULE.partition_point(|(_, end)| end <= &now);
-    NODE_RELEASE_SCHEDULE
+    let end = NODE_RELEASE_END.partition_point(|end| end <= &now);
+    NODE_RELEASE_START
         .iter()
         .enumerate()
         .skip(end)
-        .filter(move |(_, (start, _))| start < &now)
+        .filter(move |(_, start)| *start < &now)
         .map(|(idx, _)| NODE_RELEASE_VERSIONS[idx])
 }
