@@ -296,16 +296,28 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         )?;
         let version_ids =
             write_u16_array("caniuse-version-ids", "VERSION_LIST_VERSION", &version_ids)?;
-        let release_years = write_blob("VERSION_LIST_RELEASE_YEAR", &release_years)?;
-        let release_months = write_blob("VERSION_LIST_RELEASE_MONTH", &release_months)?;
-        let release_days = write_blob("VERSION_LIST_RELEASE_DAY", &release_days)?;
+        let release_years = write_blob(
+            "caniuse-release-years.bin",
+            "VERSION_LIST_RELEASE_YEAR",
+            &release_years,
+        )?;
+        let release_months = write_blob(
+            "caniuse-release-months.bin",
+            "VERSION_LIST_RELEASE_MONTH",
+            &release_months,
+        )?;
+        let release_days = write_blob(
+            "caniuse-release-days.bin",
+            "VERSION_LIST_RELEASE_DAY",
+            &release_days,
+        )?;
         let release_dates = quote! {
             #release_years #release_months #release_days
             static VERSION_LIST_RELEASE_DATE: LazyLock<Vec<i64>> = LazyLock::new(||
                 crate::decode_release_dates(
-                    &*VERSION_LIST_RELEASE_YEAR,
-                    &*VERSION_LIST_RELEASE_MONTH,
-                    &*VERSION_LIST_RELEASE_DAY,
+                    &VERSION_LIST_RELEASE_YEAR,
+                    &VERSION_LIST_RELEASE_MONTH,
+                    &VERSION_LIST_RELEASE_DAY,
                 ));
         };
         let global_usage = write_u16_array(
@@ -333,6 +345,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         fs::write(
             format!("{OUT_DIR}/caniuse-browsers.rs"),
             quote! {
+                #version_table
                 #version_ids
                 #release_dates
                 #released
@@ -401,13 +414,9 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .map(|browser| encode_browser_name(browser))
             .collect::<Vec<_>>();
         let feature_keys = features.iter().map(|(key, ..)| *key).collect::<Vec<_>>();
-        let feature_starts = features
+        let feature_widths = features
             .iter()
-            .map(|(.., start, _)| u32::try_from(*start))
-            .collect::<Result<Vec<_>, _>>()?;
-        let feature_ends = features
-            .iter()
-            .map(|(.., _, end)| u32::try_from(*end))
+            .map(|(.., start, end)| u8::try_from(end - start))
             .collect::<Result<Vec<_>, _>>()?;
 
         let flags = write_blob("caniuse-feature-flags.bin", "FEATURES_STAT_FLAGS", &flags)?;
@@ -417,16 +426,17 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             &stats_name,
         )?;
         let feature_keys = write_u32_array("caniuse-feature-keys", "FEATURES_KEY", &feature_keys)?;
-        let feature_starts =
-            write_u32_array("caniuse-feature-starts", "FEATURES_START", &feature_starts)?;
-        let feature_ends = write_u32_array("caniuse-feature-ends", "FEATURES_END", &feature_ends)?;
+        let feature_widths = write_blob(
+            "caniuse-feature-widths.bin",
+            "FEATURES_WIDTH",
+            &feature_widths,
+        )?;
 
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-matching.rs"),
             quote! {
                 #feature_keys
-                #feature_starts
-                #feature_ends
+                #feature_widths
                 #flags
                 #stats_name
             }
@@ -688,14 +698,10 @@ process.stdout.write(JSON.stringify(timeline));
         .iter()
         .map(|(date, ..)| *date)
         .collect::<Vec<_>>();
-    let timeline_starts = timeline_entries
+    let timeline_widths = timeline_entries
         .iter()
-        .map(|(.., start, _)| *start)
-        .collect::<Vec<_>>();
-    let timeline_ends = timeline_entries
-        .iter()
-        .map(|(.., _, end)| *end)
-        .collect::<Vec<_>>();
+        .map(|(.., start, end)| u8::try_from(end - start))
+        .collect::<Result<Vec<_>, _>>()?;
     let version_browsers = write_blob(
         "baseline-version-browsers.bin",
         "BASELINE_VERSION_BROWSER",
@@ -731,15 +737,10 @@ process.stdout.write(JSON.stringify(timeline));
         "BASELINE_TIMELINE_DATE",
         &timeline_dates,
     )?;
-    let timeline_starts = write_u16_array(
-        "baseline-timeline-starts",
-        "BASELINE_TIMELINE_START",
-        &timeline_starts,
-    )?;
-    let timeline_ends = write_u16_array(
-        "baseline-timeline-ends",
-        "BASELINE_TIMELINE_END",
-        &timeline_ends,
+    let timeline_widths = write_blob(
+        "baseline-timeline-widths.bin",
+        "BASELINE_TIMELINE_WIDTH",
+        &timeline_widths,
     )?;
     fs::write(
         format!("{OUT_DIR}/baseline.rs"),
@@ -749,8 +750,7 @@ process.stdout.write(JSON.stringify(timeline));
             #version_table
             #version_versions
             #timeline_dates
-            #timeline_starts
-            #timeline_ends
+            #timeline_widths
         }
         .to_string(),
     )?;
@@ -831,19 +831,6 @@ fn write_u32_array(name: &str, static_name: &str, values: &[u32]) -> Result<Toke
             .collect(),
         values.iter().map(|value| quote! { #value }).collect(),
         quote! { u32 },
-    )
-}
-
-fn write_i64_array(name: &str, static_name: &str, values: &[i64]) -> Result<TokenStream> {
-    write_array(
-        name,
-        static_name,
-        values
-            .iter()
-            .flat_map(|value| value.to_le_bytes())
-            .collect(),
-        values.iter().map(|value| quote! { #value }).collect(),
-        quote! { i64 },
     )
 }
 

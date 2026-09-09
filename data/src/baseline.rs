@@ -36,8 +36,11 @@ pub fn min_versions_on(
 ) -> Option<impl Iterator<Item = (&'static str, &'static str)>> {
     let index = BASELINE_TIMELINE_DATE.partition_point(|date| *date <= cutoff_date);
     index.checked_sub(1).map(|index| {
-        let start = BASELINE_TIMELINE_START[index];
-        let end = BASELINE_TIMELINE_END[index];
+        let end = BASELINE_TIMELINE_WIDTH[..=index]
+            .iter()
+            .map(|width| u16::from(*width))
+            .sum::<u16>();
+        let start = end - u16::from(BASELINE_TIMELINE_WIDTH[index]);
         BASELINE_VERSION_BROWSER[usize::from(start)..usize::from(end)]
             .iter()
             .zip(&BASELINE_VERSION_VERSION[usize::from(start)..usize::from(end)])

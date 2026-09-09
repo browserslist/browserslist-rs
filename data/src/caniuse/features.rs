@@ -16,7 +16,7 @@ pub struct VersionList {
 }
 
 // ```rust
-// static FEATURES_KEY/START/END: parallel feature name and browser-list ranges
+// static FEATURES_KEY/WIDTH: parallel feature name and browser-list widths
 //
 // static FEATURES_STAT_FLAGS: &[u8]; // support flag
 // static FEATURES_STAT_BROWSERS: &[u8]; // browser name id
@@ -26,9 +26,13 @@ include!("../generated/caniuse-feature-matching.rs");
 static FEATURES: LazyLock<Vec<(PooledStr, Feature)>> = LazyLock::new(|| {
     FEATURES_KEY
         .iter()
-        .zip(&*FEATURES_START)
-        .zip(&*FEATURES_END)
-        .map(|((key, start), end)| (PooledStr(*key), Feature(*start, *end)))
+        .zip(&*FEATURES_WIDTH)
+        .scan(0, |start, (key, width)| {
+            let end = *start + u32::from(*width);
+            let feature = (PooledStr(*key), Feature(*start, end));
+            *start = end;
+            Some(feature)
+        })
         .collect()
 });
 
