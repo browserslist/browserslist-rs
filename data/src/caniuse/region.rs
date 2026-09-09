@@ -2,6 +2,8 @@ use super::PooledStr;
 use crate::{decode_browser_name, utils::BinMap};
 use std::sync::LazyLock;
 
+const USAGE_SCALE: f32 = 100_000.0;
+
 #[derive(Clone, Copy)]
 pub struct RegionData(u32, u32);
 
@@ -10,7 +12,7 @@ pub struct RegionData(u32, u32);
 //
 // static REGIONS_BROWSERS: &[u8]; // browser name id
 // static REGIONS_VERSIONS: &[u32]; // version string
-// static REGIONS_USAGES: &[u32]; // browser usage (f32)
+// static REGIONS_USAGES: &[u32]; // browser usage (fixed-point x100000)
 //
 // Rows within a region are stored in canonical browser/version order so the
 // generated columns can be compressed effectively. `RegionData::iter` sorts a
@@ -43,7 +45,7 @@ impl RegionData {
                 (
                     decode_browser_name(*browser),
                     PooledStr(*version).as_str(),
-                    f32::from_bits(*usage),
+                    *usage as f32 / USAGE_SCALE,
                 )
             })
             .collect::<Vec<_>>();

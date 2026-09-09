@@ -8,6 +8,7 @@ use crate::utils::{BinMap, PooledStr};
 
 pub const ANDROID_EVERGREEN_FIRST: f32 = 37.0;
 pub const OP_MOB_BLINK_FIRST: u32 = 14;
+const GLOBAL_USAGE_SCALE: f32 = 1_000.0;
 
 #[derive(Clone, Debug)]
 pub struct BrowserStat(u32, u32);
@@ -34,7 +35,7 @@ static VERSION_LIST: LazyLock<Vec<VersionDetail>> = LazyLock::new(|| {
                 version: PooledStr(*version),
                 release_date: *release_date,
                 released: *released != 0,
-                global_usage: *global_usage,
+                global_usage: f32::from(*global_usage) / GLOBAL_USAGE_SCALE,
             },
         )
         .collect()

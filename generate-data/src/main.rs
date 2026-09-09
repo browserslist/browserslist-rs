@@ -11,6 +11,8 @@ use std::{
 };
 
 const OUT_DIR: &str = "data/src/generated";
+const GLOBAL_USAGE_SCALE: u32 = 1_000;
+const REGION_USAGE_SCALE: u32 = 100_000;
 
 fn encode_browser_name(name: &str) -> u8 {
     match name {
@@ -226,7 +228,11 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
             for version in &agent.version_list {
                 let version_str_id = strpool.insert(&version.version);
-                let usage = version.global_usage;
+                let usage = u16::try_from(quantize_usage(
+                    version.global_usage,
+                    GLOBAL_USAGE_SCALE,
+                    true,
+                )?)?;
                 let date = version.release_date.unwrap_or_default();
                 let is_released = version.release_date.is_some();
 
@@ -255,7 +261,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             "VERSION_LIST_RELEASE_DATE",
             &release_dates,
         )?;
-        let global_usage = write_f32_array(
+        let global_usage = write_u16_array(
             "caniuse-global-usage",
             "VERSION_LIST_GLOBAL_USAGE",
             &global_usage,
@@ -427,10 +433,10 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         )?;
 
         let versions = usages.iter().map(|(_, v, _)| *v).collect::<Vec<_>>();
-        let region_usages_bits = usages
+        let region_usage_values = usages
             .iter()
-            .map(|(_, _, u)| u.to_bits())
-            .collect::<Vec<_>>();
+            .map(|(_, _, usage)| quantize_usage(*usage, REGION_USAGE_SCALE, false))
+            .collect::<Result<Vec<_>>>()?;
         let region_keys = region_usages
             .iter()
             .map(|(key, ..)| *key)
@@ -444,10 +450,10 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .map(|(.., _, end)| u32::try_from(*end))
             .collect::<Result<Vec<_>, _>>()?;
         let versions = write_u32_array("caniuse-region-versions", "REGIONS_VERSIONS", &versions)?;
-        let region_usages_bits = write_u32_array(
+        let region_usages = write_u32_array(
             "caniuse-region-usages",
             "REGIONS_USAGES",
-            &region_usages_bits,
+            &region_usage_values,
         )?;
         let region_keys = write_u32_array("caniuse-region-keys", "REGIONS_KEY", &region_keys)?;
         let region_starts =
@@ -462,7 +468,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 #region_ends
                 #browsers
                 #versions
-                #region_usages_bits
+                #region_usages
             }
             .to_string(),
         )?;
@@ -766,17 +772,18 @@ fn write_i64_array(name: &str, static_name: &str, values: &[i64]) -> Result<Toke
     )
 }
 
-fn write_f32_array(name: &str, static_name: &str, values: &[f32]) -> Result<TokenStream> {
-    write_array(
-        name,
-        static_name,
-        values
-            .iter()
-            .flat_map(|value| value.to_le_bytes())
-            .collect(),
-        values.iter().map(|value| quote! { #value }).collect(),
-        quote! { f32 },
-    )
+fn quantize_usage(usage: f32, scale: u32, preserve_nonzero: bool) -> Result<u32> {
+    anyhow::ensure!(usage.is_finite() && usage >= 0.0, "invalid usage: {usage}");
+
+    let quantized = (usage * scale as f32).round();
+    anyhow::ensure!(quantized <= u32::MAX as f32, "usage is too large: {usage}");
+    let quantized = quantized as u32;
+
+    Ok(if preserve_nonzero && usage > 0.0 && quantized == 0 {
+        1
+    } else {
+        quantized
+    })
 }
 
 fn run_node(script: &str) -> Result<String> {
