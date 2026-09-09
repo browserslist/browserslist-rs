@@ -1,4 +1,5 @@
 use anyhow::Result;
+use chrono::Datelike;
 use indexmap::IndexMap;
 use miniz_oxide::deflate::compress_to_vec;
 use proc_macro2::TokenStream;
@@ -217,7 +218,9 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
     // caniuse browsers
     {
         let mut version_ids = Vec::new();
-        let mut release_dates = Vec::new();
+        let mut release_years = Vec::new();
+        let mut release_months = Vec::new();
+        let mut release_days = Vec::new();
         let mut released = Vec::new();
         let mut global_usage = Vec::new();
         let mut stats = Vec::new();
@@ -233,11 +236,26 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                     GLOBAL_USAGE_SCALE,
                     true,
                 )?)?;
-                let date = version.release_date.unwrap_or_default();
+                let (year, month, day) = match version.release_date {
+                    Some(timestamp) => {
+                        let date =
+                            chrono::DateTime::from_timestamp(timestamp, 0).ok_or_else(|| {
+                                anyhow::anyhow!("invalid release timestamp: {timestamp}")
+                            })?;
+                        (
+                            u8::try_from(date.year() - 1970)?,
+                            u8::try_from(date.month())?,
+                            u8::try_from(date.day())?,
+                        )
+                    }
+                    None => (0, 0, 0),
+                };
                 let is_released = version.release_date.is_some();
 
                 version_ids.push(version_str_id);
-                release_dates.push(date);
+                release_years.push(year);
+                release_months.push(month);
+                release_days.push(day);
                 released.push(u8::from(is_released));
                 global_usage.push(usage);
             }
@@ -256,11 +274,18 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
         let version_ids =
             write_u32_array("caniuse-version-ids", "VERSION_LIST_VERSION", &version_ids)?;
-        let release_dates = write_i64_array(
-            "caniuse-release-dates",
-            "VERSION_LIST_RELEASE_DATE",
-            &release_dates,
-        )?;
+        let release_years = write_blob("VERSION_LIST_RELEASE_YEAR", &release_years)?;
+        let release_months = write_blob("VERSION_LIST_RELEASE_MONTH", &release_months)?;
+        let release_days = write_blob("VERSION_LIST_RELEASE_DAY", &release_days)?;
+        let release_dates = quote! {
+            #release_years #release_months #release_days
+            static VERSION_LIST_RELEASE_DATE: LazyLock<Vec<i64>> = LazyLock::new(||
+                crate::decode_release_dates(
+                    &*VERSION_LIST_RELEASE_YEAR,
+                    &*VERSION_LIST_RELEASE_MONTH,
+                    &*VERSION_LIST_RELEASE_DAY,
+                ));
+        };
         let global_usage = write_u16_array(
             "caniuse-global-usage",
             "VERSION_LIST_GLOBAL_USAGE",
