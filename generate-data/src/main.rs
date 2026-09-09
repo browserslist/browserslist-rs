@@ -402,7 +402,17 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 }
             }
             let end = usages.len();
-            usages[start..end].sort_by(|(_, _, a), (_, _, b)| b.total_cmp(a));
+            // Keep every region in the same browser/version order.  Besides making
+            // the browser and version columns more compressible, this is independent
+            // of the region's usage values.  `RegionData::iter` restores the public
+            // usage-descending order for callers.
+            usages[start..end].sort_by(
+                |(left_browser, left_version, _), (right_browser, right_version, _)| {
+                    left_browser
+                        .cmp(right_browser)
+                        .then_with(|| strpool.get(*left_version).cmp(strpool.get(*right_version)))
+                },
+            );
 
             let region_str_id = strpool.insert(region_name);
             region_usages.push((region_str_id, start, end));

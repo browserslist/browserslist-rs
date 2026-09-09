@@ -11,6 +11,10 @@ pub struct RegionData(u32, u32);
 // static REGIONS_BROWSERS: &[u8]; // browser name id
 // static REGIONS_VERSIONS: &[u32]; // version string
 // static REGIONS_USAGES: &[u32]; // browser usage (f32)
+//
+// Rows within a region are stored in canonical browser/version order so the
+// generated columns can be compressed effectively. `RegionData::iter` sorts a
+// query's rows by usage to retain caniuse's public iteration order.
 // ```
 include!("../generated/caniuse-region-matching.rs");
 
@@ -31,7 +35,7 @@ impl RegionData {
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, &'static str, f32)> {
         let range = (self.0 as usize)..(self.1 as usize);
 
-        REGIONS_BROWSERS[range.clone()]
+        let mut rows = REGIONS_BROWSERS[range.clone()]
             .iter()
             .zip(&REGIONS_VERSIONS[range.clone()])
             .zip(&REGIONS_USAGES[range])
@@ -42,5 +46,8 @@ impl RegionData {
                     f32::from_bits(*usage),
                 )
             })
+            .collect::<Vec<_>>();
+        rows.sort_by(|(.., left_usage), (.., right_usage)| right_usage.total_cmp(left_usage));
+        rows.into_iter()
     }
 }
