@@ -32,7 +32,7 @@ static VERSION_LIST: LazyLock<Vec<VersionDetail>> = LazyLock::new(|| {
         .zip(&*VERSION_LIST_GLOBAL_USAGE)
         .map(
             |(((version, release_date), released), global_usage)| VersionDetail {
-                version: PooledStr(*version),
+                version: PooledStr(CANIUSE_VERSION_TABLE[usize::from(*version)]),
                 release_date: *release_date,
                 released: *released != 0,
                 global_usage: f32::from(*global_usage) / GLOBAL_USAGE_SCALE,

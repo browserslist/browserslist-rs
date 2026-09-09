@@ -41,6 +41,11 @@ pub fn min_versions_on(
         BASELINE_VERSION_BROWSER[usize::from(start)..usize::from(end)]
             .iter()
             .zip(&BASELINE_VERSION_VERSION[usize::from(start)..usize::from(end)])
-            .map(|(id, version)| (decode_browser_name(*id), PooledStr(*version).as_str()))
+            .map(|(id, version)| {
+                (
+                    decode_browser_name(*id),
+                    PooledStr(BASELINE_VERSION_TABLE[usize::from(*version)]).as_str(),
+                )
+            })
     })
 }

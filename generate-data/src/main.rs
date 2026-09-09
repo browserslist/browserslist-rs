@@ -214,6 +214,7 @@ fn build_node_release_schedule() -> Result<()> {
 fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
     let data = parse_caniuse_global()?;
     let region_data = parse_caniuse_regions()?;
+    let caniuse_version_indexes: HashMap<u32, u16>;
 
     // caniuse browsers
     {
@@ -272,8 +273,29 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .collect::<Vec<_>>();
         let stat_ends = stats.iter().map(|(.., _, end)| *end).collect::<Vec<_>>();
 
+        let caniuse_version_table = version_ids
+            .iter()
+            .copied()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        caniuse_version_indexes = caniuse_version_table
+            .iter()
+            .enumerate()
+            .map(|(index, &version)| Ok((version, u16::try_from(index)?)))
+            .collect::<Result<_>>()?;
+        let version_ids = version_ids
+            .iter()
+            .map(|version| caniuse_version_indexes[version])
+            .collect::<Vec<_>>();
+
+        let version_table = write_u32_array(
+            "caniuse-version-table",
+            "CANIUSE_VERSION_TABLE",
+            &caniuse_version_table,
+        )?;
         let version_ids =
-            write_u32_array("caniuse-version-ids", "VERSION_LIST_VERSION", &version_ids)?;
+            write_u16_array("caniuse-version-ids", "VERSION_LIST_VERSION", &version_ids)?;
         let release_years = write_blob("VERSION_LIST_RELEASE_YEAR", &release_years)?;
         let release_months = write_blob("VERSION_LIST_RELEASE_MONTH", &release_months)?;
         let release_days = write_blob("VERSION_LIST_RELEASE_DAY", &release_days)?;
@@ -457,7 +479,14 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             &usages.iter().map(|(b, ..)| *b).collect::<Vec<_>>(),
         )?;
 
-        let versions = usages.iter().map(|(_, v, _)| *v).collect::<Vec<_>>();
+        let versions = usages
+            .iter()
+            .map(|(_, version, _)| {
+                *caniuse_version_indexes
+                    .get(version)
+                    .expect("region refers to unknown caniuse version")
+            })
+            .collect::<Vec<_>>();
         let region_usage_values = usages
             .iter()
             .map(|(_, _, usage)| quantize_usage(*usage, REGION_USAGE_SCALE, false))
@@ -474,7 +503,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .iter()
             .map(|(.., _, end)| u32::try_from(*end))
             .collect::<Result<Vec<_>, _>>()?;
-        let versions = write_u32_array("caniuse-region-versions", "REGIONS_VERSIONS", &versions)?;
+        let versions = write_u16_array("caniuse-region-versions", "REGIONS_VERSIONS", &versions)?;
         let region_usages = write_u32_array(
             "caniuse-region-usages",
             "REGIONS_USAGES",
@@ -672,8 +701,28 @@ process.stdout.write(JSON.stringify(timeline));
         "BASELINE_VERSION_BROWSER",
         &version_browsers,
     )?;
-    let version_versions = write_u32_array(
-        "baseline-version-versions",
+    let baseline_version_table = version_versions
+        .iter()
+        .copied()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let baseline_version_indexes = baseline_version_table
+        .iter()
+        .enumerate()
+        .map(|(index, &version)| Ok((version, u8::try_from(index)?)))
+        .collect::<Result<HashMap<_, _>>>()?;
+    let version_versions = version_versions
+        .iter()
+        .map(|version| baseline_version_indexes[version])
+        .collect::<Vec<_>>();
+    let version_table = write_u32_array(
+        "baseline-version-table",
+        "BASELINE_VERSION_TABLE",
+        &baseline_version_table,
+    )?;
+    let version_versions = write_blob(
+        "baseline-version-versions.bin",
         "BASELINE_VERSION_VERSION",
         &version_versions,
     )?;
@@ -697,6 +746,7 @@ process.stdout.write(JSON.stringify(timeline));
         quote! {
             const BASELINE_BROWSERS: &[u8] = &[#(#browser_tokens),*];
             #version_browsers
+            #version_table
             #version_versions
             #timeline_dates
             #timeline_starts

@@ -44,7 +44,7 @@ impl RegionData {
             .map(|((browser, version), usage)| {
                 (
                     decode_browser_name(*browser),
-                    PooledStr(*version).as_str(),
+                    PooledStr(super::CANIUSE_VERSION_TABLE[usize::from(*version)]).as_str(),
                     *usage as f32 / USAGE_SCALE,
                 )
             })
