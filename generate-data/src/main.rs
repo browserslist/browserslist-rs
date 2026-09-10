@@ -289,28 +289,11 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .map(|version| caniuse_version_indexes[version])
             .collect::<Vec<_>>();
 
-        let version_table = write_u32_array(
-            "caniuse-version-table",
-            "CANIUSE_VERSION_TABLE",
-            &caniuse_version_table,
-        )?;
-        let version_ids =
-            write_u16_array("caniuse-version-ids", "VERSION_LIST_VERSION", &version_ids)?;
-        let release_years = write_blob(
-            "caniuse-release-years.bin",
-            "VERSION_LIST_RELEASE_YEAR",
-            &release_years,
-        )?;
-        let release_months = write_blob(
-            "caniuse-release-months.bin",
-            "VERSION_LIST_RELEASE_MONTH",
-            &release_months,
-        )?;
-        let release_days = write_blob(
-            "caniuse-release-days.bin",
-            "VERSION_LIST_RELEASE_DAY",
-            &release_days,
-        )?;
+        let version_table = write_u32_array("CANIUSE_VERSION_TABLE", &caniuse_version_table)?;
+        let version_ids = write_u16_array("VERSION_LIST_VERSION", &version_ids)?;
+        let release_years = write_blob("VERSION_LIST_RELEASE_YEAR", &release_years)?;
+        let release_months = write_blob("VERSION_LIST_RELEASE_MONTH", &release_months)?;
+        let release_days = write_blob("VERSION_LIST_RELEASE_DAY", &release_days)?;
         let release_dates = quote! {
             #release_years #release_months #release_days
             static VERSION_LIST_RELEASE_DATE: LazyLock<Vec<i64>> = LazyLock::new(||
@@ -320,27 +303,11 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                     &VERSION_LIST_RELEASE_DAY,
                 ));
         };
-        let global_usage = write_u16_array(
-            "caniuse-global-usage",
-            "VERSION_LIST_GLOBAL_USAGE",
-            &global_usage,
-        )?;
-        let stat_keys = write_u32_array(
-            "caniuse-browser-stat-keys",
-            "BROWSERS_STATS_KEY",
-            &stat_keys,
-        )?;
-        let stat_starts = write_u32_array(
-            "caniuse-browser-stat-starts",
-            "BROWSERS_STATS_START",
-            &stat_starts,
-        )?;
-        let stat_ends = write_u32_array(
-            "caniuse-browser-stat-ends",
-            "BROWSERS_STATS_END",
-            &stat_ends,
-        )?;
-        let released = write_blob("caniuse-released.bin", "VERSION_LIST_RELEASED", &released)?;
+        let global_usage = write_u16_array("VERSION_LIST_GLOBAL_USAGE", &global_usage)?;
+        let stat_keys = write_u32_array("BROWSERS_STATS_KEY", &stat_keys)?;
+        let stat_starts = write_u32_array("BROWSERS_STATS_START", &stat_starts)?;
+        let stat_ends = write_u32_array("BROWSERS_STATS_END", &stat_ends)?;
+        let released = write_blob("VERSION_LIST_RELEASED", &released)?;
 
         fs::write(
             format!("{OUT_DIR}/caniuse-browsers.rs"),
@@ -419,18 +386,10 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .map(|(.., start, end)| u8::try_from(end - start))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let flags = write_blob("caniuse-feature-flags.bin", "FEATURES_STAT_FLAGS", &flags)?;
-        let stats_name = write_blob(
-            "caniuse-feature-browsers.bin",
-            "FEATURES_STAT_BROWSERS",
-            &stats_name,
-        )?;
-        let feature_keys = write_u32_array("caniuse-feature-keys", "FEATURES_KEY", &feature_keys)?;
-        let feature_widths = write_blob(
-            "caniuse-feature-widths.bin",
-            "FEATURES_WIDTH",
-            &feature_widths,
-        )?;
+        let flags = write_blob("FEATURES_STAT_FLAGS", &flags)?;
+        let stats_name = write_blob("FEATURES_STAT_BROWSERS", &stats_name)?;
+        let feature_keys = write_u32_array("FEATURES_KEY", &feature_keys)?;
+        let feature_widths = write_blob("FEATURES_WIDTH", &feature_widths)?;
 
         fs::write(
             format!("{OUT_DIR}/caniuse-feature-matching.rs"),
@@ -484,7 +443,6 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         region_usages.sort_by_key(|(region, ..)| strpool.get(*region));
 
         let browsers = write_blob(
-            "caniuse-region-browsers.bin",
             "REGIONS_BROWSERS",
             &usages.iter().map(|(b, ..)| *b).collect::<Vec<_>>(),
         )?;
@@ -513,16 +471,11 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .iter()
             .map(|(.., _, end)| u32::try_from(*end))
             .collect::<Result<Vec<_>, _>>()?;
-        let versions = write_u16_array("caniuse-region-versions", "REGIONS_VERSIONS", &versions)?;
-        let region_usages = write_u32_array(
-            "caniuse-region-usages",
-            "REGIONS_USAGES",
-            &region_usage_values,
-        )?;
-        let region_keys = write_u32_array("caniuse-region-keys", "REGIONS_KEY", &region_keys)?;
-        let region_starts =
-            write_u32_array("caniuse-region-starts", "REGIONS_START", &region_starts)?;
-        let region_ends = write_u32_array("caniuse-region-ends", "REGIONS_END", &region_ends)?;
+        let versions = write_u16_array("REGIONS_VERSIONS", &versions)?;
+        let region_usages = write_u32_array("REGIONS_USAGES", &region_usage_values)?;
+        let region_keys = write_u32_array("REGIONS_KEY", &region_keys)?;
+        let region_starts = write_u32_array("REGIONS_START", &region_starts)?;
+        let region_ends = write_u32_array("REGIONS_END", &region_ends)?;
 
         fs::write(
             format!("{OUT_DIR}/caniuse-region-matching.rs"),
@@ -702,11 +655,7 @@ process.stdout.write(JSON.stringify(timeline));
         .iter()
         .map(|(.., start, end)| u8::try_from(end - start))
         .collect::<Result<Vec<_>, _>>()?;
-    let version_browsers = write_blob(
-        "baseline-version-browsers.bin",
-        "BASELINE_VERSION_BROWSER",
-        &version_browsers,
-    )?;
+    let version_browsers = write_blob("BASELINE_VERSION_BROWSER", &version_browsers)?;
     let baseline_version_table = version_versions
         .iter()
         .copied()
@@ -722,26 +671,10 @@ process.stdout.write(JSON.stringify(timeline));
         .iter()
         .map(|version| baseline_version_indexes[version])
         .collect::<Vec<_>>();
-    let version_table = write_u32_array(
-        "baseline-version-table",
-        "BASELINE_VERSION_TABLE",
-        &baseline_version_table,
-    )?;
-    let version_versions = write_blob(
-        "baseline-version-versions.bin",
-        "BASELINE_VERSION_VERSION",
-        &version_versions,
-    )?;
-    let timeline_dates = write_u32_array(
-        "baseline-timeline-dates",
-        "BASELINE_TIMELINE_DATE",
-        &timeline_dates,
-    )?;
-    let timeline_widths = write_blob(
-        "baseline-timeline-widths.bin",
-        "BASELINE_TIMELINE_WIDTH",
-        &timeline_widths,
-    )?;
+    let version_table = write_u32_array("BASELINE_VERSION_TABLE", &baseline_version_table)?;
+    let version_versions = write_blob("BASELINE_VERSION_VERSION", &version_versions)?;
+    let timeline_dates = write_u32_array("BASELINE_TIMELINE_DATE", &timeline_dates)?;
+    let timeline_widths = write_blob("BASELINE_TIMELINE_WIDTH", &timeline_widths)?;
     fs::write(
         format!("{OUT_DIR}/baseline.rs"),
         quote! {
@@ -758,12 +691,13 @@ process.stdout.write(JSON.stringify(timeline));
     Ok(())
 }
 
-/// Writes a byte array twice: verbatim as `<name>`, and as a raw deflate stream in
-/// `<name>.deflate`.
+/// Writes a byte array twice under a name derived from `<static_name>`: verbatim as
+/// `<static_name>.bin`, and as a raw deflate stream in `<static_name>.bin.deflate`.
 ///
 /// The returned expression selects one input at compile time; both representations
 /// are deliberately published so consumers can choose with `deflate`.
-fn write_blob(name: &str, static_name: &str, bytes: &[u8]) -> Result<TokenStream> {
+fn write_blob(static_name: &str, bytes: &[u8]) -> Result<TokenStream> {
+    let name = format!("{static_name}.bin");
     fs::write(format!("{OUT_DIR}/{name}"), bytes)?;
 
     let deflated = compress_to_vec(bytes, 10);
@@ -783,14 +717,13 @@ fn write_blob(name: &str, static_name: &str, bytes: &[u8]) -> Result<TokenStream
 /// Writes a numeric column as a `LazyLock<Vec<_>>`. The closure either copies the
 /// literal values or inflates and decodes their little-endian byte representation.
 fn write_array(
-    name: &str,
     static_name: &str,
     bytes: Vec<u8>,
     values: Vec<TokenStream>,
     value_type: TokenStream,
 ) -> Result<TokenStream> {
     let deflated = compress_to_vec(&bytes, 10);
-    let deflate_name = format!("{name}.deflate");
+    let deflate_name = format!("{static_name}.bin.deflate");
     let static_name = format_ident!("{static_name}");
     fs::write(format!("{OUT_DIR}/{deflate_name}"), deflated)?;
     Ok(quote! {
@@ -808,9 +741,8 @@ fn write_array(
     })
 }
 
-fn write_u16_array(name: &str, static_name: &str, values: &[u16]) -> Result<TokenStream> {
+fn write_u16_array(static_name: &str, values: &[u16]) -> Result<TokenStream> {
     write_array(
-        name,
         static_name,
         values
             .iter()
@@ -821,9 +753,8 @@ fn write_u16_array(name: &str, static_name: &str, values: &[u16]) -> Result<Toke
     )
 }
 
-fn write_u32_array(name: &str, static_name: &str, values: &[u32]) -> Result<TokenStream> {
+fn write_u32_array(static_name: &str, values: &[u32]) -> Result<TokenStream> {
     write_array(
-        name,
         static_name,
         values
             .iter()
