@@ -424,9 +424,9 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 }
             }
             let end = usages.len();
-            // Keep every region in the same browser/version order.  Besides making
+            // Keep every region in the same browser/version order. Besides making
             // the browser and version columns more compressible, this is independent
-            // of the region's usage values.  `RegionData::iter` restores the public
+            // of the region's usage values. `RegionData::iter` restores the public
             // usage-descending order for callers.
             usages[start..end].sort_by(
                 |(left_browser, left_version, _), (right_browser, right_version, _)| {
