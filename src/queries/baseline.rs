@@ -28,9 +28,12 @@ pub(super) fn baseline(
     };
     let cutoff = date_key(cutoff);
 
-    // KaiOS is only included when downstream browsers are requested as well.
+    // KaiOS is a downstream browser, but it can be requested independently of
+    // the other downstream browsers.
     let is_included = |browser: &str| {
-        baseline::is_core_browser(browser) || (downstream && (kaios || browser != "kaios"))
+        baseline::is_core_browser(browser)
+            || (downstream && browser != "kaios")
+            || (kaios && browser == "kaios")
     };
 
     let mut distribs = Vec::new();
@@ -137,6 +140,9 @@ mod tests {
     #[test_case("baseline widely available with downstream"; "widely with downstream")]
     #[test_case("baseline newly available with downstream"; "newly with downstream")]
     #[test_case("baseline 2020 including kaios"; "kaios without downstream")]
+    #[test_case("baseline widely available including kaios"; "widely with kaios")]
+    #[test_case("baseline newly available including kaios"; "newly with kaios")]
+    #[test_case("baseline widely available on 2024-06-15 including kaios"; "date with kaios")]
     #[test_case("baseline 2020 with downstream including kaios"; "year with downstream and kaios")]
     #[test_case(
         "baseline widely available on 2024-06-15 with downstream including kaios";
