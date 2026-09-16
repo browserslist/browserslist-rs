@@ -1,6 +1,6 @@
 [package]
 name = "browserslist-rs"
-version = "0.20.0"
+version = "0.21.0"
 authors = ["Pig Fang <g-plane@hotmail.com>"]
 edition = "2024"
 description = "Rust-ported Browserslist."
@@ -21,7 +21,7 @@ wasm_bindgen = ["chrono/wasmbind", "js-sys"]
 
 [dependencies]
 ahash = { workspace = true, features = ["serde"] }
-browserslist-data = { version = "0.2.0", path = "data" }
+browserslist-data = { version = "0.3", path = "data" }
 chrono = { workspace = true, features = [
     "std",
     "clock",
