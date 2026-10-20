@@ -38,6 +38,16 @@ To get more help, you can run:
 cargo run --example inspect -- -h
 ```
 
+## Cargo features
+
+- `deflate` (default): compressed embedded data.
+- `local` (default): compute "today" (for `baseline` and
+  `maintained node versions`) in the local time zone.
+  Disabling it uses UTC instead and drops chrono's `clock` feature. Near
+  midnight "today" may differ by one day.
+  Opt out with `default-features = false, features = ["deflate"]`.
+- `wasm_bindgen`: use JS `Date` for the current time on `wasm32`.
+
 ## Limitations
 
 The features below aren't supported currently:

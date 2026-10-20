@@ -1,10 +1,8 @@
 use super::{Distrib, QueryResult};
 use browserslist_data::node;
-use chrono::Local;
 
 pub(super) fn maintained_node() -> QueryResult {
-    let now = Local::now().naive_local();
-    let versions = node::release_schedule(now.date())
+    let versions = node::release_schedule(super::today())
         .filter_map(|version| {
             node::versions()
                 .iter()

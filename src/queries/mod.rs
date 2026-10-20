@@ -105,6 +105,16 @@ impl Display for Distrib {
 
 pub type QueryResult = Result<Vec<Distrib>, Error>;
 
+#[cfg(feature = "local")]
+fn today() -> chrono::NaiveDate {
+    chrono::Local::now().date_naive()
+}
+
+#[cfg(not(feature = "local"))]
+fn today() -> chrono::NaiveDate {
+    chrono::Utc::now().date_naive()
+}
+
 pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
     match atom {
         QueryAtom::Last {

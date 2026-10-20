@@ -15,17 +15,19 @@ name = "browserslist"
 crate-type = ["rlib"]
 
 [features]
-default = ["deflate"]
+default = ["deflate", "local"]
 deflate = ["browserslist-data/deflate"]
 wasm_bindgen = ["chrono/wasmbind", "js-sys"]
+# Use the local time zone for "today" (baseline and maintained node queries).
+# Without it, UTC is used and chrono's `clock` (iana-time-zone dependency) is dropped.
+local = ["chrono/clock"]
 
 [dependencies]
 ahash = { workspace = true, features = ["serde"] }
 browserslist-data = { version = "0.3", path = "data" }
 chrono = { workspace = true, features = [
     "std",
-    "clock",
-    "oldtime",
+    "now",
 ] } # disable wasmbind by default
 either = "1.17"
 itertools = "0.15"
