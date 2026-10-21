@@ -109,7 +109,6 @@ pub type QueryResult = Result<Vec<Distrib>, Error>;
 fn today() -> chrono::NaiveDate {
     chrono::Local::now().date_naive()
 }
-
 #[cfg(not(feature = "local"))]
 fn today() -> chrono::NaiveDate {
     chrono::Utc::now().date_naive()
