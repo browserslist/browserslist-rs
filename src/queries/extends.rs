@@ -102,7 +102,7 @@ mod tests {
     #[test_case("@example.com/browserslist-config-test", json!(["ie 11"]), "extends @example.com/browserslist-config-test"; "scoped package with dot in name")]
     #[test_case("@scope/browserslist-config-test-file/ie", json!(["ie 11"]), "extends @scope/browserslist-config-test-file/ie"; "file in scoped package")]
     #[test_case("@scope/browserslist-config/ie", json!(["ie 11"]), "extends @scope/browserslist-config/ie"; "file in scoped package with standard name")]
-    #[test_case("@scope/browserslist-config", json!(["ie 11"]), "extends @scope/browserslist-config"; "file-less scoped package")]
+    #[test_case("@scope-fileless/browserslist-config", json!(["ie 11"]), "extends @scope-fileless/browserslist-config"; "file-less scoped package")]
     #[test_case("browserslist-config-rel", json!(["ie 9-10"]), "extends browserslist-config-rel and not ie 9"; "with override")]
     #[test_case("browserslist-config-with-env-a", json!({ "someEnv": ["ie 10"] }), "extends browserslist-config-with-env-a"; "no default env")]
     #[test_case("browserslist-config-with-defaults", json!({ "defaults": ["ie 10"] }), "extends browserslist-config-with-defaults"; "default env")]
@@ -153,7 +153,7 @@ mod tests {
             },
             Some(&BASE_TEST_DIR),
         );
-        clean("pkg");
+        clean("browserslist-config-with-env-b");
     }
 
     #[test_case("browserslist-config-wrong", json!(null), "extends browserslist-config-wrong"; "empty export")]
