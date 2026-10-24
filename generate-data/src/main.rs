@@ -68,6 +68,7 @@ fn main() -> Result<()> {
     build_electron_to_chromium()?;
     build_node_versions()?;
     build_node_release_schedule()?;
+    build_firefox_esr()?;
 
     let mut strpool = StrPool::default();
     build_caniuse(&mut strpool)?;
@@ -137,6 +138,22 @@ fn build_node_versions() -> Result<()> {
         path,
         quote! {
             static NODE_VERSIONS: &[&str] = &[#(#versions),*];
+        }
+        .to_string(),
+    )?;
+
+    Ok(())
+}
+
+fn build_firefox_esr() -> Result<()> {
+    let version = run_node(
+        "process.stdout.write(require('./node_modules/browserslist').versionAliases.firefox.esr)",
+    )?;
+    fs::write(
+        format!("{OUT_DIR}/firefox-esr.rs"),
+        quote! {
+            /// Firefox ESR version targeted by the `firefox esr` query.
+            pub const FIREFOX_ESR_VERSION: &str = #version;
         }
         .to_string(),
     )?;

@@ -4,6 +4,8 @@ pub mod electron;
 pub mod node;
 mod utils;
 
+include!("generated/firefox-esr.rs");
+
 #[cfg(feature = "deflate")]
 pub(crate) fn inflate(blob: &[u8]) -> Vec<u8> {
     miniz_oxide::inflate::decompress_to_vec(blob).expect("failed to inflate bundled data")
