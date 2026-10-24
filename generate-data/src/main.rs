@@ -12,7 +12,6 @@ use std::{
 };
 
 const OUT_DIR: &str = "data/src/generated";
-const GLOBAL_USAGE_SCALE: u32 = 1_000;
 const REGION_USAGE_SCALE: u32 = 100_000;
 
 fn encode_browser_name(name: &str) -> u8 {
@@ -232,11 +231,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
 
             for version in &agent.version_list {
                 let version_str_id = strpool.insert(&version.version);
-                let usage = u16::try_from(quantize_usage(
-                    version.global_usage,
-                    GLOBAL_USAGE_SCALE,
-                    true,
-                )?)?;
+                let usage = version.global_usage.to_bits();
                 let (year, month, day) = match version.release_date {
                     Some(timestamp) => {
                         let date =
@@ -303,7 +298,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                     &VERSION_LIST_RELEASE_DAY,
                 ));
         };
-        let global_usage = write_u16_array("VERSION_LIST_GLOBAL_USAGE", &global_usage)?;
+        let global_usage = write_u32_array("VERSION_LIST_GLOBAL_USAGE", &global_usage)?;
         let stat_keys = write_u32_array("BROWSERS_STATS_KEY", &stat_keys)?;
         let stat_starts = write_u32_array("BROWSERS_STATS_START", &stat_starts)?;
         let stat_ends = write_u32_array("BROWSERS_STATS_END", &stat_ends)?;
@@ -457,7 +452,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .collect::<Vec<_>>();
         let region_usage_values = usages
             .iter()
-            .map(|(_, _, usage)| quantize_usage(*usage, REGION_USAGE_SCALE, false))
+            .map(|(_, _, usage)| quantize_usage(*usage, REGION_USAGE_SCALE))
             .collect::<Result<Vec<_>>>()?;
         let region_keys = region_usages
             .iter()
@@ -765,18 +760,12 @@ fn write_u32_array(static_name: &str, values: &[u32]) -> Result<TokenStream> {
     )
 }
 
-fn quantize_usage(usage: f32, scale: u32, preserve_nonzero: bool) -> Result<u32> {
+fn quantize_usage(usage: f32, scale: u32) -> Result<u32> {
     anyhow::ensure!(usage.is_finite() && usage >= 0.0, "invalid usage: {usage}");
 
     let quantized = (usage * scale as f32).round();
     anyhow::ensure!(quantized <= u32::MAX as f32, "usage is too large: {usage}");
-    let quantized = quantized as u32;
-
-    Ok(if preserve_nonzero && usage > 0.0 && quantized == 0 {
-        1
-    } else {
-        quantized
-    })
+    Ok(quantized as u32)
 }
 
 fn run_node(script: &str) -> Result<String> {
