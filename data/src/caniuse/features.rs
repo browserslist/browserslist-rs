@@ -1,24 +1,25 @@
 use super::PooledStr;
 use crate::{decode_browser_name, utils::BinMap};
-use ahash::AHashMap;
-use std::sync::LazyLock;
+use std::{iter, ops::Range, sync::LazyLock};
 
 #[derive(Clone, Copy)]
 pub struct Feature(u32, u32);
 
 #[derive(Clone, Copy)]
 pub struct VersionList {
-    // Where each of the browser's versions sits in its version list, which is also where
-    // that version's flag sits within the browser's run of flags.
-    indexes: &'static AHashMap<&'static str, u32>,
-    // Index of this browser's first flag within FEATURES_STAT_FLAGS.
-    base: u32,
+    browser: u8,
+    initial_flag: u8,
+    last_flag: u8,
+    positions: &'static [u16],
+    flags: &'static [u8],
 }
 
 // ```rust
 // static FEATURES_KEY/WIDTH: parallel feature name and browser-list widths
 //
-// static FEATURES_STAT_FLAGS: &[u8]; // support flag
+// static FEATURES_STAT_TRANSITION_HEADERS: &[u8]; // transition count << 4 | initial flag << 2 | last flag
+// static FEATURES_STAT_TRANSITION_POSITIONS: &[u8]; // version position of each transition
+// static FEATURES_STAT_FLAGS: &[u8]; // support flag from each transition on, except the last
 // static FEATURES_STAT_BROWSERS: &[u8]; // browser name id
 // ```
 include!("../generated/caniuse-feature-matching.rs");
@@ -36,16 +37,15 @@ static FEATURES: LazyLock<Vec<(PooledStr, Feature)>> = LazyLock::new(|| {
         .collect()
 });
 
-// caniuse states every feature for every version of a browser (checked by
-// generate-data), so a browser's flags line up with its version list position by
-// position, and each browser's run of flags is as long as its version list.
-static FEATURES_STAT_FLAG_START: LazyLock<Vec<u32>> = LazyLock::new(|| {
-    let mut start = 0;
-    FEATURES_STAT_BROWSERS
+static FEATURES_STAT_FLAG_START: LazyLock<Vec<(u32, u32)>> = LazyLock::new(|| {
+    let (mut positions, mut flags) = (0, 0);
+    FEATURES_STAT_TRANSITION_HEADERS
         .iter()
-        .map(|id| {
-            let base = start;
-            start += browser_of(*id).version_list().len() as u32;
+        .map(|header| {
+            let base = (positions, flags);
+            let count = u32::from(header >> 4);
+            positions += count;
+            flags += count.saturating_sub(1);
             base
         })
         .collect()
@@ -55,15 +55,17 @@ pub fn get_feature_stat(name: &str) -> Option<Feature> {
     BinMap(&FEATURES).get(name).copied()
 }
 
-fn browser_of(id: u8) -> &'static super::BrowserStat {
-    super::browser_stat(decode_browser_name(id)).expect("feature refers to unknown browser")
-}
-
 fn version_list_at(index: usize) -> VersionList {
-    let name = decode_browser_name(FEATURES_STAT_BROWSERS[index]);
+    let header = FEATURES_STAT_TRANSITION_HEADERS[index];
+    let count = usize::from(header >> 4);
+    let (positions, flags) = FEATURES_STAT_FLAG_START[index];
+    let (positions, flags) = (positions as usize, flags as usize);
     VersionList {
-        indexes: super::version_indexes(name).expect("feature refers to unknown browser"),
-        base: FEATURES_STAT_FLAG_START[index],
+        browser: FEATURES_STAT_BROWSERS[index],
+        initial_flag: (header >> 2) & 3,
+        last_flag: header & 3,
+        positions: &FEATURES_STAT_TRANSITION_POSITIONS[positions..positions + count],
+        flags: &FEATURES_STAT_FLAGS[flags..flags + count.saturating_sub(1)],
     }
 }
 
@@ -87,7 +89,36 @@ impl Feature {
 
 impl VersionList {
     pub fn get(&self, version: &str) -> Option<u8> {
-        let position = *self.indexes.get(version)?;
-        Some(FEATURES_STAT_FLAGS[self.base as usize + position as usize])
+        let position = super::version_index(self.browser, version)?;
+        Some(self.flag_at(position as usize))
+    }
+
+    /// Support flag of the version at `position` in this browser's version list.
+    pub fn flag_at(&self, position: usize) -> u8 {
+        let offset = self
+            .positions
+            .partition_point(|&transition| usize::from(transition) <= position);
+        if offset == 0 {
+            self.initial_flag
+        } else if offset == self.positions.len() {
+            self.last_flag
+        } else {
+            self.flags[offset - 1]
+        }
+    }
+
+    /// Runs of adjacent positions in this browser's version list that share one support
+    /// flag, in version list order, covering the first `version_count` positions.
+    pub fn spans(&self, version_count: usize) -> impl Iterator<Item = (Range<usize>, u8)> + use<> {
+        let positions = self.positions.iter().map(|&position| usize::from(position));
+        let starts = iter::once(0).chain(positions.clone());
+        let ends = positions.chain(iter::once(version_count));
+        let flags = iter::once(self.initial_flag)
+            .chain(self.flags.iter().copied())
+            .chain((!self.positions.is_empty()).then_some(self.last_flag));
+        starts
+            .zip(ends)
+            .zip(flags)
+            .map(|((start, end), flag)| (start..end, flag))
     }
 }
