@@ -70,22 +70,22 @@ static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(&'static str, &'static str, f32)>> =
     });
 
 /// Position of every version within its own browser's version list. The feature tables
-/// store one flag per version in that same order, so a position is also a flag offset.
-static VERSION_INDEXES: LazyLock<AHashMap<&'static str, AHashMap<&'static str, u32>>> =
-    LazyLock::new(|| {
-        CANIUSE_BROWSERS
-            .iter()
-            .map(|(name, stat)| {
-                let indexes = stat
-                    .version_list()
-                    .iter()
-                    .enumerate()
-                    .map(|(index, version)| (version.version(), index as u32))
-                    .collect();
-                (name.as_str(), indexes)
-            })
-            .collect()
-    });
+/// record each support transition by its position in that same order.
+static VERSION_INDEXES: LazyLock<Vec<AHashMap<&'static str, u32>>> = LazyLock::new(|| {
+    crate::BROWSER_NAMES
+        .iter()
+        .map(|name| {
+            CANIUSE_BROWSERS
+                .get(*name)
+                .expect("browser id refers to unknown browser")
+                .version_list()
+                .iter()
+                .enumerate()
+                .map(|(index, version)| (version.version(), index as u32))
+                .collect()
+        })
+        .collect()
+});
 
 static BROWSER_VERSION_ALIASES: LazyLock<
     AHashMap<&'static str, AHashMap<&'static str, &'static str>>,
@@ -277,14 +277,12 @@ pub fn normalize_version<'a>(
     }
 }
 
-/// Looks up one browser by name, for the feature tables to resolve versions through.
-pub(crate) fn browser_stat(name: &str) -> Option<&'static BrowserStat> {
-    CANIUSE_BROWSERS.get(name)
-}
-
-/// One browser's slice of [`VERSION_INDEXES`], for the feature tables to look versions up in.
-pub(crate) fn version_indexes(name: &str) -> Option<&'static AHashMap<&'static str, u32>> {
-    VERSION_INDEXES.get(name)
+/// Position of `version` within the version list of the browser with id `browser`, for the
+/// feature tables to look versions up in.
+pub(crate) fn version_index(browser: u8, version: &str) -> Option<u32> {
+    VERSION_INDEXES[crate::browser_slot(browser)]
+        .get(version)
+        .copied()
 }
 
 impl BrowserStat {

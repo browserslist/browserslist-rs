@@ -347,6 +347,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
         let mut features = Vec::new();
         let mut stats = Vec::new();
         let mut flags: Vec<u8> = Vec::new();
+        let mut transition_headers = Vec::new();
+        let mut transition_positions = Vec::new();
 
         for (name, feature) in &data.data {
             let start = stats.len();
@@ -357,8 +359,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                     anyhow::anyhow!("feature `{name}`: unknown browser `{browser}`")
                 })?;
                 // caniuse states every feature for every version of a browser, so no
-                // versions are stored here at all: the flags line up with the browser's
-                // own version list, position by position.
+                // versions are stored here at all: transition positions index the
+                // browser's own version list.
                 anyhow::ensure!(
                     agent.version_list.len() == ver.len()
                         && agent
@@ -368,7 +370,7 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                     "feature `{name}` does not cover every version of `{browser}`"
                 );
 
-                flags.extend(agent.version_list.iter().map(|version| {
+                let mut version_flags = agent.version_list.iter().map(|version| {
                     let support = &ver[&version.version];
                     let mut bit: u8 = 0;
                     if support.contains('y') {
@@ -378,7 +380,28 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                         bit |= 2;
                     }
                     bit
-                }));
+                });
+                let initial_flag = version_flags.next().ok_or_else(|| {
+                    anyhow::anyhow!("feature `{name}`: `{browser}` has no versions")
+                })?;
+                let mut transition_count: u8 = 0;
+                let mut previous_flag = initial_flag;
+                for (position, flag) in (1usize..).zip(version_flags) {
+                    if flag != previous_flag {
+                        if transition_count > 0 {
+                            flags.push(previous_flag);
+                        }
+                        transition_positions.push(u16::try_from(position)?);
+                        transition_count += 1;
+                        previous_flag = flag;
+                    }
+                }
+                anyhow::ensure!(
+                    transition_count < 16,
+                    "feature `{name}`: `{browser}` has too many transitions"
+                );
+                transition_headers
+                    .push((transition_count << 4) | (initial_flag << 2) | previous_flag);
                 stats.push(browser.as_str());
             }
             let end = stats.len();
@@ -403,6 +426,10 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             .map(|(.., start, end)| u8::try_from(end - start))
             .collect::<Result<Vec<_>, _>>()?;
 
+        let transition_headers =
+            write_blob("FEATURES_STAT_TRANSITION_HEADERS", &transition_headers)?;
+        let transition_positions =
+            write_u16_array("FEATURES_STAT_TRANSITION_POSITIONS", &transition_positions)?;
         let flags = write_blob("FEATURES_STAT_FLAGS", &flags)?;
         let stats_name = write_blob("FEATURES_STAT_BROWSERS", &stats_name)?;
         let feature_keys = write_u32_array("FEATURES_KEY", &feature_keys)?;
@@ -413,6 +440,8 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
             quote! {
                 #feature_keys
                 #feature_widths
+                #transition_headers
+                #transition_positions
                 #flags
                 #stats_name
             }

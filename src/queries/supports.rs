@@ -1,6 +1,9 @@
 use super::{Distrib, QueryResult};
 use crate::{Opts, error::Error, parser::SupportKind};
-use browserslist_data::caniuse::{features::get_feature_stat, get_browser_stat, to_desktop_name};
+use browserslist_data::caniuse::{
+    VersionDetail, features::get_feature_stat, get_browser_stat, to_desktop_name,
+};
+use either::Either;
 
 const Y: u8 = 1;
 const A: u8 = 2;
@@ -20,29 +23,55 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                     .mobile_to_desktop
                     .then_some(to_desktop_name(name))
                     .flatten();
-                let check_desktop = desktop_name.is_some()
-                    && browser_stat
-                        .iter()
-                        .filter(|version| version.released)
-                        .filter_map(|latest_version| versions.get(latest_version.version()))
-                        .next_back()
-                        .is_some_and(|flags| is_supported(flags, include_partial));
-                browser_stat
-                    .iter()
-                    .filter_map(move |version| {
+                let Some(desktop_name) = desktop_name else {
+                    return Either::Left(
                         versions
-                            .get(version.version())
-                            .or_else(|| match desktop_name {
-                                Some(desktop_name) if check_desktop => feature
-                                    .get(desktop_name)
-                                    .and_then(|versions| versions.get(version.version())),
-                                _ => None,
-                            })
-                            .and_then(|flags| {
-                                is_supported(flags, include_partial).then_some(version)
-                            })
+                            .spans(browser_stat.len())
+                            .filter(|(_, flags)| is_supported(*flags, include_partial))
+                            .flat_map(move |(positions, _)| &browser_stat[positions])
+                            .map(move |version| Distrib::new(name, version.version())),
+                    );
+                };
+
+                let mobile_list = get_browser_stat(name, false).map_or(&[][..], |(_, list)| list);
+                let mobile_position = move |version: &VersionDetail| {
+                    mobile_list
+                        .iter()
+                        .position(|mobile| mobile.version() == version.version())
+                };
+                let check_desktop = browser_stat
+                    .iter()
+                    .rev()
+                    .filter(|version| version.released)
+                    .find_map(mobile_position)
+                    .is_some_and(|position| {
+                        is_supported(versions.flag_at(position), include_partial)
+                    });
+                let desktop = check_desktop
+                    .then(|| {
+                        feature
+                            .get(desktop_name)
+                            .zip(get_browser_stat(desktop_name, false))
                     })
-                    .map(move |version| Distrib::new(name, version.version()))
+                    .flatten();
+                Either::Right(browser_stat.iter().enumerate().filter_map(
+                    move |(index, version)| {
+                        let flags = match mobile_position(version) {
+                            Some(position) => versions.flag_at(position),
+                            None => {
+                                let (desktop_versions, (_, desktop_list)) = desktop?;
+                                let position =
+                                    (index + desktop_list.len()).checked_sub(browser_stat.len())?;
+                                if desktop_list.get(position)?.version() != version.version() {
+                                    return None;
+                                }
+                                desktop_versions.flag_at(position)
+                            }
+                        };
+                        is_supported(flags, include_partial)
+                            .then(|| Distrib::new(name, version.version()))
+                    },
+                ))
             })
             .collect();
         Ok(distribs)
