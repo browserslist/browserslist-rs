@@ -62,10 +62,11 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                                 let (desktop_versions, (_, desktop_list)) = desktop?;
                                 let position =
                                     (index + desktop_list.len()).checked_sub(browser_stat.len())?;
-                                if desktop_list.get(position)?.version() != version.version() {
-                                    return None;
+                                if desktop_list.get(position)?.version() == version.version() {
+                                    desktop_versions.flag_at(position)
+                                } else {
+                                    None
                                 }
-                                desktop_versions.flag_at(position)
                             }
                         };
                         is_supported(flags, include_partial)
