@@ -470,7 +470,7 @@ fn parse_single_query<'a>(input: &mut &'a str) -> Result<SingleQuery<'a>> {
 }
 
 pub(crate) fn parse_browserslist_query<'a>(input: &mut &'a str) -> Result<Vec<SingleQuery<'a>>> {
-    if input.trim().is_empty() {
+    if input.is_empty() {
         return Ok(vec![]);
     }
 

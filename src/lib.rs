@@ -58,7 +58,6 @@
 //! but those environments aren't Node.js,
 //! so you will receive an error when querying `current node` in those environments.
 
-use parser::parse_browserslist_query;
 use std::cmp::Ordering;
 use winnow::Parser;
 pub use {error::Error, opts::Opts, queries::Distrib};
@@ -105,8 +104,8 @@ where
             s
         });
 
-    let mut distribs = parse_browserslist_query
-        .parse(&query)?
+    let mut distribs = crate::parser::parse_browserslist_query
+        .parse(query.trim())?
         .into_iter()
         .enumerate()
         .try_fold(vec![], |mut distribs, (i, current)| {
