@@ -42,10 +42,7 @@ mod tests {
     #[test]
     fn global_usage_matches_caniuse() {
         let output = Command::new("node")
-            .args([
-                "-p",
-                "JSON.stringify(require('browserslist').usage.global)",
-            ])
+            .args(["-p", "JSON.stringify(require('browserslist').usage.global)"])
             .output()
             .unwrap();
         assert!(output.status.success());
