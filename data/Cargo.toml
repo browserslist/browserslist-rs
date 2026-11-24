@@ -15,8 +15,10 @@ include = [
 ]
 
 [dependencies]
-ahash = { workspace = true }
-miniz_oxide = { version = "0.9.1", optional = true, default-features = false, features = ["with-alloc"] }
+miniz_oxide = { version = "0.9.1", optional = true, default-features = false, features = [
+    "with-alloc",
+] }
+rustc-hash = { workspace = true }
 time = { workspace = true }
 
 [features]

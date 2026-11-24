@@ -1,7 +1,6 @@
 use crate::{error::Error, opts::Opts};
-use ahash::AHashMap;
 use either::Either;
-use parser::parse;
+use rustc_hash::FxHashMap;
 use serde::Deserialize;
 #[cfg(test)]
 use serde::Serialize;
@@ -15,7 +14,7 @@ use std::{
 
 mod parser;
 
-type Config = AHashMap<String, Vec<String>>;
+type Config = FxHashMap<String, Vec<String>>;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
@@ -35,7 +34,7 @@ pub(crate) enum PkgConfig {
 
 impl Default for PkgConfig {
     fn default() -> Self {
-        Self::Obj(AHashMap::default())
+        Self::Obj(FxHashMap::default())
     }
 }
 
@@ -77,7 +76,7 @@ pub fn load(opts: &Opts) -> Result<Vec<String>, Error> {
             _ => {
                 let content = fs::read_to_string(config_path)
                     .map_err(|_| Error::FailedToReadConfig(format!("{}", config_path.display())))?;
-                let config = parse(&content, get_env(opts), opts.throw_on_missing)?;
+                let config = self::parser::parse(&content, get_env(opts), opts.throw_on_missing)?;
                 Ok(config.env.unwrap_or(config.defaults))
             }
         }
@@ -88,7 +87,7 @@ pub fn load(opts: &Opts) -> Result<Vec<String>, Error> {
         };
         match find_config(path)? {
             Either::Left(s) => {
-                let config = parse(&s, get_env(opts), opts.throw_on_missing)?;
+                let config = self::parser::parse(&s, get_env(opts), opts.throw_on_missing)?;
                 Ok(config.env.unwrap_or(config.defaults))
             }
             Either::Right(config) => {
@@ -300,7 +299,7 @@ mod tests {
         );
 
         // package.json with object format
-        let mut config_obj = AHashMap::new();
+        let mut config_obj = FxHashMap::default();
         let _ = config_obj.insert("production".into(), vec!["> 1%".into(), "not dead".into()]);
         let _ = config_obj.insert("modern".into(), vec!["last 1 version".into()]);
         let _ = config_obj.insert("xp".into(), vec!["chrome >= 49".into()]);

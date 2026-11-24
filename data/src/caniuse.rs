@@ -1,4 +1,4 @@
-use ahash::AHashMap;
+use rustc_hash::FxHashMap;
 use std::{borrow::Cow, sync::LazyLock};
 
 pub mod features;
@@ -70,7 +70,7 @@ static CANIUSE_GLOBAL_USAGE: LazyLock<Vec<(&'static str, &'static str, f32)>> =
 
 /// Position of every version within its own browser's version list. The feature tables
 /// record each support transition by its position in that same order.
-static VERSION_INDEXES: LazyLock<Vec<AHashMap<&'static str, u32>>> = LazyLock::new(|| {
+static VERSION_INDEXES: LazyLock<Vec<FxHashMap<&'static str, u32>>> = LazyLock::new(|| {
     crate::BROWSER_NAMES
         .iter()
         .map(|name| {
@@ -87,7 +87,7 @@ static VERSION_INDEXES: LazyLock<Vec<AHashMap<&'static str, u32>>> = LazyLock::n
 });
 
 static BROWSER_VERSION_ALIASES: LazyLock<
-    AHashMap<&'static str, AHashMap<&'static str, &'static str>>,
+    FxHashMap<&'static str, FxHashMap<&'static str, &'static str>>,
 > = LazyLock::new(|| {
     let mut aliases = CANIUSE_BROWSERS
         .iter()
@@ -104,7 +104,7 @@ static BROWSER_VERSION_ALIASES: LazyLock<
                         .map(|(bottom, top)| (bottom, top, version.version))
                 })
                 .fold(
-                    AHashMap::<&str, &str>::new(),
+                    FxHashMap::default(),
                     move |mut aliases, (bottom, top, version)| {
                         let _ = aliases.insert(bottom, version.as_str());
                         let _ = aliases.insert(top, version.as_str());
@@ -117,9 +117,9 @@ static BROWSER_VERSION_ALIASES: LazyLock<
                 Some((name, aliases))
             }
         })
-        .collect::<AHashMap<&'static str, _>>();
+        .collect::<FxHashMap<&'static str, _>>();
     let _ = aliases.insert("op_mob", {
-        let mut aliases = AHashMap::new();
+        let mut aliases = FxHashMap::default();
         let _ = aliases.insert("59", "58");
         aliases
     });

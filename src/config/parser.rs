@@ -1,6 +1,6 @@
 use super::PartialConfig;
 use crate::error::Error;
-use ahash::AHashSet;
+use rustc_hash::FxHashSet;
 
 pub(crate) fn parse<S: AsRef<str>>(
     source: &str,
@@ -8,7 +8,7 @@ pub(crate) fn parse<S: AsRef<str>>(
     throw_on_missing: bool,
 ) -> Result<PartialConfig, Error> {
     let env = env.as_ref();
-    let mut encountered_sections = AHashSet::new();
+    let mut encountered_sections = FxHashSet::default();
     let mut current_section = Some("defaults");
 
     let config = source
