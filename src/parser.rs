@@ -1,15 +1,13 @@
-use nom::{
-    IResult, Parser,
-    branch::alt,
-    bytes::complete::{tag, tag_no_case, take_while_m_n, take_while1},
-    character::complete::{anychar, char, i32, one_of, space0, space1, u16, u32},
-    combinator::{all_consuming, consumed, map, opt, recognize, value, verify},
-    multi::{many_till, many0},
-    number::complete::{double, float},
-    sequence::{delimited, pair, preceded, separated_pair, terminated},
+use winnow::{
+    Result,
+    ascii::{Caseless, dec_int, dec_uint, digit1, float, space0, space1},
+    combinator::{
+        alt, delimited, opt, peek, preceded, repeat, repeat_till, separated_pair, terminated,
+    },
+    error::ContextError,
+    prelude::*,
+    token::{any, one_of, take_while},
 };
-
-type PResult<'a, Output> = IResult<&'a str, Output>;
 
 #[derive(Debug, Clone)]
 pub enum BaselineKind<'a> {
@@ -75,30 +73,26 @@ pub enum SupportKind {
     Partially,
 }
 
-fn parse_version_keyword(input: &str) -> PResult<'_, &str> {
-    terminated(tag_no_case("version"), opt(char('s'))).parse(input)
+fn parse_version_keyword<'a>(input: &mut &'a str) -> Result<&'a str> {
+    terminated(Caseless("version"), opt('s')).parse_next(input)
 }
 
-fn parse_last(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        (
-            terminated(tag_no_case("last"), space1),
-            terminated(u16, space1),
-            opt(terminated(
-                verify(
-                    take_while1(|c: char| c.is_ascii_alphabetic() || c == '_'),
-                    |s: &str| {
-                        !s.eq_ignore_ascii_case("version")
-                            && !s.eq_ignore_ascii_case("versions")
-                            && !s.eq_ignore_ascii_case("major")
-                    },
-                ),
-                space1,
-            )),
-            opt(terminated(tag_no_case("major"), space1)),
-            parse_version_keyword,
-        ),
-        |(_, count, name, major, _)| {
+fn parse_last<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    (
+        terminated(Caseless("last"), space1),
+        terminated(digit1.verify_map(|s: &str| s.parse().ok()), space1),
+        opt(terminated(
+            take_while(1.., |c: char| c.is_ascii_alphabetic() || c == '_').verify(|s: &str| {
+                !s.eq_ignore_ascii_case("version")
+                    && !s.eq_ignore_ascii_case("versions")
+                    && !s.eq_ignore_ascii_case("major")
+            }),
+            space1,
+        )),
+        opt(terminated(Caseless("major"), space1)),
+        parse_version_keyword,
+    )
+        .map(|(_, count, name, major, _)| {
             if matches!(name, Some(name) if name.eq_ignore_ascii_case("major")) && major.is_none() {
                 QueryAtom::Last {
                     count,
@@ -112,53 +106,46 @@ fn parse_last(input: &str) -> PResult<'_, QueryAtom<'_>> {
                     name,
                 }
             }
-        },
-    )
-    .parse(input)
+        })
+        .parse_next(input)
 }
 
-fn parse_unreleased(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        delimited(
-            terminated(tag_no_case("unreleased"), space1),
-            opt(terminated(
-                take_while1(|c: char| c.is_ascii_alphabetic() || c == '_'),
-                space1,
-            )),
-            parse_version_keyword,
-        ),
-        QueryAtom::Unreleased,
+fn parse_unreleased<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    delimited(
+        terminated(Caseless("unreleased"), space1),
+        opt(terminated(
+            take_while(1.., |c: char| c.is_ascii_alphabetic() || c == '_'),
+            space1,
+        )),
+        parse_version_keyword,
     )
-    .parse(input)
+    .map(QueryAtom::Unreleased)
+    .parse_next(input)
 }
 
-fn parse_years(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        delimited(
-            terminated(tag_no_case("last"), space1),
-            terminated(double, space1),
-            terminated(tag_no_case("year"), opt(char('s'))),
-        ),
-        QueryAtom::Years,
+fn parse_years<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    delimited(
+        terminated(Caseless("last"), space1),
+        terminated(float, space1),
+        terminated(Caseless("year"), opt('s')),
     )
-    .parse(input)
+    .map(QueryAtom::Years)
+    .parse_next(input)
 }
 
-fn parse_since(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        (
-            terminated(tag_no_case("since"), one_of(" \t")),
-            i32,
-            opt(preceded(char('-'), u32)),
-            opt(preceded(char('-'), u32)),
-        ),
-        |(_, year, month, day)| QueryAtom::Since {
+fn parse_since<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    (
+        terminated(Caseless("since"), one_of([' ', '\t'])),
+        dec_int,
+        opt(preceded('-', digit1.verify_map(|s: &str| s.parse().ok()))),
+        opt(preceded('-', digit1.verify_map(|s: &str| s.parse().ok()))),
+    )
+        .map(|(_, year, month, day)| QueryAtom::Since {
             year,
             month: month.unwrap_or(1),
             day: day.unwrap_or(1),
-        },
-    )
-    .parse(input)
+        })
+        .parse_next(input)
 }
 
 #[derive(Debug, Clone)]
@@ -169,79 +156,67 @@ pub enum Comparator {
     GreaterOrEqual,
 }
 
-fn parse_compare_operator(input: &str) -> PResult<'_, Comparator> {
-    map(
-        (alt((char('<'), char('>'))), opt(char('='))),
-        |(relation, equals)| match relation {
+fn parse_compare_operator(input: &mut &str) -> Result<Comparator> {
+    (alt(('<', '>')), opt('='))
+        .map(|(relation, equals)| match relation {
             '<' if equals.is_some() => Comparator::LessOrEqual,
             '<' => Comparator::Less,
             '>' if equals.is_some() => Comparator::GreaterOrEqual,
             _ => Comparator::Greater,
-        },
-    )
-    .parse(input)
+        })
+        .parse_next(input)
 }
 
-fn parse_region(input: &str) -> PResult<'_, Stats<'_>> {
-    map(
-        recognize(preceded(
-            opt(tag_no_case("alt-")),
-            take_while_m_n(2, 2, char::is_alphabetic),
-        )),
-        Stats::Region,
-    )
-    .parse(input)
+fn parse_region<'a>(input: &mut &'a str) -> Result<Stats<'a>> {
+    preceded(opt(Caseless("alt-")), take_while(2, char::is_alphabetic))
+        .take()
+        .map(Stats::Region)
+        .parse_next(input)
 }
 
-fn parse_percentage(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        (
-            terminated(parse_compare_operator, space0),
-            terminated(float, char('%')),
-            opt(preceded((space1, tag_no_case("in"), space1), parse_region)),
-        ),
-        |(comparator, value, stats)| QueryAtom::Percentage {
+fn parse_percentage<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    (
+        terminated(parse_compare_operator, space0),
+        terminated(float, '%'),
+        opt(preceded((space1, Caseless("in"), space1), parse_region)),
+    )
+        .map(|(comparator, value, stats)| QueryAtom::Percentage {
             comparator,
             popularity: value,
             stats: stats.unwrap_or(Stats::Global),
-        },
-    )
-    .parse(input)
+        })
+        .parse_next(input)
 }
 
-fn parse_cover(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        (
-            preceded(
-                terminated(tag_no_case("cover"), space1),
-                terminated(float, char('%')),
-            ),
-            opt(preceded((space1, tag_no_case("in"), space1), parse_region)),
+fn parse_cover<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    (
+        preceded(
+            terminated(Caseless("cover"), space1),
+            terminated(float, '%'),
         ),
-        |(value, stats)| QueryAtom::Cover {
+        opt(preceded((space1, Caseless("in"), space1), parse_region)),
+    )
+        .map(|(value, stats)| QueryAtom::Cover {
             coverage: value,
             stats: stats.unwrap_or(Stats::Global),
-        },
-    )
-    .parse(input)
+        })
+        .parse_next(input)
 }
 
-fn parse_supports(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        separated_pair(
-            opt(terminated(
-                alt((
-                    value(SupportKind::Fully, tag_no_case("fully")),
-                    value(SupportKind::Partially, tag_no_case("partially")),
-                )),
-                space1,
+fn parse_supports<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    separated_pair(
+        opt(terminated(
+            alt((
+                Caseless("fully").map(|_| SupportKind::Fully),
+                Caseless("partially").map(|_| SupportKind::Partially),
             )),
-            terminated(tag_no_case("supports"), space1),
-            take_while1(|c: char| c.is_alphanumeric() || c == '-'),
-        ),
-        |(kind, name)| QueryAtom::Supports(name, kind),
+            space1,
+        )),
+        terminated(Caseless("supports"), space1),
+        take_while(1.., |c: char| c.is_alphanumeric() || c == '-'),
     )
-    .parse(input)
+    .map(|(kind, name)| QueryAtom::Supports(name, kind))
+    .parse_next(input)
 }
 
 #[derive(Debug, Clone)]
@@ -251,231 +226,184 @@ pub enum VersionRange<'a> {
     Accurate(&'a str),
 }
 
-fn parse_version(input: &str) -> PResult<'_, &str> {
-    take_while1(|c: char| c.is_ascii_digit() || c == '.')(input)
+fn parse_version<'a>(input: &mut &'a str) -> Result<&'a str> {
+    take_while(1.., |c: char| c.is_ascii_digit() || c == '.').parse_next(input)
 }
 
-fn parse_version_range(input: &str) -> PResult<'_, VersionRange<'_>> {
+fn parse_version_range<'a>(input: &mut &'a str) -> Result<VersionRange<'a>> {
     alt((
-        map(
-            preceded(
-                space1,
-                separated_pair(
-                    parse_version,
-                    delimited(space0, char('-'), space0),
-                    parse_version,
-                ),
-            ),
-            |(from, to)| VersionRange::Bounded(from, to),
-        ),
-        map(
-            preceded(
-                space0,
-                separated_pair(parse_compare_operator, space0, parse_version),
-            ),
-            |(comparator, version)| VersionRange::Unbounded(comparator, version),
-        ),
-        map(preceded(space1, parse_version), VersionRange::Accurate),
-    ))
-    .parse(input)
-}
-
-fn parse_electron(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        preceded(tag_no_case("electron"), parse_version_range),
-        QueryAtom::Electron,
-    )
-    .parse(input)
-}
-
-fn parse_node(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        preceded(tag_no_case("node"), parse_version_range),
-        QueryAtom::Node,
-    )
-    .parse(input)
-}
-
-fn parse_browser(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        pair(
-            take_while1(|c: char| c.is_ascii_alphabetic() || c == '_'),
-            alt((
-                parse_version_range,
-                map(preceded(space1, tag_no_case("tp")), VersionRange::Accurate),
-            )),
-        ),
-        |(name, version)| QueryAtom::Browser(name, version),
-    )
-    .parse(input)
-}
-
-fn parse_firefox_esr(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    value(
-        QueryAtom::FirefoxESR,
-        (
-            alt((tag_no_case("firefox"), tag_no_case("fx"), tag_no_case("ff"))),
-            space1,
-            tag_no_case("esr"),
-        ),
-    )
-    .parse(input)
-}
-
-fn parse_opera_mini(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    value(
-        QueryAtom::OperaMini,
-        (
-            alt((tag_no_case("operamini"), tag_no_case("op_mini"))),
-            space1,
-            tag_no_case("all"),
-        ),
-    )
-    .parse(input)
-}
-
-fn parse_current_node(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    value(
-        QueryAtom::CurrentNode,
-        (tag_no_case("current"), space1, tag_no_case("node")),
-    )
-    .parse(input)
-}
-
-fn parse_maintained_node(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    value(
-        QueryAtom::MaintainedNode,
-        (
-            tag_no_case("maintained"),
-            space1,
-            tag_no_case("node"),
-            space1,
-            tag_no_case("versions"),
-        ),
-    )
-    .parse(input)
-}
-
-fn parse_phantom(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
         preceded(
-            terminated(tag_no_case("phantomjs"), space1),
-            alt((tag("1.9"), tag("2.1"))),
-        ),
-        |version| QueryAtom::Phantom(version == "2.1"),
-    )
-    .parse(input)
-}
-
-fn parse_browserslist_config(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    value(
-        QueryAtom::BrowserslistConfig,
-        tag_no_case("browserslist config"),
-    )
-    .parse(input)
-}
-
-fn parse_defaults(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    value(QueryAtom::Defaults, tag_no_case("defaults")).parse(input)
-}
-
-fn parse_dead(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    value(QueryAtom::Dead, tag_no_case("dead")).parse(input)
-}
-
-fn parse_extends(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
+            space1,
+            separated_pair(parse_version, delimited(space0, '-', space0), parse_version),
+        )
+        .map(|(from, to)| VersionRange::Bounded(from, to)),
         preceded(
-            terminated(tag_no_case("extends"), space1),
-            take_while1(|c: char| {
-                c.is_alphanumeric() || c == '-' || c == '_' || c == '@' || c == '/' || c == '.'
-            }),
-        ),
-        QueryAtom::Extends,
-    )
-    .parse(input)
-}
-
-fn parse_date_yyyy_mm_dd(input: &str) -> PResult<'_, &str> {
-    recognize((
-        take_while_m_n(4, 4, |c: char| c.is_ascii_digit()),
-        char('-'),
-        take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        char('-'),
-        take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+            space0,
+            separated_pair(parse_compare_operator, space0, parse_version),
+        )
+        .map(|(comparator, version)| VersionRange::Unbounded(comparator, version)),
+        preceded(space1, parse_version).map(VersionRange::Accurate),
     ))
-    .parse(input)
+    .parse_next(input)
 }
 
-fn parse_baseline(input: &str) -> PResult<'_, QueryAtom<'_>> {
+fn parse_electron<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    preceded(Caseless("electron"), parse_version_range)
+        .map(QueryAtom::Electron)
+        .parse_next(input)
+}
+
+fn parse_node<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    preceded(Caseless("node"), parse_version_range)
+        .map(QueryAtom::Node)
+        .parse_next(input)
+}
+
+fn parse_browser<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    (
+        take_while(1.., |c: char| c.is_ascii_alphabetic() || c == '_'),
+        alt((
+            parse_version_range,
+            preceded(space1, Caseless("tp")).map(VersionRange::Accurate),
+        )),
+    )
+        .map(|(name, version)| QueryAtom::Browser(name, version))
+        .parse_next(input)
+}
+
+fn parse_firefox_esr<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    (
+        alt((Caseless("firefox"), Caseless("fx"), Caseless("ff"))),
+        space1,
+        Caseless("esr"),
+    )
+        .map(|_| QueryAtom::FirefoxESR)
+        .parse_next(input)
+}
+
+fn parse_opera_mini<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    (
+        alt((Caseless("operamini"), Caseless("op_mini"))),
+        space1,
+        Caseless("all"),
+    )
+        .map(|_| QueryAtom::OperaMini)
+        .parse_next(input)
+}
+
+fn parse_current_node<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    (Caseless("current"), space1, Caseless("node"))
+        .map(|_| QueryAtom::CurrentNode)
+        .parse_next(input)
+}
+
+fn parse_maintained_node<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    (
+        Caseless("maintained"),
+        space1,
+        Caseless("node"),
+        space1,
+        Caseless("versions"),
+    )
+        .map(|_| QueryAtom::MaintainedNode)
+        .parse_next(input)
+}
+
+fn parse_phantom<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    preceded(
+        terminated(Caseless("phantomjs"), space1),
+        alt(("1.9", "2.1")),
+    )
+    .map(|version| QueryAtom::Phantom(version == "2.1"))
+    .parse_next(input)
+}
+
+fn parse_browserslist_config<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    Caseless("browserslist config")
+        .map(|_| QueryAtom::BrowserslistConfig)
+        .parse_next(input)
+}
+
+fn parse_defaults<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    Caseless("defaults")
+        .map(|_| QueryAtom::Defaults)
+        .parse_next(input)
+}
+
+fn parse_dead<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    Caseless("dead").map(|_| QueryAtom::Dead).parse_next(input)
+}
+
+fn parse_extends<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    preceded(
+        terminated(Caseless("extends"), space1),
+        take_while(1.., |c: char| {
+            c.is_alphanumeric() || c == '-' || c == '_' || c == '@' || c == '/' || c == '.'
+        }),
+    )
+    .map(QueryAtom::Extends)
+    .parse_next(input)
+}
+
+fn parse_date_yyyy_mm_dd<'a>(input: &mut &'a str) -> Result<&'a str> {
+    (
+        take_while(4, |c: char| c.is_ascii_digit()),
+        '-',
+        take_while(2, |c: char| c.is_ascii_digit()),
+        '-',
+        take_while(2, |c: char| c.is_ascii_digit()),
+    )
+        .take()
+        .parse_next(input)
+}
+
+fn parse_baseline<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
     // Grammar (case-insensitive):
     //   baseline YEAR
     //   baseline widely available [on YYYY-MM-DD]
     //   baseline newly available
     //   … optionally followed by "with downstream", then optionally "including kaios"
-    let (input, _) = pair(tag_no_case("baseline"), space1).parse(input)?;
-
-    let (input, kind) = alt((
-        map(u16, BaselineKind::Year),
-        map(
+    (
+        (Caseless("baseline"), space1),
+        alt((
+            dec_uint.map(BaselineKind::Year),
             preceded(
-                pair(
-                    terminated(tag_no_case("widely"), space1),
-                    tag_no_case("available"),
+                (
+                    terminated(Caseless("widely"), space1),
+                    Caseless("available"),
                 ),
                 opt(preceded(
-                    (space1, tag_no_case("on"), space1),
+                    (space1, Caseless("on"), space1),
                     parse_date_yyyy_mm_dd,
                 )),
-            ),
-            |date| match date {
+            )
+            .map(|date| match date {
                 Some(date) => BaselineKind::WidelyAvailableOnDate(date),
                 None => BaselineKind::WidelyAvailable,
-            },
-        ),
-        value(
-            BaselineKind::NewlyAvailable,
-            (tag_no_case("newly"), space1, tag_no_case("available")),
-        ),
-    ))
-    .parse(input)?;
-
-    let (input, downstream) = opt((
-        space1,
-        tag_no_case("with"),
-        space1,
-        tag_no_case("downstream"),
-    ))
-    .parse(input)?;
-
-    let (input, kaios) = opt((
-        space1,
-        tag_no_case("including"),
-        space1,
-        tag_no_case("kaios"),
-    ))
-    .parse(input)?;
-
-    Ok((
-        input,
-        QueryAtom::Baseline {
+            }),
+            (Caseless("newly"), space1, Caseless("available"))
+                .map(|_| BaselineKind::NewlyAvailable),
+        )),
+        opt((space1, Caseless("with"), space1, Caseless("downstream"))),
+        opt((space1, Caseless("including"), space1, Caseless("kaios"))),
+    )
+        .map(|(_, kind, downstream, kaios)| QueryAtom::Baseline {
             kind,
             downstream: downstream.is_some(),
             kaios: kaios.is_some(),
-        },
-    ))
+        })
+        .parse_next(input)
 }
 
-fn parse_unknown(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    map(
-        recognize(many_till(anychar, parse_composition_operator)),
-        QueryAtom::Unknown,
-    )
-    .parse(input)
+fn parse_unknown<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    repeat_till::<_, _, (), _, _, _, _>(1.., any, peek(parse_composition_operator))
+        .take()
+        .map(QueryAtom::Unknown)
+        .parse_next(input)
 }
 
-fn parse_query_atom(input: &str) -> PResult<'_, QueryAtom<'_>> {
-    alt((
+fn parse_query_atom<'a>(input: &mut &'a str) -> Result<QueryAtom<'a>> {
+    alt([
         parse_last,
         parse_unreleased,
         parse_years,
@@ -497,8 +425,8 @@ fn parse_query_atom(input: &str) -> PResult<'_, QueryAtom<'_>> {
         parse_dead,
         parse_extends,
         parse_unknown,
-    ))
-    .parse(input)
+    ])
+    .parse_next(input)
 }
 
 #[derive(Debug)]
@@ -509,80 +437,76 @@ pub(crate) struct SingleQuery<'a> {
     pub(crate) is_and: bool,
 }
 
-fn parse_and(input: &str) -> PResult<'_, bool> {
-    value(true, delimited(space1, tag_no_case("and"), space1)).parse(input)
+fn parse_and(input: &mut &str) -> Result<bool> {
+    delimited(space1, Caseless("and"), space1)
+        .map(|_| true)
+        .parse_next(input)
 }
 
-fn parse_or(input: &str) -> PResult<'_, bool> {
+fn parse_or(input: &mut &str) -> Result<bool> {
     alt((
-        value(false, delimited(space0, char(','), space0)),
-        value(false, delimited(space1, tag_no_case("or"), space1)),
+        delimited(space0, ',', space0).map(|_| false),
+        delimited(space1, Caseless("or"), space1).map(|_| false),
     ))
-    .parse(input)
+    .parse_next(input)
 }
 
-fn parse_composition_operator(input: &str) -> PResult<'_, bool> {
-    alt((parse_and, parse_or)).parse(input)
+fn parse_composition_operator(input: &mut &str) -> Result<bool> {
+    alt((parse_and, parse_or)).parse_next(input)
 }
 
-fn parse_single_query(input: &str) -> PResult<'_, SingleQuery<'_>> {
-    map(
-        (
-            parse_composition_operator,
-            consumed(pair(
-                opt(terminated(tag_no_case("not"), space1)),
-                parse_query_atom,
-            )),
-        ),
-        |(is_and, (raw, (negated, atom)))| SingleQuery {
+fn parse_single_query<'a>(input: &mut &'a str) -> Result<SingleQuery<'a>> {
+    (
+        parse_composition_operator,
+        (opt(terminated(Caseless("not"), space1)), parse_query_atom).with_taken(),
+    )
+        .map(|(is_and, ((negated, atom), raw))| SingleQuery {
             raw,
             atom,
             negated: negated.is_some(),
             is_and,
-        },
-    )
-    .parse(input)
+        })
+        .parse_next(input)
 }
 
-pub(crate) fn parse_browserslist_query(input: &str) -> PResult<'_, Vec<SingleQuery<'_>>> {
-    let input = input.trim();
-    // `many0` doesn't allow empty input, so we detect it here
-    if input.is_empty() {
-        return Ok(("", vec![]));
+pub(crate) fn parse_browserslist_query<'a>(input: &mut &'a str) -> Result<Vec<SingleQuery<'a>>> {
+    if input.trim().is_empty() {
+        return Ok(vec![]);
     }
 
-    map(
-        all_consuming((
-            consumed(pair(
-                // this isn't allowed, but for better error report
-                opt(terminated(tag_no_case("not"), space1)),
-                parse_query_atom,
-            )),
-            many0(parse_single_query),
-        )),
-        |((first_raw, (negated, first)), mut queries)| {
-            queries.insert(
-                0,
-                SingleQuery {
-                    raw: first_raw,
-                    atom: first,
-                    negated: negated.is_some(),
-                    is_and: false,
-                },
-            );
-            queries
-        },
+    (
+        (
+            // this isn't allowed, but for better error report
+            opt(terminated(Caseless("not"), space1)),
+            parse_query_atom,
+        )
+            .with_taken(),
+        repeat(0.., parse_single_query),
     )
-    .parse(input)
+        .map(
+            |(((negated, first), first_raw), mut queries): (_, Vec<_>)| {
+                queries.insert(
+                    0,
+                    SingleQuery {
+                        raw: first_raw,
+                        atom: first,
+                        negated: negated.is_some(),
+                        is_and: false,
+                    },
+                );
+                queries
+            },
+        )
+        .parse_next(input)
 }
 
 pub(crate) fn parse_electron_version(version: &str) -> Result<f32, crate::error::Error> {
-    all_consuming(terminated(float, opt(pair(char('.'), u16))))
-        .parse(version)
-        .map(|(_, v)| v)
-        .map_err(|_: nom::Err<nom::error::Error<_>>| {
-            crate::error::Error::UnknownElectronVersion(version.to_string())
-        })
+    terminated(
+        float::<_, _, ContextError>,
+        opt(('.', digit1.verify_map(|s: &str| s.parse::<u16>().ok()))),
+    )
+    .parse(version)
+    .map_err(|_| crate::error::Error::UnknownElectronVersion(version.to_string()))
 }
 
 #[cfg(test)]

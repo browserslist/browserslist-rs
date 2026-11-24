@@ -60,6 +60,7 @@
 
 use parser::parse_browserslist_query;
 use std::cmp::Ordering;
+use winnow::Parser;
 pub use {error::Error, opts::Opts, queries::Distrib};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -104,8 +105,8 @@ where
             s
         });
 
-    let mut distribs = parse_browserslist_query(&query)?
-        .1
+    let mut distribs = parse_browserslist_query
+        .parse(&query)?
         .into_iter()
         .enumerate()
         .try_fold(vec![], |mut distribs, (i, current)| {

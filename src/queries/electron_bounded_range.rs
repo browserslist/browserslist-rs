@@ -5,8 +5,8 @@ use browserslist_data::electron;
 pub(super) fn electron_bounded_range(from: &str, to: &str) -> QueryResult {
     let from_str = from;
     let to_str = to;
-    let from: f32 = parse_electron_version(from)?;
-    let to: f32 = parse_electron_version(to)?;
+    let from = parse_electron_version(from)?;
+    let to = parse_electron_version(to)?;
 
     let versions = electron::bounded_range(from..to).map_err(|v| {
         let v = match v {
@@ -50,7 +50,7 @@ mod tests {
         "unknown version 2"
     )]
     #[test_case(
-        "electron 1-8.a", Error::Nom(String::from("a"));
+        "electron 1-8.a", Error::InvalidQuerySyntax(String::from("a"));
         "malformed version 1"
     )]
     #[test_case(

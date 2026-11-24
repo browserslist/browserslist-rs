@@ -1,11 +1,12 @@
 use thiserror::Error;
+use winnow::error::{ContextError, ParseError};
 
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
 /// The errors may occur when querying with browserslist.
 pub enum Error {
     #[error("failed to parse the rest of input: ...'{0}'")]
     /// Error of parsing query.
-    Nom(String),
+    InvalidQuerySyntax(String),
 
     #[error("invalid date: {0}")]
     /// Date format is invalid.
@@ -90,11 +91,8 @@ pub enum Error {
     YearOverflow,
 }
 
-impl<'a> From<nom::Err<nom::error::Error<&'a str>>> for Error {
-    fn from(e: nom::Err<nom::error::Error<&'a str>>) -> Self {
-        match e {
-            nom::Err::Error(e) | nom::Err::Failure(e) => Self::Nom(e.input.to_owned()),
-            _ => unreachable!(),
-        }
+impl<'a> From<ParseError<&'a str, ContextError>> for Error {
+    fn from(e: ParseError<&'a str, ContextError>) -> Self {
+        Self::InvalidQuerySyntax(e.input()[e.offset()..].to_owned())
     }
 }

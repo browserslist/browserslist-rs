@@ -4,7 +4,7 @@ use browserslist_data::electron;
 
 pub(super) fn electron_accurate(version: &str) -> QueryResult {
     let version_str = version;
-    let version: f32 = parse_electron_version(version)?;
+    let version = parse_electron_version(version)?;
 
     let distribs = electron::get(version)
         .map(|chromium_version| vec![Distrib::new("chrome", chromium_version)])
@@ -33,7 +33,7 @@ mod tests {
         "unknown version"
     )]
     #[test_case(
-        "electron 8.a", Error::Nom(String::from("a"));
+        "electron 8.a", Error::InvalidQuerySyntax(String::from("a"));
         "malformed version 1"
     )]
     #[test_case(

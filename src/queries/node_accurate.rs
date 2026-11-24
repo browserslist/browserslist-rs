@@ -34,7 +34,7 @@ mod tests {
         "unknown version"
     )]
     #[test_case(
-        "node 8.a", Error::Nom(String::from("a"));
+        "node 8.a", Error::InvalidQuerySyntax(String::from("a"));
         "malformed version 1"
     )]
     #[test_case(

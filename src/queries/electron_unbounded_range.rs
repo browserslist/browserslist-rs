@@ -3,7 +3,7 @@ use crate::{parser::Comparator, parser::parse_electron_version};
 use browserslist_data::electron;
 
 pub(super) fn electron_unbounded_range(comparator: Comparator, version: &str) -> QueryResult {
-    let version: f32 = parse_electron_version(version)?;
+    let version = parse_electron_version(version)?;
 
     let distribs = electron::versions()
         .filter(|(electron_version, _)| match comparator {
@@ -34,7 +34,7 @@ mod tests {
     }
 
     #[test_case(
-        "electron < 8.a", Error::Nom(String::from("a"));
+        "electron < 8.a", Error::InvalidQuerySyntax(String::from("a"));
         "malformed version 1"
     )]
     #[test_case(
