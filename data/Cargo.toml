@@ -16,8 +16,8 @@ include = [
 
 [dependencies]
 ahash = { workspace = true }
-chrono = { workspace = true }
 miniz_oxide = { version = "0.9.1", optional = true, default-features = false, features = ["with-alloc"] }
+time = { workspace = true }
 
 [features]
 deflate = ["dep:miniz_oxide"]

@@ -1,14 +1,15 @@
 use super::{Distrib, QueryResult};
 use crate::{error::Error, opts::Opts};
 use browserslist_data::caniuse;
-use chrono::{Duration, Utc};
 
 const ONE_YEAR_IN_SECONDS: f64 = 365.259641 * 24.0 * 60.0 * 60.0;
 
 pub(super) fn years(count: f64, opts: &Opts) -> QueryResult {
-    let duration =
-        Duration::try_seconds((count * ONE_YEAR_IN_SECONDS) as i64).ok_or(Error::YearOverflow)?;
-    let time = (Utc::now() - duration).timestamp();
+    let seconds = (count * ONE_YEAR_IN_SECONDS) as i64;
+    let time = time::OffsetDateTime::now_utc()
+        .unix_timestamp()
+        .checked_sub(seconds)
+        .ok_or(Error::YearOverflow)?;
 
     let distribs = caniuse::iter_browser_stat(opts.mobile_to_desktop)
         .flat_map(|(name, version_list)| {

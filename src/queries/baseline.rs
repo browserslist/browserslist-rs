@@ -4,7 +4,6 @@ use crate::{
     parser::{BaselineKind, Comparator},
 };
 use browserslist_data::baseline;
-use chrono::Datelike;
 
 type Date = (i32, u32, u32);
 
@@ -71,7 +70,7 @@ fn date_key((year, month, day): Date) -> u32 {
 
 fn today() -> Date {
     let now = super::today();
-    (now.year(), now.month(), now.day())
+    (now.year(), u8::from(now.month()).into(), now.day().into())
 }
 
 fn parse_date(date: &str) -> Date {

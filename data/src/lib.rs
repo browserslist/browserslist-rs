@@ -26,16 +26,15 @@ pub(crate) fn decode_release_dates(years: &[u8], months: &[u8], days: &[u8]) -> 
             if year == 0 {
                 0
             } else {
-                chrono::NaiveDate::from_ymd_opt(
+                time::Date::from_calendar_date(
                     i32::from(year) + 1970,
-                    u32::from(month),
-                    u32::from(day),
+                    time::Month::try_from(month).unwrap(),
+                    day,
                 )
                 .expect("invalid bundled release date")
-                .and_hms_opt(0, 0, 0)
-                .expect("invalid bundled release time")
-                .and_utc()
-                .timestamp()
+                .midnight()
+                .assume_utc()
+                .unix_timestamp()
             }
         })
         .collect()

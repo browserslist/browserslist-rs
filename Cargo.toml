@@ -17,24 +17,21 @@ crate-type = ["rlib"]
 [features]
 default = ["deflate", "local"]
 deflate = ["browserslist-data/deflate"]
-wasm_bindgen = ["chrono/wasmbind", "js-sys"]
 # Use the local time zone for "today" (baseline and maintained node queries).
-# Without it, UTC is used and chrono's `clock` (iana-time-zone dependency) is dropped.
-local = ["chrono/clock"]
+# Without it, UTC is used and `time` crate's local-offset is dropped.
+local = ["time/local-offset"]
+wasm_bindgen = ["time/wasm-bindgen", "js-sys"]
 
 [dependencies]
 ahash = { workspace = true, features = ["serde"] }
 browserslist-data = { version = "0.4", path = "data" }
-chrono = { workspace = true, features = [
-    "std",
-    "now",
-] } # disable wasmbind by default
 either = "1.17"
 itertools = "0.15"
 nom = "8.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
+time = { workspace = true }
 
 [dev-dependencies]
 clap = { version = "4.6", features = ["derive"] }
@@ -49,4 +46,4 @@ resolver = "3"
 
 [workspace.dependencies]
 ahash = "0.8.12"
-chrono = { version = "0.4.38", default-features = false }
+time = "0.3"

@@ -106,12 +106,14 @@ impl Display for Distrib {
 pub type QueryResult = Result<Vec<Distrib>, Error>;
 
 #[cfg(feature = "local")]
-fn today() -> chrono::NaiveDate {
-    chrono::Local::now().date_naive()
+fn today() -> time::Date {
+    time::OffsetDateTime::now_local()
+        .unwrap_or_else(|_| time::OffsetDateTime::now_utc())
+        .date()
 }
 #[cfg(not(feature = "local"))]
-fn today() -> chrono::NaiveDate {
-    chrono::Utc::now().date_naive()
+fn today() -> time::Date {
+    time::OffsetDateTime::now_utc().date()
 }
 
 pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {

@@ -1,5 +1,4 @@
 use anyhow::Result;
-use chrono::Datelike;
 use indexmap::IndexMap;
 use miniz_oxide::deflate::compress_to_vec;
 use proc_macro2::TokenStream;
@@ -161,7 +160,7 @@ fn build_firefox_esr() -> Result<()> {
 }
 
 fn build_node_release_schedule() -> Result<()> {
-    use chrono::{Datelike, NaiveDate};
+    use time::Date;
 
     #[derive(Deserialize)]
     struct NodeRelease {
@@ -174,18 +173,12 @@ fn build_node_release_schedule() -> Result<()> {
     let schedule: BTreeMap<String, NodeRelease> = serde_json::from_slice(&fs::read(
         "node_modules/node-releases/data/release-schedule/release-schedule.json",
     )?)?;
+    let date_format = time::macros::format_description!("[year]-[month]-[day]");
     let mut versions = schedule
         .into_iter()
         .map(|(version, NodeRelease { start, end })| {
-            let date_format = "%Y-%m-%d";
-            let start = NaiveDate::parse_from_str(&start, date_format)
-                .unwrap()
-                .and_hms_opt(0, 0, 0)
-                .unwrap();
-            let end = NaiveDate::parse_from_str(&end, date_format)
-                .unwrap()
-                .and_hms_opt(0, 0, 0)
-                .unwrap();
+            let start = Date::parse(&start, &date_format).unwrap();
+            let end = Date::parse(&end, &date_format).unwrap();
 
             (version, (start, end))
         })
@@ -198,15 +191,8 @@ fn build_node_release_schedule() -> Result<()> {
         .map(|(version, (start, end))| {
             let version = version.trim_start_matches('v');
 
-            let start_year = start.year();
-            let start_month = start.month();
-            let start_day = start.day();
-            let end_year = end.year();
-            let end_month = end.month();
-            let end_day = end.day();
-
-            let start = quote! { chrono::NaiveDate::from_ymd_opt(#start_year, #start_month, #start_day).unwrap() };
-            let end = quote! { chrono::NaiveDate::from_ymd_opt(#end_year, #end_month, #end_day).unwrap() };
+            let start = start.to_julian_day();
+            let end = end.to_julian_day();
 
             (version.to_owned(), (start, end))
         })
@@ -218,8 +204,8 @@ fn build_node_release_schedule() -> Result<()> {
         path,
         quote! {
             static NODE_RELEASE_VERSIONS: &[&str] = &[#(#versions),*];
-            static NODE_RELEASE_START: &[chrono::NaiveDate] = &[#(#starts),*];
-            static NODE_RELEASE_END: &[chrono::NaiveDate] = &[#(#ends),*];
+            static NODE_RELEASE_START: &[i32] = &[#(#starts),*];
+            static NODE_RELEASE_END: &[i32] = &[#(#ends),*];
         }
         .to_string(),
     )?;
@@ -252,12 +238,12 @@ fn build_caniuse(strpool: &mut StrPool) -> Result<()> {
                 let (year, month, day) = match version.release_date {
                     Some(timestamp) => {
                         let date =
-                            chrono::DateTime::from_timestamp(timestamp, 0).ok_or_else(|| {
+                            time::OffsetDateTime::from_unix_timestamp(timestamp).map_err(|_| {
                                 anyhow::anyhow!("invalid release timestamp: {timestamp}")
                             })?;
                         (
                             u8::try_from(date.year() - 1970)?,
-                            u8::try_from(date.month())?,
+                            date.month() as u8,
                             u8::try_from(date.day())?,
                         )
                     }

@@ -1,13 +1,18 @@
 use super::{Distrib, QueryResult};
 use crate::{error::Error, opts::Opts};
 use browserslist_data::caniuse;
-use chrono::{LocalResult, TimeZone, Utc};
 
 pub(super) fn since(year: i32, month: u32, day: u32, opts: &Opts) -> QueryResult {
-    let time = match Utc.with_ymd_and_hms(year, month, day, 0, 0, 0) {
-        LocalResult::Single(date) => date.timestamp(),
-        _ => return Err(Error::InvalidDate(format!("{year}-{month}-{day}"))),
-    };
+    let date = u8::try_from(month)
+        .ok()
+        .and_then(|month| time::Month::try_from(month).ok())
+        .and_then(|month| {
+            u8::try_from(day)
+                .ok()
+                .and_then(|day| time::Date::from_calendar_date(year, month, day).ok())
+        })
+        .ok_or_else(|| Error::InvalidDate(format!("{year}-{month}-{day}")))?;
+    let time = date.midnight().assume_utc().unix_timestamp();
 
     let distribs = caniuse::iter_browser_stat(opts.mobile_to_desktop)
         .flat_map(|(name, version_list)| {
