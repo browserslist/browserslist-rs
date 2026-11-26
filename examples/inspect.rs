@@ -1,33 +1,20 @@
 use browserslist::{Opts, resolve};
-use clap::Parser;
-
-#[derive(Parser)]
-struct Args {
-    #[arg(long)]
-    mobile_to_desktop: bool,
-
-    #[arg(long)]
-    ignore_unknown_versions: bool,
-
-    queries: Vec<String>,
-}
+use std::env;
 
 fn main() {
-    let args = Args::parse();
+    let mut args = env::args();
+    args.next();
 
-    match resolve(
-        &args.queries,
-        &Opts {
-            mobile_to_desktop: args.mobile_to_desktop,
-            ignore_unknown_versions: args.ignore_unknown_versions,
-            ..Default::default()
-        },
-    ) {
-        Ok(versions) => {
-            for version in versions {
-                println!("{}", version)
-            }
-        }
-        Err(error) => eprintln!("{}", error),
-    };
+    let mut opts = Opts::default();
+    let mut queries = Vec::new();
+    args.for_each(|arg| match &*arg {
+        "--mobile-to-desktop" => opts.mobile_to_desktop = true,
+        "--ignore-unknown-versions" => opts.ignore_unknown_versions = true,
+        _ => queries.push(arg),
+    });
+
+    match resolve(&queries, &opts) {
+        Ok(versions) => versions.iter().for_each(|version| println!("{version}")),
+        Err(error) => eprintln!("{error}"),
+    }
 }
