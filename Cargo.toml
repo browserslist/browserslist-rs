@@ -24,7 +24,7 @@ wasm_bindgen = ["time/wasm-bindgen", "js-sys"]
 
 [dependencies]
 browserslist-data = { version = "0.4", path = "data" }
-either = "1.17"
+either = "1.19"
 itertools = "0.15"
 rustc-hash = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
@@ -35,7 +35,7 @@ winnow = "1.0"
 
 [dev-dependencies]
 clap = { version = "4.6", features = ["derive"] }
-test-case = "3.3"
+test-case = "3.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = { version = "0.3", optional = true }
