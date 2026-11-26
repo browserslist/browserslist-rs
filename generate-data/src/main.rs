@@ -131,7 +131,10 @@ fn build_node_versions() -> Result<()> {
         "node_modules/node-releases/data/processed/envs.json",
     )?)?;
 
-    let versions = releases.into_iter().map(|release| release.version);
+    let versions = releases
+        .into_iter()
+        .map(|release| release.version)
+        .filter(|version| !version.contains('-'));
     fs::write(
         path,
         quote! {
@@ -553,7 +556,7 @@ fn parse_caniuse_regions() -> Result<BTreeMap<String, BTreeMap<String, BTreeMap<
         r#"
 const fs = require('fs');
 const path = require('path');
-const browsersMap = require('./node_modules/caniuse-lite/data/browsers');
+const unpackRegion = require('./node_modules/caniuse-lite/dist/unpacker/region').default;
 const regionDir = './node_modules/caniuse-lite/data/regions';
 const files = fs.readdirSync(regionDir).filter(f => f.endsWith('.js')).sort();
 const result = {};
@@ -561,10 +564,8 @@ for (const file of files) {
     const name = path.basename(file, '.js');
     const packed = require(path.resolve(regionDir, file));
     const regionData = {};
-    for (const [browserKey, data] of Object.entries(packed)) {
-        const browserName = browsersMap[browserKey];
-        if (!browserName) continue;
-        const entries = [...Object.entries(data)].filter(([version]) => version !== '_');
+    for (const [browserName, data] of Object.entries(unpackRegion(packed))) {
+        const entries = [...Object.entries(data)].filter(([version, usage]) => version !== '_' && usage != null);
         if (entries.length > 0) { regionData[browserName] = Object.fromEntries(entries); }
     }
     result[name] = regionData;
