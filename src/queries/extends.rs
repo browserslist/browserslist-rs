@@ -185,14 +185,14 @@ mod tests {
         let pkg = "browserslist-config-from-path";
         mock(&format!("path/node_modules/{pkg}"), json!(["ie 9"]));
         let path = BASE_TEST_DIR.join("node_modules/path");
-        let result = extends(
-            pkg,
+        run_compare(
+            &format!("extends {pkg}"),
             &Opts {
                 path: Some(path.to_str().unwrap().into()),
                 ..Default::default()
             },
+            Some(&path),
         );
         clean("path");
-        assert_eq!(result.unwrap(), [crate::Distrib::new("ie", "9")]);
     }
 }
