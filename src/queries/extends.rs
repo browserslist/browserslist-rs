@@ -27,8 +27,12 @@ pub(super) fn extends(pkg: &str, opts: &Opts) -> QueryResult {
         check_extend_name(pkg)?;
     }
 
+    let paths = serde_json::json!([".", opts.path.as_deref().unwrap_or(".")]);
     let mut command = process::Command::new("node");
-    command.args(["-p", &format!("JSON.stringify(require('{pkg}'))")]);
+    command.args([
+        "-p",
+        &format!("JSON.stringify(require(require.resolve('{pkg}', {{ paths: {paths} }})))"),
+    ]);
     #[cfg(test)]
     command.current_dir(&*BASE_TEST_DIR);
     let output = command
@@ -174,5 +178,21 @@ mod tests {
             should_failed(query, &Default::default()),
             Error::InvalidExtendName(..)
         ));
+    }
+
+    #[test]
+    fn resolves_from_path() {
+        let pkg = "browserslist-config-from-path";
+        mock(&format!("path/node_modules/{pkg}"), json!(["ie 9"]));
+        let path = BASE_TEST_DIR.join("node_modules/path");
+        run_compare(
+            &format!("extends {pkg}"),
+            &Opts {
+                path: Some(path.to_str().unwrap().into()),
+                ..Default::default()
+            },
+            Some(&path),
+        );
+        clean("path");
     }
 }
